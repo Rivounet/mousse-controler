@@ -79,3 +79,9 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 ## Publication des preuves et revues
 
 **Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT peut lire directement la PR et les preuves lorsque la revue est demandée, sans transfert manuel à l'utilisateur. Une publication de PR n'impose pas une revue de code complète. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 et MC-INIT-002 ont été publiées et relues dans les PR #1 et #2 ; toute nouvelle preuve suit le même processus.
+
+## Méthode de réalisation validée — autonomie Codex
+
+**Décision D-023 :** un objectif fonctionnel vérifiable par mandat, avec autonomie de conception, développement, tests et corrections dans les limites explicitement autorisées. Les points d'étape significatifs indiquent le temps écoulé ; seules les décisions engageantes ou les opérations sensibles nécessitent un arrêt pour accord. Pas de micro-mandats successifs ni de revue de code systématique. Ne pas créer de fichier de mandat GitHub : le mandat complet est remis dans le chat. Les PR Draft restent non fusionnées jusqu'à décision explicite.
+
+**Prochain objectif proposé :** chaîne de déploiement réellement opérationnelle sur mini-pc-backend, depuis un SHA Git exact jusqu'au transfert, lancement, état, arrêt et retour arrière d'une application témoin ; réutiliser les PR #2 et #3, sous autorisation distincte pour les écritures et changements sensibles. La PR #3 dépend de la PR #2 ; aucune fusion implicite.
