@@ -7,7 +7,7 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - **Développer en local** sur le PC Windows avec Codex Desktop.
 - **Déployer et exécuter les tests matériels** sur `mini-pc-backend` via un canal distant qualifié et des scripts versionnés, **pas via des manipulations manuelles non reproductibles**.
 - Le PC Windows de développement est aussi la **cible Bluetooth HID**. Aucun agent récepteur spécifique au projet ne doit y être installé.
-- **ChatGPT détient la responsabilité de la documentation de référence et des revues de code**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer de jalon validé sans revue.
+- **ChatGPT détient la responsabilité de la documentation de référence et peut effectuer des revues de code à la demande ou aux jalons convenus, sans revue systématique à chaque livraison**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer un jalon validé sans vérification adaptée.
 
 ## Pour chaque mandat
 
@@ -17,7 +17,7 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 4. Faire une modification ciblée et testable. Utiliser une branche de travail et une PR pour les changements applicatifs ; ne pas pousser de code directement sur `main`.
 5. Distinguer tests locaux, déploiement de test et **preuves matérielles sur le mini-PC**.
 6. Fournir les résultats, commandes, SHA, fichiers modifiés, échecs, réserves et instructions de rollback.
-7. Soumettre le diff et les preuves à ChatGPT pour revue indépendante ; **ne pas fusionner sans arbitrage explicite**.
+7. Publier le diff, les tests et les preuves dans une PR Draft ; ChatGPT assure le suivi Git/GitHub et ne lance une revue de code approfondie que sur demande explicite ou au point de contrôle préalablement convenu. **Ne pas fusionner sans arbitrage explicite**.
 
 ## Sécurité / opérations
 
@@ -49,7 +49,7 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 ## Mandats, revue et GitHub
 
 - **ChatGPT fournit intégralement les mandats Codex dans la conversation**, avec objectifs, périmètre autorisé, critères de validation, risques et format des preuves. **Les mandats ne sont pas publiés ni archivés dans GitHub.** Les décisions, états de jalons, rapports, preuves et revues restent versionnés.
-- **ChatGPT supervise Git/GitHub** : état de `main`, branches, PR, SHA, changements préexistants, cohérence local/distant et absence de fusion implicite.
+- **ChatGPT supervise Git/GitHub** : état de `main`, branches, PR, SHA, changements préexistants, cohérence local/distant et absence de fusion implicite. **Réception d'une livraison ≠ déclenchement automatique d'une revue de code**.
 - Codex exécute le mandat dans le périmètre autorisé et publie une PR **Draft** pour les changements applicatifs, sans fusion ; il fournit à ChatGPT les traces de validation.
 - Démarrage *from scratch* : commencer par vérifier le clone Git local et les environnements ; ne pas supposer que le mini-PC ou une connexion distante sont prêts.
 - Aucun `push --force`, rebase destructif, nettoyage irréversible, reset de travail non committé, modification de `main` ni fusion sans mandat explicite.
