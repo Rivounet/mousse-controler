@@ -1,0 +1,95 @@
+{
+  "artifact_sha256": "bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428",
+  "blockers": [
+    "REMOTE_TRANSPORT_NOT_IMPLEMENTED",
+    "DISTINCT_REMOTE_AUTHORIZATION_REQUIRED"
+  ],
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/.gitattributes",
+      "sha256": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
+      "size": 14
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/DEPLOYMENT.md",
+      "sha256": "46b534d4bc47f629bda00ae136e36fb476def6112a3e6cd9018eb913cd5e812b",
+      "size": 7167
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/README.md",
+      "sha256": "6f0a789890f02d4e8c1b1954b62035c911ba9d43383812ca9b0172679ee280fa",
+      "size": 5012
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/artifacts.py",
+      "sha256": "45dc2218b5aa8a0ca5671f44df68de545f7392aa90ed910051d6989b763a11a1",
+      "size": 10239
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/deployment.py",
+      "sha256": "ca880af85082612350a982e0d81757116db166ca10d86731587d520ffaa1ba65",
+      "size": 4986
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/plan_witness.py",
+      "sha256": "2023af1f1543b83378581f1dad5db1610893821a456aa9e0e98aa9976d2c3753",
+      "size": 6688
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/releases.py",
+      "sha256": "97f7ec21f355a5f218bd06819fd18afd6eb0033bcfd8380df4d362bc29ff6dd2",
+      "size": 17263
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/remote.py",
+      "sha256": "bf8028e514b132e796fbae06e9f7d4aadeea967016a9e619494129a3aaaa2615",
+      "size": 12467
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/test_deployment.py",
+      "sha256": "3c464083bc3895468058fb0a9511682374764d1b23779b0cede444d294c58312",
+      "size": 21472
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/remote/test_remote.py",
+      "sha256": "397712ba6b1157434bc055fb91aa226ce742c03e23dedc30ac2df5d3379ae01b",
+      "size": 14835
+    }
+  ],
+  "git_sha": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9",
+  "local_result": "NO_FILES_WRITTEN",
+  "mode": "LOCAL_DRY_RUN",
+  "planned_operations": [
+    "transfer to unique staging after authorization",
+    "verify SHA-256",
+    "extract explicitly listed files",
+    "register release without overwriting"
+  ],
+  "remote_checks": "NON_EXÉCUTÉ",
+  "remote_contacted": false,
+  "remote_synced": false,
+  "remote_target": "<RACINE_AUTORISÉE>\\staging\\1a438e1422b05a5a77f4f35c860aaf0eb165feb9-bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428",
+  "required_remote_checks": [
+    "identity",
+    "authorized root",
+    "permissions",
+    "free space",
+    "exclusive lock",
+    "source Git state if present",
+    "artifact integrity",
+    "existing release"
+  ],
+  "selection": [
+    "scripts/remote"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "initial_branch": "feat/mc-init-002-remote-qualification",
+  "initial_head": "cf3c37200541d3291f6b506731e14ce020bcf630",
+  "initial_clean": true,
+  "unpublished_commits_detected": false,
+  "main_before": "6033e0d99e391528f3c131818dde1a19dd32f0f8",
+  "main_after_fast_forward": "bd55aaaa1a8dd9825128b758aff6b22873871d47",
+  "work_branch": "feat/mc-init-003-versioned-deployment",
+  "comparison_base_branch": "feat/mc-init-002-remote-qualification",
+  "comparison_base_sha": "cf3c37200541d3291f6b506731e14ce020bcf630",
+  "technical_commit": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9",
+  "pr_1": {
+    "number": 1,
+    "draft": true,
+    "merged": false,
+    "head": "8886cab1230039add8e2712a5114c4e312c0f49b"
+  },
+  "pr_2": {
+    "number": 2,
+    "draft": true,
+    "merged": false,
+    "head": "cf3c37200541d3291f6b506731e14ce020bcf630"
+  },
+  "commands": [
+    "git fetch origin",
+    "git status --porcelain=v1",
+    "git log --all --not --remotes --oneline",
+    "git merge-base --is-ancestor main origin/main",
+    "git merge --ff-only origin/main",
+    "git switch -c feat/mc-init-003-versioned-deployment origin/feat/mc-init-002-remote-qualification"
+  ],
+  "official_docs": "Dernières versions lues via origin/main ; checkout hérité distinct et non modifié",
+  "remote_operations_this_mandate": []
+}
