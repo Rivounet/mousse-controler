@@ -2,14 +2,14 @@
 
 Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire → En cours → En revue → Validé** ; **Bloqué** indique un obstacle documenté. Un passage à *Validé* nécessite une preuve ou une revue adaptée.
 
-**MC-INIT-001 :** exécuté selon le rapport ; [revue](REVUES/MC-INIT-001.md) PASS_WITH_RESERVATIONS (preuves individuelles à examiner). **J1 reste ouvert** ; mandat MC-INIT-002 à cadrer pour transfert réversible et qualification du cycle distant. Voir [REPRISE.md](REPRISE.md).
+**MC-INIT-001 :** exécuté ; [revue](REVUES/MC-INIT-001.md) **PASS_WITH_RESERVATIONS** après examen des preuves. Publication en [PR #1 Draft](https://github.com/Rivounet/mousse-controler/pull/1) **PASS documentaire, non fusionnée**. **J1 reste ouvert** ; [mandat MC-INIT-002](MANDATS/MC-INIT-002.md) préparé (écritures distantes soumises à autorisation explicite). Voir [REPRISE.md](REPRISE.md).
 
 ## Prochaines tâches (ordre recommandé)
 
 | ID | Jalon | Travail | Responsable d'exécution | Livrable/preuve | État |
 |---|---|---|---|---|---|
 | MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
-| MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport MC-INIT-001 fourni ; preuves individuelles non examinées | En revue |
+| MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport et preuves MC-INIT-001 revus, réserves consignées | Validé avec réserves |
 | MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | SSH et listing SFTP déclarés PASS ; transfert aller-retour et droits d'écriture à tester | En cours |
 | MC-003A | J1 | Qualifier la copie Git distante et le modèle de synchronisation par SHA | Codex Desktop | Preuve de synchronisation non destructive, contrôle d'état Git et manifeste version | À faire |
 | MC-003B | J1/J4 | Concevoir puis implémenter les scripts distants (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | Scripts, configuration externe et tests d'échec/idempotence | À faire |
@@ -41,4 +41,4 @@ Maintenir ce tableau à jour lors de chaque revue de jalon ; utiliser les GitHub
 
 ## Livrables des mandats
 
-Codex publie rapports et preuves expurgés dans une branche GitHub et une PR Draft, selon `AGENTS.md`. Pour **MC-INIT-001**, la revue reste assortie d'une réserve tant que les preuves individuelles n'ont pas été publiées et examinées. Ne pas joindre manuellement des fichiers à ChatGPT comme procédure standard.
+Codex publie rapports et preuves expurgés dans une branche GitHub et une PR Draft, selon `AGENTS.md`. Pour **MC-INIT-001**, les preuves expurgées ont été publiées et examinées via PR #1 ; les réserves concernent les éléments non démontrés, et non plus l'absence des fichiers. Ne pas joindre manuellement des fichiers à ChatGPT comme procédure standard.
