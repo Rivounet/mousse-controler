@@ -67,3 +67,7 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 ## 8. Règle de mise à jour
 
 À chaque jalon ou décision structurante, **ChatGPT met à jour** les documents concernés et résume ici : état réellement vérifié, prochaine action, blocages et références PR/SHA utiles. Ne pas dupliquer l'intégralité des rapports, pointer vers leurs preuves.
+
+## Publication des preuves et revues
+
+**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves restantes doivent être publiées par Codex dans une PR dédiée après expurgation.
