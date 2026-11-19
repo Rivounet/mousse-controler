@@ -61,3 +61,12 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Avant toute publication, examiner les fichiers et **exclure** secrets, clés, empreintes d'hôte non nécessaires, comptes, chemins privés, adresses réseau privées, journaux sensibles et artefacts volumineux ou binaires inutiles. Conserver localement les preuves brutes non publiables et indiquer leur existence, sans exposer leur contenu.
 - Rapporter l'URL de PR, la branche, le SHA publié et la liste des preuves, en distinguant résultats vérifiés, déclarés et non exécutés. Ne jamais pousser directement sur `main` ni fusionner sans arbitrage.
 - Si la publication est bloquée, documenter la cause et demander une décision ; **ne pas imposer à l'utilisateur un transfert manuel de fichiers comme procédure normale**.
+
+## Mandats orientés résultats — autonomie encadrée
+
+- Un mandat vise **un résultat fonctionnel vérifiable**, pas une succession de micro-tâches ; Codex choisit les étapes techniques nécessaires et corrige les échecs ordinaires dans le même mandat.
+- Définir un objectif principal, des critères d'acceptation observables, des limites d'autorisation et des points d'arrêt pour les opérations sensibles. Ne pas élargir le périmètre produit sans décision.
+- Ne pas interrompre l'exécution pour chaque choix technique mineur ; communiquer les jalons significatifs avec le temps écoulé, risques et blocages.
+- Ne solliciter l'utilisateur qu'en cas de décision structurante, modification système/permission, risque de perte de données, fusion ou blocage véritable. Préserver les opérations existantes.
+- Éviter une PR par sous-étape ; regrouper les changements cohérents dans une PR Draft, sans empiler indéfiniment des PR dépendantes. Les fusions restent explicitement autorisées.
+- ChatGPT fournit **tout mandat intégralement dans le chat**, sans fichier de mandat dans GitHub ; aucune revue de code automatique à chaque livraison.
