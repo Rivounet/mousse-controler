@@ -9,8 +9,9 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Séparer le clone `source/` des releases et états d'exécution. Les outils
   SSH/SFTP existants sont secondaires : maintenance distante ou reprise, pas
   chemin normal de développement.
-- `MonOrdinateur` est exclusivement la **cible Bluetooth HID**. Aucun agent
-  récepteur spécifique au projet ne doit y être installé.
+- `MonOrdinateur` est la **cible Bluetooth HID** et hébergera uniquement un
+  agent visible de retour de position sur LAN privé. Cet agent mesure le
+  curseur ; il ne reçoit ni n'exécute aucune commande souris.
 - **ChatGPT détient la responsabilité de la documentation de référence et peut effectuer des revues de code à la demande ou aux jalons convenus, sans revue systématique à chaque livraison**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer un jalon validé sans vérification adaptée.
 
 ## Pour chaque mandat

@@ -1,0 +1,18 @@
+MC-HID-AUDIT-001 local validation
+Date: 2026-11-19
+Command: python -m unittest discover
+Temporary path: short workspace-local path, removed after execution
+Result: 76 tests, OK
+Duration: 30.360 seconds
+
+Additional read-only probe:
+- adapter present: true
+- peripheral role supported: true
+- radio state: Off
+- HID/Battery/Device Information CreateAsync: RadioNotAvailable
+- StartAdvertising: not called
+- pairing/connection/notification/HID report: not executed
+
+Target status:
+- Inspect-MonOrdinateur.ps1 syntax and schema validated locally
+- not executed on MonOrdinateur

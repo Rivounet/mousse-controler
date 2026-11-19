@@ -47,12 +47,30 @@ if ($null -eq $adapter) {
     throw 'No default Bluetooth adapter returned by Windows'
 }
 
-$os = Get-CimInstance Win32_OperatingSystem
+$os = try { Get-CimInstance Win32_OperatingSystem -ErrorAction Stop } catch { $null }
 $currentVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
-$signedDriver = Get-CimInstance Win32_PnPSignedDriver |
+$signedDriver = @(try { Get-CimInstance Win32_PnPSignedDriver -ErrorAction Stop } catch { @() }) |
     Where-Object { $_.DeviceClass -eq 'BLUETOOTH' -and $_.DeviceName -like '*Adapter*' } |
     Select-Object -First 1
-$services = Get-Service -Name 'bthserv', 'BTAGService', 'BluetoothUserService*' -ErrorAction SilentlyContinue |
+if (-not $signedDriver) {
+    $pnpAdapter = Get-PnpDevice -Class Bluetooth -PresentOnly -ErrorAction SilentlyContinue |
+        Where-Object { $_.FriendlyName -like '*Adapter*' } | Select-Object -First 1
+    if ($pnpAdapter) {
+        $driverVersion = Get-PnpDeviceProperty -InstanceId $pnpAdapter.InstanceId `
+            -KeyName 'DEVPKEY_Device_DriverVersion' -ErrorAction SilentlyContinue
+        $driverDate = Get-PnpDeviceProperty -InstanceId $pnpAdapter.InstanceId `
+            -KeyName 'DEVPKEY_Device_DriverDate' -ErrorAction SilentlyContinue
+        $manufacturer = Get-PnpDeviceProperty -InstanceId $pnpAdapter.InstanceId `
+            -KeyName 'DEVPKEY_Device_Manufacturer' -ErrorAction SilentlyContinue
+        $signedDriver = [pscustomobject]@{
+            DeviceName = $pnpAdapter.FriendlyName
+            Manufacturer = $manufacturer.Data
+            DriverVersion = $driverVersion.Data
+            DriverDate = $driverDate.Data
+        }
+    }
+}
+$services = @(try { Get-Service -Name 'bthserv', 'BTAGService', 'BluetoothUserService*' -ErrorAction Stop } catch { @() }) |
     Sort-Object Name |
     ForEach-Object {
         [ordered]@{
@@ -63,17 +81,29 @@ $services = Get-Service -Name 'bthserv', 'BTAGService', 'BluetoothUserService*' 
     }
 
 $api = [Windows.Foundation.Metadata.ApiInformation]
+$codexCommand = Get-Command codex -ErrorAction SilentlyContinue | Select-Object -First 1
+$codexVersion = $null
+if ($codexCommand) {
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $codexOutput = (& codex --version 2>&1 | Out-String)
+        if ($codexOutput -match 'codex-cli\s+[^\s]+') { $codexVersion = $Matches[0] }
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+}
 $result = [ordered]@{
     schema = 1
     diagnostic_mode = 'read-only'
     machine = [ordered]@{
         expected_role = 'mini-pc-backend'
         name = $env:COMPUTERNAME.ToLowerInvariant()
-        architecture = $os.OSArchitecture
+        architecture = if ($os) { $os.OSArchitecture } elseif ([Environment]::Is64BitOperatingSystem) { '64-bit' } else { '32-bit' }
     }
     os = [ordered]@{
-        caption = $os.Caption
-        version = $os.Version
+        caption = if ($os) { $os.Caption } else { $currentVersion.ProductName }
+        version = if ($os) { $os.Version } else { [Environment]::OSVersion.Version.ToString() }
         build = "{0}.{1}" -f $currentVersion.CurrentBuildNumber, $currentVersion.UBR
         display_version = $currentVersion.DisplayVersion
         edition = $currentVersion.EditionID
@@ -82,7 +112,7 @@ $result = [ordered]@{
         powershell = $PSVersionTable.PSVersion.ToString()
         python = (& python --version 2>&1 | Out-String).Trim()
         git = (& git --version 2>&1 | Out-String).Trim()
-        codex = (& codex --version 2>&1 | Out-String).Trim()
+        codex = $codexVersion
     }
     bluetooth = [ordered]@{
         adapter = [ordered]@{

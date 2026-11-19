@@ -6,20 +6,23 @@
 python -m unittest discover
 ```
 
-MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécute
-désormais 72 tests au lieu d'en annoncer zéro. Le 19 novembre 2026, les 72 tests
-ont réussi sur mini-pc-backend en 31,876 secondes.
+MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécutait
+72 tests au lieu d'en annoncer zéro. MC-HID-AUDIT-001 ajoute quatre gardes ; le
+19 novembre 2026, les **76 tests** ont réussi sur mini-pc-backend en 30,360 s
+avec un chemin temporaire court.
 
 La suite couvre 69 tests historiques d'artefacts, releases, chemins, erreurs,
-verrous et client distant hors ligne, plus trois tests du diagnostic Bluetooth
-en lecture seule. Elle ne crée pas de publicité et n'émet aucun rapport HID.
+verrous et client distant hors ligne, trois tests du diagnostic Bluetooth et
+quatre tests du diagnostic cible/garde anti-publicité. Elle ne crée pas de
+publicité et n'émet aucun rapport HID.
 
 ## Niveaux
 
 | Niveau | But | État |
 |---|---|---|
 | T0 | cohérence Git, syntaxe et documentation | exécuté dans MC-REPRISE-001 |
-| T1 | unités, artefacts, releases, diagnostic Bluetooth | 72 PASS |
+| T1 | unités, artefacts, releases, diagnostics non intrusifs | 76 PASS |
+| T1A | probe GATT non diffusé et diagnostic cible réutilisable | probe exécuté : radio Off / RadioNotAvailable ; cible non exécutée |
 | T2 | service GATT, publicité, bonding et pilote HID | non exécuté, autorisation requise |
 | T3 | API → mouvement/clic/scroll | non développé |
 | T4 | reconnexion, saturation, arrêt d'urgence | non développé |
@@ -36,10 +39,16 @@ Un résultat positif de porte 1 ne peut produire qu'un
 `GO_WITH_RESERVATIONS`. `GO` requiert la reconnaissance comme souris et un
 événement réellement observé sur MonOrdinateur.
 
+Le probe `scripts/bluetooth/probe-gatt-shape.ps1` ne constitue pas la porte 2 :
+il ne lance jamais `StartAdvertising`. Le diagnostic
+`scripts/diagnostics/Inspect-MonOrdinateur.ps1` doit être exécuté dans la session
+interactive de la cible avant le mandat de réalisation.
+
 ## Acceptation MVP
 
 - MonOrdinateur reconnaît une souris Bluetooth native après appairage ;
-- aucun logiciel récepteur propre au projet sur MonOrdinateur ;
+- agent cible limité au retour de position, visible et incapable de recevoir une
+  commande souris ;
 - mouvement relatif, clic gauche/droit et défilement via un client autorisé ;
 - aucune commande invalide ou expirée émise ;
 - reconnexion sans rejeu de commandes obsolètes ;

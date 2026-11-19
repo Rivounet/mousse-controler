@@ -6,8 +6,8 @@
 |---|---|---|---|---|
 | J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | Validé |
 | J1 — Environnement local | Qualifier mini-pc-backend comme machine de développement et d'exécution | Inventaire contrôlé, clone séparé des releases, tests reproductibles | OS/outils/Bluetooth observés, travaux Git préservés, suite locale exécutable | Validé |
-| J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS, diagnostic GATT et prototype HID minimal | MonOrdinateur reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | En cours — GO_WITH_RESERVATIONS |
-| J3 — API fonctionnelle | Transformer des commandes API en événements souris | API locale + moteur de commandes + adaptateur HID | Mouvements, clics et défilement testés de bout en bout | À faire |
+| J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS, diagnostic GATT et prototype HID minimal | MonOrdinateur reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | En cours — audit achevé, GO_WITH_RESERVATIONS |
+| J3 — API et position | Transformer des commandes API en événements souris corrigés par retour réel | API locale + moteur + adaptateur HID + agent position LAN | Positions, mouvements, clics et défilement testés de bout en bout | À faire |
 | J4 — Activation robuste | Automatiser artefact Git, lancement local, état, arrêt et rollback | Scripts versionnés ; accès distant optionnel | Version SHA confirmée, idempotence, erreurs gérées et rollback local testés | En cours |
 | J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | À faire |
 
@@ -20,6 +20,9 @@
   restent nécessaires avant `GO`. En cas d'échec, comparer un module HID externe
   sans achat automatique.
 - **J3 dépend de J2**, mais l'API peut être maquettée et testée indépendamment grâce à un adaptateur simulé.
+- L'audit MC-HID-AUDIT-001 fournit l'architecture, les choix recommandés et le
+  plan d'un mandat exécutoire unique ; le diagnostic réel de MonOrdinateur reste
+  une précondition de ce mandat.
 - **J4** réutilise les scripts de releases consolidés, mais se concentre sur
   l'activation locale. La maintenance distante est documentée séparément.
 - **J5** n'est pas une mise en production automatique.

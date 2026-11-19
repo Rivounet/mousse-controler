@@ -16,15 +16,17 @@ mini-pc-backend
                          │ Bluetooth LE appairé
                          ▼
 MonOrdinateur
-    └── pile Bluetooth + pilote HID natifs → curseur
+    ├── pile Bluetooth + pilote HID natifs → curseur
+    └── agent GetCursorPos ── HTTPS/HMAC sortant ──> retour mini-PC
 ```
 
 ## Rôles des machines
 
 - **mini-pc-backend** : Codex, clone Git, développement, tests, exécution,
   future API et émission HOGP.
-- **MonOrdinateur** : cible Bluetooth HID seulement. Aucun récepteur Mousse-
-  controler, outil de développement ou analyseur d'écran n'y est requis.
+- **MonOrdinateur** : cible Bluetooth HID native et agent utilisateur minimal de
+  position. L'agent ne reçoit ni n'exécute de commande souris et n'analyse pas
+  l'écran.
 - **GitHub** : source versionnée officielle, sans être un mécanisme d'exécution.
 
 ## État qualifié au 19 novembre 2026
@@ -38,6 +40,11 @@ Ces résultats prouvent les préconditions, pas HOGP : aucun service HID n'a ét
 créé, publié ou appairé. Le verdict est `GO_WITH_RESERVATIONS` jusqu'à la
 démonstration décrite dans
 [`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md).
+
+Le probe non diffusé MC-HID-AUDIT-001 a ensuite observé la radio `Off` et
+`GattServiceProvider.CreateAsync = RadioNotAvailable`. Il n'a appelé ni
+publicité, ni appairage, ni notification. Le diagnostic confirme donc que la
+création réelle reste à démontrer, sans invalider les capacités annoncées.
 
 ## Contraintes HOGP à respecter
 
@@ -68,8 +75,12 @@ Commandes prévues : `move(dx, dy)`, `click(button)`, `press`, `release`,
 `scroll(delta)`, `status()` et `stop()`. Les coordonnées absolues, l'analyse de
 l'écran et le contrôle intelligent des applications sont hors périmètre.
 
-L'API est liée à `127.0.0.1` par défaut. Toute ouverture LAN est une décision
-distincte avec authentification, filtrage et limites de débit.
+L'API de commande est liée à `127.0.0.1` par défaut. Un endpoint LAN distinct,
+HTTPS et authentifié, reçoit uniquement les mesures de position émises par la
+cible ; il n'est pas une API de commande.
+
+L'architecture détaillée et la boucle de position sont spécifiées dans
+[`MC-HID-AUDIT-001/ARCHITECTURE.md`](../qualification/MC-HID-AUDIT-001/ARCHITECTURE.md).
 
 ## Alternative en cas de NO-GO
 

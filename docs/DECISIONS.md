@@ -45,6 +45,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 
+| D-028 | 2026-11-19 | Validé par le mandat MC-HID-AUDIT-001, amende D-004 et D-024 sur le rôle cible | Séparer le contrôle en deux canaux : commandes par Bluetooth HID natif ; retour de position réelle par un agent Windows visible sur LAN privé sécurisé | MonOrdinateur n'est plus « uniquement HID » : l'agent lit et publie la position, mais ne reçoit ni n'exécute aucune commande souris |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.

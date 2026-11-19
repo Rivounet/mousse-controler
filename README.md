@@ -14,7 +14,8 @@ API locale protégée.
    Codex, Git, Python, les tests, les diagnostics et la future émission HID y
    résident.
 2. **MonOrdinateur** : cible Windows recevant les événements via ses pilotes HID
-   natifs, sans logiciel récepteur propre au projet.
+   natifs ; un agent utilisateur séparé publiera uniquement la position réelle
+   du curseur sur un canal LAN privé sécurisé.
 3. **GitHub** : source officielle du code et de la documentation. Le clone de
    développement reste séparé des releases et états d'exécution locaux.
 
@@ -27,10 +28,10 @@ du périmètre actuel.
 client autorisé
       │
       ▼
-API locale protégée → validation / file / arrêt → adaptateur HOGP Windows
-                                                    │ Bluetooth LE
-                                                    ▼
-                                  MonOrdinateur + pilote HID natif
+API locale protégée → validation / boucle / arrêt → adaptateur HOGP Windows
+                        ▲                           │ Bluetooth LE
+                        │ HTTPS + HMAC              ▼
+                  agent position ← MonOrdinateur + pilote HID natif
 ```
 
 L'adaptateur HID restera remplaçable et simulable. Les scripts SSH/SFTP et de
@@ -45,19 +46,20 @@ python -m unittest discover
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bluetooth\diagnose.ps1
 ```
 
-La suite locale compte 72 tests. Le diagnostic Bluetooth est strictement en
+La suite locale compte 76 tests. Le diagnostic Bluetooth est strictement en
 lecture seule : il ne crée pas de service GATT et ne démarre aucune publicité.
 
 ## État vérifié
 
 - [x] Dépôt et travaux des PR #1 à #3 consolidés sans fusion.
 - [x] Environnement réel de mini-pc-backend inventorié.
-- [x] 72 tests locaux réussis.
+- [x] 76 tests locaux réussis.
 - [x] Rôle périphérique BLE et API serveur GATT présents.
 - [ ] Service HOGP créé et annoncé sur le matériel réel.
 - [ ] Appairage avec MonOrdinateur et reconnaissance comme souris.
 - [ ] Mouvement HID minimal observé.
 - [ ] API de commandes intégrée et protégée.
+- [ ] Agent de position diagnostiqué puis qualifié sur MonOrdinateur.
 
 Le verdict détaillé est `GO_WITH_RESERVATIONS`. Le prochain essai nécessite une
 autorisation explicite car il rendrait un service GATT visible, créerait un
@@ -67,6 +69,7 @@ appairage et pourrait émettre un événement souris.
 
 - [Reprise et état courant](docs/REPRISE.md)
 - [Rapport MC-REPRISE-001](qualification/MC-REPRISE-001/RAPPORT.md)
+- [Audit et plan MC-HID-AUDIT-001](qualification/MC-HID-AUDIT-001/RAPPORT.md)
 - [Roadmap](docs/ROADMAP.md) et [planning](docs/PLANNING.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Développement et déploiement](docs/DEPLOIEMENT.md)

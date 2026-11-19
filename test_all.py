@@ -6,6 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REMOTE = ROOT / "scripts" / "remote"
 BLUETOOTH = ROOT / "scripts" / "bluetooth"
+DIAGNOSTICS = ROOT / "scripts" / "diagnostics"
 
 
 def load_tests(loader, standard_tests, pattern):
@@ -21,6 +22,11 @@ def load_tests(loader, standard_tests, pattern):
     suite.addTests(
         loader.discover(
             str(BLUETOOTH), pattern="test_*.py", top_level_dir=str(BLUETOOTH)
+        )
+    )
+    suite.addTests(
+        loader.discover(
+            str(DIAGNOSTICS), pattern="test_*.py", top_level_dir=str(DIAGNOSTICS)
         )
     )
     return suite

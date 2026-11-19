@@ -10,8 +10,10 @@ valide pas à elle seule le fonctionnement HID.
   sans fusion dans la branche MC-REPRISE-001.
 - Environnement local : inventorié ; clone officiel dans `source/` ; artefacts
   d'exécution préexistants préservés.
-- Tests : 72 PASS sur mini-pc-backend.
+- Tests : 76 PASS sur mini-pc-backend après ajout des gardes d'audit.
 - Bluetooth : rôles BLE et API GATT favorables ; aucune émission exécutée.
+- Audit deux canaux : architecture et plan prêts ; radio observée Off pendant le
+  probe GATT non diffusé ; cible non accessible et donc non diagnostiquée.
 
 ## Tâches
 
@@ -26,7 +28,8 @@ valide pas à elle seule le fonctionnement HID.
 | MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
 | MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | En attente d'autorisation d'essai |
 | MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | En attente d'autorisation |
-| MC-006 | J3 | Contrat API et moteur de commandes | contrat + adaptateur simulé + tests | À faire après décision J2 |
+| MC-005C | J2/J3 | Auditer HOGP, retour position et boucle précise | `MC-HID-AUDIT-001` | En revue — audit livré |
+| MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | À faire après décision J2 |
 | MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | À faire |
 | MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
 | MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
@@ -39,8 +42,10 @@ création du service GATT/HID, publicité visible, appairage avec MonOrdinateur 
 mouvement relatif minimal. La commande d'arrêt et les effets sont décrits avant
 toute exécution.
 
-Sans cette autorisation, J2 reste en cours et le développement applicatif
-complexe ne démarre pas.
+Avant cet essai, exécuter également le diagnostic cible préparé par
+MC-HID-AUDIT-001 et arbitrer la chaîne de compilation, l'installation visible de
+l'agent et l'éventuelle règle de pare-feu privée. Sans ces autorisations, J2
+reste en cours et le développement applicatif complexe ne démarre pas.
 
 ## Règles de livraison
 

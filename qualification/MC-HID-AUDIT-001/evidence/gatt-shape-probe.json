@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "probe_mode": "ephemeral WinRT object creation; never advertised",
+  "adapter": {
+    "present": true,
+    "peripheral_role_supported": true,
+    "radio_state": "Off"
+  },
+  "hid_service": {"uuid": "00001812-0000-1000-8000-00805f9b34fb", "provider_error": "RadioNotAvailable", "provider_created": false, "advertising_called": false},
+  "battery_service": {"uuid": "0000180f-0000-1000-8000-00805f9b34fb", "provider_error": "RadioNotAvailable", "provider_created": false, "advertising_called": false},
+  "device_information_reserved_service": {"uuid": "0000180a-0000-1000-8000-00805f9b34fb", "provider_error": "RadioNotAvailable", "provider_created": false, "advertising_called": false},
+  "not_executed": ["StartAdvertising", "pairing", "connection", "notification", "HID report"]
+}

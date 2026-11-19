@@ -7,15 +7,16 @@ chat et ne sont pas archivés dans le dépôt.
 ## Objectif
 
 `mini-pc-backend` doit se présenter comme souris Bluetooth HID auprès de
-`MonOrdinateur`, qui utilise exclusivement sa pile et ses pilotes natifs. Une API
-locale protégée commandera ensuite mouvement relatif, clic et défilement.
+`MonOrdinateur`, qui utilise sa pile et ses pilotes natifs. Un agent utilisateur
+séparé y publiera uniquement la position réelle du curseur sur LAN privé ; une
+API locale protégée commandera mouvement, clic et défilement.
 
 ## Organisation actuelle
 
 | Élément | Rôle |
 |---|---|
 | `mini-pc-backend` | Codex, Git, développement, tests, exécution, future API et émission HOGP |
-| `MonOrdinateur` | cible Windows Bluetooth HID, sans agent Mousse-controler |
+| `MonOrdinateur` | cible Windows Bluetooth HID + futur agent visible de position sans commande entrante |
 | GitHub | source officielle et PR Draft |
 
 Le clone Git est dans le sous-dossier local `source/`, séparé des releases,
@@ -39,9 +40,9 @@ ouvertes en Draft. #1 est indépendante ; #3 est empilée sur #2. Leurs cinq
 commits utiles sont conservés dans la branche de consolidation issue de `main`,
 sans fusion ni réécriture des branches historiques.
 
-`python -m unittest discover` exécute **72 tests**, tous réussis sur
-mini-pc-backend. La découverte racine qui annonçait auparavant zéro test est
-corrigée.
+`python -m unittest discover` exécute désormais **76 tests**, tous réussis sur
+mini-pc-backend (72 à la consolidation, puis quatre gardes d'audit). La
+découverte racine qui annonçait auparavant zéro test est corrigée.
 
 ### Bluetooth HID
 
@@ -54,6 +55,12 @@ spécification Bluetooth SIG rendent une implémentation HOGP crédible.
 publicité démarrée, aucun appairage effectué et aucun événement HID émis. Ces
 étapes sont indispensables avant `GO`.
 
+MC-HID-AUDIT-001 a défini l'architecture deux canaux et le plan de réalisation.
+Son probe GATT non diffusé a trouvé la radio `Off` et a reçu
+`RadioNotAvailable` ; aucune opération sensible n'a été exécutée. MonOrdinateur
+n'était pas accessible : son script de diagnostic est prêt, mais ses
+caractéristiques restent inconnues.
+
 ## Réalisé, simulé, non qualifié
 
 | Domaine | État |
@@ -61,7 +68,7 @@ publicité démarrée, aucun appairage effectué et aucun événement HID émis.
 | Inventaire local et diagnostic Bluetooth | Réalisé en lecture seule |
 | Consolidation des trois PR historiques | Réalisée localement, publication à finaliser |
 | Tests artefacts/releases/distant hors ligne | 69 PASS |
-| Tests du diagnostic Bluetooth | 3 PASS |
+| Tests diagnostics Bluetooth/cible et garde anti-publicité | 7 PASS |
 | Release locale et rollback | Modèle et tests présents ; activation applicative réelle à requalifier |
 | SSH/SFTP | Qualifié historiquement, non relancé dans la nouvelle organisation |
 | Service HOGP, publicité, bonding, mouvement | Non exécutés — autorisation requise |
@@ -74,11 +81,13 @@ Décider l'autorisation du
 prévoit un prototype au premier plan, arrêt par `Ctrl+C` avec
 `StopAdvertising()`, appairage volontaire et mouvement de cinq pixels dans une
 surface sûre. Sans autorisation, ne pas passer au développement complexe de
-l'API.
+l'API. Exécuter auparavant le diagnostic cible et arbitrer les décisions de
+[`MC-HID-AUDIT-001`](../qualification/MC-HID-AUDIT-001/DECISIONS.md).
 
 ## Sources de vérité
 
 - [Rapport MC-REPRISE-001](../qualification/MC-REPRISE-001/RAPPORT.md)
+- [Audit MC-HID-AUDIT-001](../qualification/MC-HID-AUDIT-001/RAPPORT.md)
 - [Roadmap](ROADMAP.md) et [planning](PLANNING.md)
 - [Architecture](ARCHITECTURE.md)
 - [Déploiement local](DEPLOIEMENT.md)
