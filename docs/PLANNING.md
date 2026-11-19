@@ -6,7 +6,7 @@ Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire
 
 | ID | Jalon | Travail | Responsable d'exécution | Livrable/preuve | État |
 |---|---|---|---|---|---|
-| MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | En cours |
+| MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
 | MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport de diagnostic reproductible | À faire |
 | MC-003 | J1 | Qualifier le canal de déploiement PC → mini-PC | Codex Desktop | Test de connexion/transfert et collecte de logs | À faire |
 | MC-004 | J2 | Mesurer le rôle périphérique BLE/HID disponible sur le mini-PC | Codex Desktop | Matrice matériel/OS, résultats et limites | À faire |
