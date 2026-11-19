@@ -21,6 +21,10 @@ Un appairage Bluetooth initial reste nécessaire. Le protocole exact (BLE HID ov
 - Simplicité : jalons plutôt que dates fixes, GitHub Issues pour les tâches, changements de code examinés avant fusion.
 - Aucun pilote constructeur particulier n'est requis par principe : viser l'interface HID native de Windows.
 
+## Reprendre le projet
+
+**[REPRISE.md — état, décisions, responsabilités et prochaine action](docs/REPRISE.md)** est le point d'entrée d'une nouvelle session ChatGPT ou Codex Desktop. Le premier mandat est [MC-INIT-001](docs/MANDATS/MC-INIT-001.md).
+
 ## Documentation
 
 - [Roadmap par jalons](docs/ROADMAP.md)
@@ -45,4 +49,4 @@ Voir [PLANNING.md](docs/PLANNING.md) pour les prochaines tâches et leurs dépen
 
 ## Gouvernance légère
 
-**Codex Desktop** : implémentation, tests et déploiements techniques, avec preuves. **ChatGPT** : responsabilité de la documentation de référence, de la revue de code et des critères de validation. **Utilisateur** : arbitrages de périmètre et autorisations d'opérations sensibles. Aucune fusion ou mise en production n'est implicite.
+**Codex Desktop** : implémentation, tests et déploiements techniques, avec preuves. **ChatGPT** : rédaction des mandats Codex, responsabilité de la documentation de référence, revue de code, supervision Git/GitHub et critères de validation. **Utilisateur** : arbitrages de périmètre et autorisations d'opérations sensibles. Aucune fusion ou mise en production n'est implicite.
