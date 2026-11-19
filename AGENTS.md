@@ -45,11 +45,10 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Tests / revue : `docs/TESTS.md`
 - Décisions : `docs/DECISIONS.md`
 - Reprise : `docs/REPRISE.md`
-- Mandat initial : `docs/MANDATS/MC-INIT-001.md`
 
 ## Mandats, revue et GitHub
 
-- **ChatGPT fournit les mandats Codex** avec objectifs, périmètre autorisé, critères de validation, risques et format des preuves.
+- **ChatGPT fournit intégralement les mandats Codex dans la conversation**, avec objectifs, périmètre autorisé, critères de validation, risques et format des preuves. **Les mandats ne sont pas publiés ni archivés dans GitHub.** Les décisions, états de jalons, rapports, preuves et revues restent versionnés.
 - **ChatGPT supervise Git/GitHub** : état de `main`, branches, PR, SHA, changements préexistants, cohérence local/distant et absence de fusion implicite.
 - Codex exécute le mandat dans le périmètre autorisé et publie une PR **Draft** pour les changements applicatifs, sans fusion ; il fournit à ChatGPT les traces de validation.
 - Démarrage *from scratch* : commencer par vérifier le clone Git local et les environnements ; ne pas supposer que le mini-PC ou une connexion distante sont prêts.
