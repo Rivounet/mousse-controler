@@ -40,7 +40,7 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 **Acquis :** dépôt GitHub initialisé avec README, consignes Codex, roadmap, planning, architecture, procédure de déploiement, spécification d'accès distant, stratégie de tests, registre des décisions et ce document de reprise.
 
-**Qualifié selon le rapport MC-INIT-001 (preuves individuelles non jointes) :** Windows 11 Famille sur le poste de développement, Windows 11 Pro sur mini-pc-backend ; accès SSH par clé et listing SFTP réussis ; adaptateur Realtek sur les deux PC et indicateur WinRT de rôle périphérique BLE positif. Le mini-PC dispose d'un compte SSH administrateur : privilégier les droits minimaux pour les opérations courantes.
+**Qualifié selon le rapport et les preuves expurgées de la [PR #1](https://github.com/Rivounet/mousse-controler/pull/1) (examinés par ChatGPT) :** Windows 11 Famille sur le poste de développement, Windows 11 Pro sur mini-pc-backend ; accès SSH par clé et listing SFTP réussis ; adaptateur Realtek sur les deux PC et indicateur WinRT de rôle périphérique BLE positif. Le mini-PC dispose d'un compte SSH administrateur : privilégier les droits minimaux pour les opérations courantes.
 
 **Non démontré :** transfert SFTP aller-retour avec hash, droits effectifs d'écriture dans la racine dédiée, scripts de synchronisation/déploiement, arrêt et rollback, émission GATT/HID, appairage et mouvement de souris. La compatibilité HID reste ouverte. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
 
@@ -50,9 +50,9 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 ## 6. Prochaine action
 
-**MC-INIT-001** : exécuté selon le rapport du 19 novembre 2026, [revue ChatGPT](REVUES/MC-INIT-001.md) = **PASS_WITH_RESERVATIONS** sur le rapport seul ; fichiers de preuves individuels encore à examiner. **J1 reste ouvert.**
+**MC-INIT-001** : exécuté selon le rapport du 19 novembre 2026 ; [revue ChatGPT](REVUES/MC-INIT-001.md) = **PASS_WITH_RESERVATIONS** après lecture des preuves publiées. **Publication MC-INIT-001 : PASS**, PR #1 Draft au SHA `8886cab1230039add8e2712a5114c4e312c0f49b`, sans fusion. **J1 reste ouvert.**
 
-**Prochaine étape : MC-INIT-002 à préparer après revue des preuves** : transfert réversible d'un fichier témoin dans une racine dédiée autorisée, vérification des hash, gestion des erreurs, contexte PowerShell, collecte de logs et arrêt d'un processus de test sans HID. Pas de déploiement permanent ni de modification système implicite.
+**Prochaine étape : [MC-INIT-002](MANDATS/MC-INIT-002.md), mandat préparé ; aucune écriture distante avant autorisation explicite** : transfert réversible d'un fichier témoin dans une racine dédiée autorisée, vérification des hash, gestion des erreurs, contexte PowerShell, collecte de logs et arrêt d'un processus de test sans HID. Pas de déploiement permanent ni de modification système implicite.
 
 ## 7. Où retrouver les détails ?
 
@@ -70,4 +70,4 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 ## Publication des preuves et revues
 
-**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves restantes doivent être publiées par Codex dans une PR dédiée après expurgation.
+**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 ont été publiées et relues dans la PR #1 ; toute nouvelle preuve suit le même processus.
