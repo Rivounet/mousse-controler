@@ -2,7 +2,7 @@
 
 **Objet : qualifier et commencer à outiller le canal de synchronisation/déploiement distant, sans HID.**
 **Jalon : J1 ; puis préparation J4.**
-**Statut : prêt pour préparation/diagnostics en lecture seule ; les essais écrivant sur mini-pc-backend sont conditionnés à une autorisation explicite de l'utilisateur.**
+**Statut : exécuté ; [revue indépendante](../REVUES/MC-INIT-002.md) PASS_WITH_RESERVATIONS ; [PR #2](https://github.com/Rivounet/mousse-controler/pull/2) Draft, non fusionnée. La qualification du témoin a été autorisée lors de l'exécution ; cette autorisation n'est pas étendue aux mandats futurs.**
 
 ## Prérequis
 
