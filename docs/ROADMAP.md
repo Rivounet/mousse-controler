@@ -4,7 +4,7 @@
 
 | Jalon | Finalité | Livrable attendu | Critère de sortie | État |
 |---|---|---|---|---|
-| J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | En cours |
+| J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | Validé |
 | J1 — Environnement | Fiabiliser le cycle PC Windows → mini-pc-backend | Inventaire contrôlé, accès distant sécurisé et premier transfert réversible | Exécution et collecte de logs démontrées sur mini-PC | À faire |
 | J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS et prototype HID minimal | PC Windows reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | À faire |
 | J3 — API fonctionnelle | Transformer des commandes API en événements souris | API locale + moteur de commandes + adaptateur HID | Mouvements, clics et défilement testés de bout en bout | À faire |
