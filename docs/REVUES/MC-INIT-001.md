@@ -1,11 +1,11 @@
 # Revue MC-INIT-001 — 19 novembre 2026
 
-**Verdict : PASS_WITH_RESERVATIONS sur le rapport transmis ; vérification indépendante des fichiers de preuves non réalisée.**
+**Verdict final : PASS_WITH_RESERVATIONS pour MC-INIT-001 (qualification initiale), PASS pour la publication des preuves par la PR #1.**
 **J1 : partiellement qualifié, non validé.**
 
 ## Périmètre et source
 
-Source examinée : `MC-INIT-001-RAPPORT.txt`, fourni dans la conversation ChatGPT le 19 novembre 2026, 140 lignes. Les preuves annoncées par Codex (inventaires, scripts diagnostics, captures WinRT, vérifications SSH/SFTP, état Git) **ne sont pas jointes** à cette revue ; les résultats ci-dessous sont des constats rapportés, pas une réexécution indépendante.
+Sources : rapport initial fourni dans la conversation, puis [PR #1](https://github.com/Rivounet/mousse-controler/pull/1) au SHA `8886cab1230039add8e2712a5114c4e312c0f49b` : 10 fichiers de rapport, manifeste et preuves expurgées directement consultés dans GitHub. **La lecture des preuves est indépendante de leur production**, sans réexécution des diagnostics sur les machines. Les sorties brutes exclues pour confidentialité restent non auditables depuis GitHub.
 
 ## Constats du rapport
 
@@ -19,7 +19,7 @@ Source examinée : `MC-INIT-001-RAPPORT.txt`, fourni dans la conversation ChatGP
 
 ## Réserves et risques
 
-1. **Preuves non relues** : joindre les fichiers de diagnostic pertinents (expurgés des métadonnées sensibles) pour confirmer les résultats et lever la réserve de traçabilité.
+1. **Preuves relues dans GitHub** : dix fichiers et leur manifeste inspectés, fichiers JSON analysables, neuf empreintes SHA-256 concordantes après restitution des fins de ligne Windows CRLF lors du contrôle textuel. Les originaux expurgés et les tests matériels n'ont pas été réexécutés ; la confidentialité ne peut pas être certifiée exhaustivement.
 2. **J1 incomplet** : transfert SFTP aller-retour, empreintes, répertoire dédié et droits d'écriture, arrêt d'un processus test, reprise et rollback non exécutés.
 3. **Privilèges** : la session SSH distante est administrateur ; préférer les droits minimaux pour le déploiement courant.
 4. **Contexte Windows** : PowerShell 5.1 distant, `cmd.exe` par défaut ; gestion des chemins, encodage UTF-8 et erreurs à qualifier.
@@ -29,8 +29,8 @@ Source examinée : `MC-INIT-001-RAPPORT.txt`, fourni dans la conversation ChatGP
 
 ## Décision et suite
 
-- **MC-INIT-001** : travail de diagnostic déclaré réalisé dans le périmètre ; **PASS_WITH_RESERVATIONS** sur rapport.
+- **MC-INIT-001** : **PASS_WITH_RESERVATIONS** après examen du rapport et des preuves publiées. **MC-INIT-001-PUBLICATION** : **PASS** pour la publication documentaire. La [PR #1](https://github.com/Rivounet/mousse-controler/pull/1) est **Draft**, non fusionnée ; revue COMMENT publiée sur GitHub, sans fusion.
 - **J1** : non clos. **J2** : non qualifié.
 - **Aucune autorisation implicite** d'installer un service, modifier SSH/pare-feu, effectuer un appairage Bluetooth, créer une API ou fusionner une PR.
-- Préparer **MC-INIT-002** après examen des preuves : tester sur une racine dédiée explicitement autorisée un fichier témoin, transfert aller-retour avec SHA-256, nettoyage borné, codes d'erreur, exécution et arrêt d'un processus sans HID, récupération des logs, idempotence et comportements en échec. Conserver les changements techniques en branche/PR Draft et préserver `main`.
-- Mettre à jour cette revue si les preuves sont reçues ; séparer alors les résultats vérifiés des déclarations du rapport.
+- **[MC-INIT-002](../MANDATS/MC-INIT-002.md)** préparé : qualification du canal distant, scripts et transfert témoin sous contrôle. **Point d'arrêt : aucune écriture ni création sur mini-pc-backend sans autorisation explicite de l'utilisateur.** Conserver les changements techniques en branche/PR Draft et préserver `main`.
+- Références Git historiques : `main` local en retard après MC-INIT-001, puis fast-forward propre rapporté dans `evidence/git-publication.txt` vers `86ed1088bc1e2ae7984c4c4ccfd0bb0af8755b02`. À l'examen, la base de PR #1 correspond au SHA `86ed1088...`, la tête à `8886cab...`. Ne pas interpréter ces états historiques comme un état local courant.
