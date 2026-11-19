@@ -2,6 +2,8 @@
 
 Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire → En cours → En revue → Validé** ; **Bloqué** indique un obstacle documenté. Un passage à *Validé* nécessite une preuve ou une revue adaptée.
 
+**Mandat actif préparé :** [MC-INIT-001 — démarrage from scratch](MANDATS/MC-INIT-001.md). Il n'est pas encore déclaré exécuté. Voir [REPRISE.md](REPRISE.md).
+
 ## Prochaines tâches (ordre recommandé)
 
 | ID | Jalon | Travail | Responsable d'exécution | Livrable/preuve | État |
