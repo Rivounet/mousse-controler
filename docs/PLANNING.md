@@ -8,18 +8,20 @@ Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire
 |---|---|---|---|---|---|
 | MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
 | MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport de diagnostic reproductible | À faire |
-| MC-003 | J1 | Qualifier le canal de déploiement PC → mini-PC | Codex Desktop | Test de connexion/transfert et collecte de logs | À faire |
+| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | Diagnostic sans modification, test de connexion/transfert et collecte de logs | À faire |
+| MC-003A | J1 | Qualifier la copie Git distante et le modèle de synchronisation par SHA | Codex Desktop | Preuve de synchronisation non destructive, contrôle d'état Git et manifeste version | À faire |
+| MC-003B | J1/J4 | Concevoir puis implémenter les scripts distants (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | Scripts, configuration externe et tests d'échec/idempotence | À faire |
 | MC-004 | J2 | Mesurer le rôle périphérique BLE/HID disponible sur le mini-PC | Codex Desktop | Matrice matériel/OS, résultats et limites | À faire |
 | MC-005 | J2 | Tester l'appairage et un mouvement HID minimal | Codex Desktop | Démonstration + traces côté émetteur/cible | À faire |
 | MC-006 | J3 | Définir le contrat API et le moteur de commandes | Codex Desktop | Contrat versionné, tests automatisés | À faire |
 | MC-007 | J3 | Intégrer le Bluetooth HID et les sécurités | Codex Desktop | Démo API → souris sur PC Windows | À faire |
-| MC-008 | J4 | Automatiser l'installation, démarrage, arrêt et rollback | Codex Desktop | Procédure testée sur mini-PC | À faire |
+| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves | À faire |
 | MC-009 | J5 | Qualifier robustesse, déconnexions, sécurité, non-régression | Codex Desktop | Rapport et preuves | À faire |
 | MC-010 | J5 | Effectuer la revue finale du code et de la documentation | ChatGPT | Verdict motivé + réserves | À faire |
 
 ## Définition de « terminé »
 
-Une tâche technique est terminée quand ses changements sont localisés, ses tests et leurs résultats sont rapportés, et son comportement est vérifié sur **mini-pc-backend** quand pertinent. Le code ne passe pas en `main` sans revue de ChatGPT et décision de fusion explicite. Une tâche documentaire n'est terminée qu'après publication GitHub et vérification des liens/cohérences.
+Une tâche technique est terminée quand ses changements sont localisés, ses tests et leurs résultats sont rapportés, et son comportement est vérifié sur **mini-pc-backend** quand pertinent. Toute livraison distante doit identifier le **SHA demandé et le SHA réellement déployé** ; aucun écrasement de données du clone distant n'est acceptable. Le code ne passe pas en `main` sans revue de ChatGPT et décision de fusion explicite. Une tâche documentaire n'est terminée qu'après publication GitHub et vérification des liens/cohérences.
 
 ## Cadence de travail
 
