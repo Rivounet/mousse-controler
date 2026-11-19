@@ -35,6 +35,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-022 | 2026-11-19 | Validé | Une livraison ou une nouvelle PR Codex ne déclenche pas automatiquement de revue de code exhaustive par ChatGPT | Suivi Git/GitHub et des jalons courant ; revue approfondie seulement sur demande explicite de l'utilisateur ou à un point de contrôle préalablement convenu ; fusion toujours soumise à décision explicite |
 
+| D-023 | 2026-11-19 | Validé | Mandats Codex orientés vers un objectif fonctionnel complet et vérifiable, autonomie technique encadrée plutôt que micro-mandats | Codex conçoit, implémente, teste et corrige dans le même mandat ; points d'étape significatifs ; arrêt seulement pour décisions structurantes ou opérations sensibles ; PR Draft cohérentes, revues sur demande |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
