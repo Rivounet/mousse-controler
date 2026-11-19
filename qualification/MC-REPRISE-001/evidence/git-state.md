@@ -10,6 +10,7 @@
   été créé dans son sous-dossier `source/`, sans modifier les artefacts locaux.
 - La branche `feat/mc-reprise-001-consolidation` part de `origin/main` et
   conserve les cinq commits utiles des trois PR par cherry-pick non destructif.
+- PR #4 : Draft créée depuis cette branche vers `main`, sans fusion automatique.
 
 Commandes de lecture utilisées : `git ls-remote`, `git merge-base`,
 `git rev-list`, API publique GitHub des PR. Aucune branche ou PR existante n'a

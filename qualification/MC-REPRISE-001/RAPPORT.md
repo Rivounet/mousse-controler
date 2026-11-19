@@ -99,5 +99,8 @@ conserver le verdict actuel.
 
 ## 13. Publication
 
-Branche : `feat/mc-reprise-001-consolidation`. L'URL de PR et le SHA final sont
-à renseigner après commit et publication. Aucune fusion n'est incluse.
+Branche : `feat/mc-reprise-001-consolidation`. PR Draft :
+<https://github.com/Rivounet/mousse-controler/pull/4>. Commit principal de
+livraison : `f40344d7acaea7ee5fd034c517a7c012bca5341a`. Le commit de métadonnées
+qui ajoute cette référence est rapporté dans la conversation de livraison et à
+la tête de la PR. Aucune fusion n'est incluse.
