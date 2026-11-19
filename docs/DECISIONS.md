@@ -37,15 +37,13 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-023 | 2026-11-19 | Validé | Mandats Codex orientés vers un objectif fonctionnel complet et vérifiable, autonomie technique encadrée plutôt que micro-mandats | Codex conçoit, implémente, teste et corrige dans le même mandat ; points d'étape significatifs ; arrêt seulement pour décisions structurantes ou opérations sensibles ; PR Draft cohérentes, revues sur demande |
 
-| D-024 | 2026-11-19 | Validé, remplace D-002 et D-003 pour l'organisation courante | Codex, Git, développement, tests et exécution résident directement sur `mini-pc-backend` ; `MonOrdinateur` est uniquement la cible HID | Suppression du transfert distant dans le cycle quotidien ; preuves Bluetooth toujours observées sur les deux machines |
+| D-024 | 2026-11-19 | Validé, remplace D-002 et D-003 pour l'organisation courante et amende D-004 sur le rôle cible | Codex, Git, développement, tests et exécution résident directement sur `mini-pc-backend` ; commandes vers `MonOrdinateur` par Bluetooth HID, retour de position réelle par un canal LAN privé sécurisé distinct | Agent Windows visible limité à `GetCursorPos` et à la transmission horodatée multi-écrans/DPI ; aucune réception/exécution de commande souris ; documenter installation, arrêt, fraîcheur et protections réseau |
 
 | D-025 | 2026-11-19 | Validé | Conserver les composants SSH/SFTP et releases sans les supprimer, en les classant comme maintenance/rollback secondaires | Le travail des PR #2 et #3 est préservé ; il ne bloque pas J2 et devra être requalifié avant un nouvel usage distant réel |
 
 | D-026 | 2026-11-19 | Qualification partielle | Le Realtek et Windows exposent rôle périphérique BLE, serveur GATT, notifications, publicité et appairage ; verdict HOGP `GO_WITH_RESERVATIONS` | `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels ; protocole soumis à autorisation |
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
-
-| D-028 | 2026-11-19 | Validé par le mandat MC-HID-AUDIT-001, amende D-004 et D-024 sur le rôle cible | Séparer le contrôle en deux canaux : commandes par Bluetooth HID natif ; retour de position réelle par un agent Windows visible sur LAN privé sécurisé | MonOrdinateur n'est plus « uniquement HID » : l'agent lit et publie la position, mais ne reçoit ni n'exécute aucune commande souris |
 
 ## En cas de changement
 
