@@ -2,15 +2,15 @@
 
 Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire → En cours → En revue → Validé** ; **Bloqué** indique un obstacle documenté. Un passage à *Validé* nécessite une preuve ou une revue adaptée.
 
-**Mandat actif préparé :** [MC-INIT-001 — démarrage from scratch](MANDATS/MC-INIT-001.md). Il n'est pas encore déclaré exécuté. Voir [REPRISE.md](REPRISE.md).
+**MC-INIT-001 :** exécuté selon le rapport ; [revue](REVUES/MC-INIT-001.md) PASS_WITH_RESERVATIONS (preuves individuelles à examiner). **J1 reste ouvert** ; mandat MC-INIT-002 à cadrer pour transfert réversible et qualification du cycle distant. Voir [REPRISE.md](REPRISE.md).
 
 ## Prochaines tâches (ordre recommandé)
 
 | ID | Jalon | Travail | Responsable d'exécution | Livrable/preuve | État |
 |---|---|---|---|---|---|
 | MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
-| MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport de diagnostic reproductible | À faire |
-| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | Diagnostic sans modification, test de connexion/transfert et collecte de logs | À faire |
+| MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport MC-INIT-001 fourni ; preuves individuelles non examinées | En revue |
+| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | SSH et listing SFTP déclarés PASS ; transfert aller-retour et droits d'écriture à tester | En cours |
 | MC-003A | J1 | Qualifier la copie Git distante et le modèle de synchronisation par SHA | Codex Desktop | Preuve de synchronisation non destructive, contrôle d'état Git et manifeste version | À faire |
 | MC-003B | J1/J4 | Concevoir puis implémenter les scripts distants (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | Scripts, configuration externe et tests d'échec/idempotence | À faire |
 | MC-004 | J2 | Mesurer le rôle périphérique BLE/HID disponible sur le mini-PC | Codex Desktop | Matrice matériel/OS, résultats et limites | À faire |
