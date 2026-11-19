@@ -44,3 +44,11 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Accès distant et synchronisation : `docs/ACCES-DISTANT-ET-SYNCHRONISATION.md`
 - Tests / revue : `docs/TESTS.md`
 - Décisions : `docs/DECISIONS.md`
+
+## Mandats, revue et GitHub
+
+- **ChatGPT fournit les mandats Codex** avec objectifs, périmètre autorisé, critères de validation, risques et format des preuves.
+- **ChatGPT supervise Git/GitHub** : état de `main`, branches, PR, SHA, changements préexistants, cohérence local/distant et absence de fusion implicite.
+- Codex exécute le mandat dans le périmètre autorisé et publie une PR **Draft** pour les changements applicatifs, sans fusion ; il fournit à ChatGPT les traces de validation.
+- Démarrage *from scratch* : commencer par vérifier le clone Git local et les environnements ; ne pas supposer que le mini-PC ou une connexion distante sont prêts.
+- Aucun `push --force`, rebase destructif, nettoyage irréversible, reset de travail non committé, modification de `main` ni fusion sans mandat explicite.
