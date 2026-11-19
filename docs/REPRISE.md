@@ -24,7 +24,7 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 | **ChatGPT** | Définit les mandats Codex, tient la documentation et les décisions à jour dans GitHub, pilote la roadmap et le planning, supervise Git/GitHub, effectue les revues indépendantes de code et de preuves |
 | **Codex Desktop** | Exécute les mandats, développe localement, prépare les branches et PR, effectue diagnostics, transferts/déploiements autorisés, tests distants et comptes rendus |
 
-**Cycle :** mandat ChatGPT → travaux Codex → rapport, SHA, diff/PR et preuves → revue ChatGPT (PASS / PASS_WITH_RESERVATIONS / NO-GO) → décision utilisateur si nécessaire → mise à jour documentaire. Ne jamais présenter une validation de ChatGPT comme une exécution ou une supervision continue automatique : elle intervient à la demande, sur preuves consultables.
+**Cycle :** mandat ChatGPT **fourni dans le chat, non archivé dans GitHub** → travaux Codex → rapport, SHA, diff/PR et preuves sur GitHub → revue ChatGPT (PASS / PASS_WITH_RESERVATIONS / NO-GO) → décision utilisateur si nécessaire → mise à jour documentaire. Ne jamais présenter une validation de ChatGPT comme une exécution ou une supervision continue automatique : elle intervient à la demande, sur preuves consultables.
 
 ## 4. Principes de gestion
 
@@ -56,7 +56,7 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 **MC-INIT-002** : terminé avec réserves, [revue](REVUES/MC-INIT-002.md) publiée après examen des 14 fichiers de la PR #2 au SHA `cf3c37200541d3291f6b506731e14ce020bcf630`. **PR #1 et PR #2 sont en Draft, non fusionnées.**
 
-**Prochaine étape :** décider de l'intégration séparée des PR #1 et #2 avant la réalisation de la chaîne de release. Préparer [MC-INIT-003](MANDATS/MC-INIT-003.md) : sync par SHA, staging, version active, arrêt et rollback sous tests contrôlés, sans HID et sans modification système implicite.
+**Prochaine étape :** décider de l'intégration séparée des PR #1 et #2 avant la réalisation de la chaîne de release. Mandat MC-INIT-003 à fournir intégralement dans le chat, sans fichier GitHub : sync par SHA, staging, version active, arrêt et rollback sous tests contrôlés, sans HID et sans modification système implicite.
 
 ## 7. Où retrouver les détails ?
 
@@ -71,6 +71,10 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 ## 8. Règle de mise à jour
 
 À chaque jalon ou décision structurante, **ChatGPT met à jour** les documents concernés et résume ici : état réellement vérifié, prochaine action, blocages et références PR/SHA utiles. Ne pas dupliquer l'intégralité des rapports, pointer vers leurs preuves.
+
+## Règle des mandats et publication des preuves
+
+**Mandats Codex :** uniquement dans le chat, en version intégrale et directement copiable. Le dépôt ne contient aucun fichier de mandat ; la reprise s'appuie sur les décisions, jalons, revues et livrables, sans copier les consignes opérationnelles de mandat dans GitHub.
 
 ## Publication des preuves et revues
 
