@@ -1,27 +1,18 @@
 # Planning opérationnel
 
-Progression sans échéances fixes : **À faire → En cours → En revue → Validé**.
-Un état validé exige une preuve adaptée ; une capacité déclarée par Windows ne
-valide pas à elle seule le fonctionnement HID.
+**Statuts :** À faire / En cours / En revue / Validé / Bloqué. Le mandat global en cours de cadrage est **MC-HID-EXEC-001** ; ne pas confondre spécification et fonctionnalité réalisée.
 
-## Situation consolidée
+## État de référence
 
-- MC-INIT-001 à 003 : travaux préservés dans les PR Draft #1 à #3 et réunis
-  sans fusion dans la branche MC-REPRISE-001.
-- Environnement local : inventorié ; clone officiel dans `source/` ; artefacts
-  d'exécution préexistants préservés.
-- Tests : 79 PASS sur mini-pc-backend après ajout des gardes d'audit.
-- Bluetooth : rôles BLE et API GATT favorables ; aucune émission exécutée.
-- Audit deux canaux : architecture et plan prêts ; radio observée Off pendant le
-  probe GATT non diffusé ; cible non accessible et donc non diagnostiquée.
-- Audit complémentaire : PnP/pilote/services sains ; `RadioNotAvailable` causé
-  uniquement par la radio logicielle Off pour HID/Battery. Créations GATT
-  minimales réussies sans publicité, radio restaurée Off. MonOrdinateur reste
-  `INCOMPLETE` faute de canal natif existant depuis le mini-PC.
+- PR #4 fusionnée dans main ; PR #1–#3 clôturées sans fusion directe.
+- PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
+- Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
+- Aucun appairage HOGP, mouvement souris depuis mini-PC ni retour LAN intégré démontré.
+- MC-HID-EXEC-001 : 103 PASS, agent réel et retour HTTPS/HMAC qualifiés ; publicité packagée et HID réel bloqués par l'approbation du certificat MSIX.
 
-## Tâches
+## Travaux structurants
 
-| ID | Jalon | Travail | Livrable / preuve | État |
+| ID | Jalon | Travail | Preuve attendue | État |
 |---|---|---|---|---|
 | MC-001 | J0 | Documentation de référence | documents du dépôt | Validé |
 | MC-002 | J1 | Inventorier mini-pc-backend sans modification | `MC-REPRISE-001/evidence/environment.json` | Validé |
@@ -40,7 +31,9 @@ valide pas à elle seule le fonctionnement HID.
 | MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
 | MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
 
-## Prochaine décision
+**Mandat :** Codex sur mini-pc-backend, autorisé à coordonner les deux machines dans les limites du mandat exécutoire ; les modifications sensibles, l'accès distant et l'appairage restent supervisables. Une seule PR Draft cohérente, sans fusion automatique. Ne pas enregistrer le texte du mandat dans GitHub.
+
+## Prochaine porte
 
 Approuver ou refuser l'ancre de confiance de développement limitée à
 `CurrentUser` nécessaire à l'installation du MSIX HOGP. La cible, l'agent
@@ -55,3 +48,7 @@ et preuves expurgées, puis s'arrête avant fusion. Les mandats restent dans le
 chat (D-021), une livraison ne déclenche pas automatiquement une revue exhaustive
 (D-022) et l'autonomie technique reste bornée par les opérations sensibles
 (D-023).
+
+## Critères proposés (non mesurés)
+
+Erreur finale ≤ 2 px sur trois mesures, P95 ≤ 4 px, ≥ 99 % des cibles sous 2 s, refus d'une mesure > 150 ms, arrêt cible ≤ 250 ms. Les seuils sont à valider par essais réels et peuvent nécessiter arbitrage motivé.

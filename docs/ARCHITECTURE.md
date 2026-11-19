@@ -1,63 +1,43 @@
-# Architecture technique
+# Architecture technique — cible MC-HID-EXEC-001
 
-## Parcours cible
+## Deux machines, deux canaux
 
 ```text
-Client API autorisé
-    │ HTTP local par défaut
-    ▼
 mini-pc-backend
-    ├── API et authentification
-    ├── validation, file bornée et expiration
-    ├── arrêt immédiat et journalisation expurgée
-    └── interface HidAdapter
-          ├── SimulatedHidAdapter (tests)
-          └── WindowsHogpAdapter (production)
-                         │ Bluetooth LE appairé
-                         ▼
-MonOrdinateur
-    ├── pile Bluetooth + pilote HID natifs → curseur
-    └── agent GetCursorPos ── HTTPS/HMAC sortant ──> retour mini-PC
+  CommandGateway (authentification/TTL/idempotence)
+    → SequenceEngine (zones, modes d'attente, pause/reprise/arrêt)
+    → TrajectoryEngine (chemin courbe, vitesse, variations bornées)
+    → PositionController (mesure fraîche, correction, limites)
+    → IHogpTransport / WindowsHogpEngine (C++20/C++/WinRT)
+           │ Bluetooth LE HOGP
+           ▼
+MonOrdinateur : pile Bluetooth et souris HID natives Windows
+  PositionAgent visible (C# .NET Framework 4.8, session utilisateur)
+           │ GetCursorPos / écrans / session / horodatage
+           └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
 ```
 
-## Rôles des machines
+Codex travaille **directement sur mini-pc-backend** et pilote les interventions autorisées sur MonOrdinateur via un accès distant authentifié à établir ou à qualifier ; un accès réseau distant n'assure pas à lui seul l'accès à la session graphique interactive.
 
-- **mini-pc-backend** : Codex, clone Git, développement, tests, exécution,
-  future API et émission HOGP.
-- **MonOrdinateur** : cible Bluetooth HID native et agent utilisateur minimal de
-  position. L'agent ne reçoit ni n'exécute de commande souris et n'analyse pas
-  l'écran.
-- **GitHub** : source versionnée officielle, sans être un mécanisme d'exécution.
+## Contrats et limites
 
-## État qualifié au 19 novembre 2026
+- **Zones** : rectangle (x,y,largeur,hauteur), cercle (centre,rayon), polygone (sommets). Validation géométrique, écrans virtuels et coordonnées signées. Point cible tiré aléatoirement dans la zone, graine configurable en test.
+- **Séquences** : A→B→C… ; modes après arrivée : temporisation configurable ou commande explicite ; les deux peuvent coexister. États `IDLE`, `MOVING`, `ARRIVED`, `WAITING`, `PAUSED`, `COMPLETED`, `STOPPED`, `ERROR`.
+- **Trajectoires** : courbes et points intermédiaires, profils d'accélération/décélération et vitesse variable, micro-variations bornées pendant le mouvement seulement. Paramètres configurables, pas d'usurpation Logitech ni de dissimulation d'automatisation.
+- **PositionController** : une commande relative HID bornée puis une mesure **réelle plus récente** ; correction vers un point intérieur à la zone, arrêt si donnée obsolète, session/topologie modifiée, écart concurrent anormal ou timeout. Ne jamais présenter une estimation comme une mesure.
+- **IHogpTransport** : start/stop/state/send_relative/release_all ; HOGP conforme, pairing volontaire, chiffrement, notifications, relâchement boutons, aucun rejeu après reconnexion. Doubles simulés pour tests.
+- **Agent cible** : lit seulement curseur, topologie, DPI et état de session ; publie les mesures, sans entrée de commandes souris, sans capture d'écran, sans service caché.
+- **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu, séquence, horodatage, secrets protégés, aucun port entrant sur MonOrdinateur.
 
-Le mini-PC exécute Windows 11 Professionnel 26H2 x64 avec un adaptateur Realtek.
-WinRT retourne `true` pour BLE et le rôle périphérique. Les API de serveur GATT,
-création de caractéristiques, notification, publicité et appairage sont présentes.
-Le service Bluetooth principal est actif.
+## Priorités et alternatives
 
-Ces résultats prouvent les préconditions, pas HOGP complet : le fournisseur HID
-et sa forme minimale ont été créés sans publicité, mais jamais publiés ou
-appairés. Le verdict produit reste `GO_WITH_RESERVATIONS` jusqu'à la
-démonstration décrite dans
-[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md).
+P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534` est hors périmètre (radio propriétaire 2,4 GHz non Bluetooth). Repli : pont HID physique programmable après arbitrage ; HID virtuel seulement en option secondaire explicitement décidée. `SendInput`/`SetCursorPos` seuls ne satisfont pas l'exigence de périphérique HID.
 
-Le complément MC-HID-AUDIT-002 a confirmé que `Off` était la cause de
-`RadioNotAvailable` : radio `On`, les fournisseurs HID et Battery, quatre
-caractéristiques HID et Report Reference retournent `Success`. Device
-Information retourne `DisabledByPolicy`, service réservé par Windows. Aucun
-appel à la publicité, à l'appairage ou aux notifications ; état final `Off`.
+## État des preuves
 
-## Contraintes HOGP à respecter
+Sur mini-pc-backend, radio Bluetooth temporairement On et créations non diffusées HID `0x1812`, Battery `0x180F`, caractéristiques HID et Report Reference réussies ; radio restaurée Off. Device Information `0x180A` : `DisabledByPolicy` (service réservé Windows). **Aucune publicité, association, notification HID ni commande réelle démontrée.** Sur MonOrdinateur, `GetCursorPos` et deux écrans ont été observés ; liaison LAN sécurisée non qualifiée. Ces résultats proviennent des audits en PR #5, non encore fusionnés.
 
-- service HID `0x1812`, Report Map de souris relative et Report characteristic ;
-- services/attributs complémentaires exigés par le profil ;
-- notifications vers le Host et gestion du Client Characteristic Configuration ;
-- lien chiffré, mode bondable et appairage ;
-- publicité connectable/découvrable arrêtée explicitement ;
-- aucune émission avant abonnement du Host et consentement de la session de test.
-
-## Organisation locale
+## Exploitation et sécurité
 
 ```text
 Mousse-controler/
@@ -115,3 +95,9 @@ en `Aborted` tant que le processus n'a pas une identité de package déclarant l
 capacité `bluetooth`. Le paquet MSIX et son lanceur sont construits ; son
 installation de développement reste suspendue à l'approbation humaine du
 certificat utilisateur. Aucun rapport HID n'a donc été émis à ce stade.
+
+Le processus de qualification reste au premier plan ; l'agent cible est visible
+et à démarrage manuel. L'arrêt d'urgence purge les commandes et relâche les
+boutons ; TTL, limites de débit et absence de rejeu après reconnexion sont
+imposés. Les scripts SSH/SFTP et releases restent des moyens secondaires de
+maintenance. Aucune garantie d'indétectabilité par les applications.

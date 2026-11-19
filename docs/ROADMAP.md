@@ -1,6 +1,6 @@
 # Roadmap — jalons sans échéances fixes
 
-**Pilotage : par livrables et preuves**, sans dates calendaires ni estimation obligatoire. Un jalon n'est validé qu'après examen des résultats, non à la seule livraison du code.
+Pilotage par **preuves fonctionnelles**, non par simple disponibilité d'API. **MC-HID-EXEC-001** est le mandat exécutoire global cadré ; son exécution/achèvement n'est pas attesté ici.
 
 | Jalon | Finalité | Livrable attendu | Critère de sortie | État |
 |---|---|---|---|---|
@@ -11,7 +11,7 @@
 | J4 — Activation robuste | Automatiser artefact Git, lancement local, état, arrêt et rollback | Scripts versionnés ; accès distant optionnel | Version SHA confirmée, idempotence, erreurs gérées et rollback local testés | En cours |
 | J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | À faire |
 
-## Dépendances et points de décision
+## Dépendances et priorités
 
 - **J1 avant essais réels** : la machine locale, le clone, les outils et le
   Bluetooth sont inventoriés. L'accès distant historique est secondaire.
