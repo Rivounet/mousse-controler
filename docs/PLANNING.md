@@ -30,27 +30,23 @@ valide pas à elle seule le fonctionnement HID.
 | MC-003B | J4 | Activation, santé, arrêt et rollback locaux réels | preuve sur une application témoin | À faire |
 | MC-003C | J4 | Maintenance SSH/SFTP optionnelle | requalification seulement si nécessaire | Secondaire |
 | MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
-| MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | En attente d'autorisation d'essai |
-| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | En attente d'autorisation |
+| MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | Réalisé — build natif et GATT préparé |
+| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | Bloqué — identité MSIX/certificat utilisateur à approuver |
 | MC-005C | J2/J3 | Auditer HOGP, retour position et boucle précise | `MC-HID-AUDIT-001` | En revue — audit livré |
 | MC-005D | J2/J3 | Qualifier cause radio et prérequis cible | `MC-HID-AUDIT-002` | En revue — mini-PC READY, cible INCOMPLETE |
-| MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | À faire après décision J2 |
-| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | À faire |
+| MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | Réalisé logiciel ; agent réel opérationnel |
+| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | En cours — chaîne prête, mouvement réel non atteint |
+| MC-008 | J3 | Trajectoires, zones et séquences A→B→C | code, API et tests | Réalisé en simulation ; matériel à qualifier |
 | MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
 | MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
 
 ## Prochaine décision
 
-Autoriser ou refuser le protocole
-[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md) :
-création du service GATT/HID, publicité visible, appairage avec MonOrdinateur et
-mouvement relatif minimal. La commande d'arrêt et les effets sont décrits avant
-toute exécution.
-
-Avant cet essai, exécuter également le diagnostic cible préparé par
-MC-HID-AUDIT-001 et arbitrer la chaîne de compilation, l'installation visible de
-l'agent et l'éventuelle règle de pare-feu privée. Sans ces autorisations, J2
-reste en cours et le développement applicatif complexe ne démarre pas.
+Approuver ou refuser l'ancre de confiance de développement limitée à
+`CurrentUser` nécessaire à l'installation du MSIX HOGP. La cible, l'agent
+interactif, le HTTPS privé et la compilation sont déjà qualifiés. Après cette
+approbation seulement : publicité, appairage, mouvement minimal puis batterie
+matérielle complète. Ne pas déclarer PASS avant ces mesures.
 
 ## Règles de livraison
 

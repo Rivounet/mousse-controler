@@ -45,6 +45,12 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 
+| D-028 | 2026-11-20 | Validé | Séparer transport HOGP, contrôle de position, trajectoire pure et orchestration de séquence | Le moteur de trajectoires n'accède jamais au Bluetooth ; toute arrivée est confirmée par une mesure réelle |
+| D-029 | 2026-11-20 | Validé | Agent cible visible .NET Framework 4.8, sortie HTTPS seulement, lancé par tâche interactive temporaire | Aucun service caché, démarrage automatique ou commande souris sur la cible ; session console vérifiée |
+| D-030 | 2026-11-20 | Validé | Secrets HMAC et bearer protégés par DPAPI ; TLS épinglé ; pare-feu limité au port, programme et deux hôtes privés | Ne publier ni secret, certificat privé, adresse privée exacte ni identifiant matériel |
+| D-031 | 2026-11-20 | Validé | Zones physiques validées conservativement contre la topologie et sélectionnées avec une graine configurable | Rectangles, cercles et polygones sont reproductibles en test ; une zone traversant un vide d'écran est refusée |
+| D-032 | 2026-11-20 | Bloqué par confirmation humaine | Utiliser une identité MSIX avec capacité `bluetooth`, exigée par Windows pour la publicité GATT | Paquet signé de développement prêt ; aucune élévation globale ou baisse de protection ; approbation du certificat utilisateur nécessaire avant essai réel |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.

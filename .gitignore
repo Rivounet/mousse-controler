@@ -1,2 +1,7 @@
 __pycache__/
 *.py[cod]
+.tmp/
+build/
+out/
+!scripts/build/
+!scripts/build/*.ps1

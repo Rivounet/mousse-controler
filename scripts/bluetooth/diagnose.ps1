@@ -38,6 +38,7 @@ function Convert-AsyncOperationToResult {
 
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 $null = [Windows.Devices.Bluetooth.BluetoothAdapter,Windows.Devices.Bluetooth,ContentType=WindowsRuntime]
+$null = [Windows.Devices.Enumeration.DeviceInformation,Windows.Devices.Enumeration,ContentType=WindowsRuntime]
 $null = [Windows.Foundation.Metadata.ApiInformation,Windows.Foundation,ContentType=WindowsRuntime]
 
 $adapter = Convert-AsyncOperationToResult `
@@ -46,6 +47,9 @@ $adapter = Convert-AsyncOperationToResult `
 if ($null -eq $adapter) {
     throw 'No default Bluetooth adapter returned by Windows'
 }
+$adapterInformation = Convert-AsyncOperationToResult `
+    -Operation ([Windows.Devices.Enumeration.DeviceInformation]::CreateFromIdAsync($adapter.DeviceId)) `
+    -ResultType ([Windows.Devices.Enumeration.DeviceInformation])
 
 $os = try { Get-CimInstance Win32_OperatingSystem -ErrorAction Stop } catch { $null }
 $currentVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
@@ -68,6 +72,14 @@ if (-not $signedDriver) {
             DriverVersion = $driverVersion.Data
             DriverDate = $driverDate.Data
         }
+    }
+}
+if (-not $signedDriver) {
+    $signedDriver = [pscustomobject]@{
+        DeviceName = $adapterInformation.Name
+        Manufacturer = $null
+        DriverVersion = $null
+        DriverDate = $null
     }
 }
 $services = @(try { Get-Service -Name 'bthserv', 'BTAGService', 'BluetoothUserService*' -ErrorAction Stop } catch { @() }) |

@@ -89,3 +89,29 @@ L'architecture détaillée et la boucle de position sont spécifiées dans
 Si le prototype conforme échoue sur la pile Windows/Realtek, comparer d'abord un
 adaptateur externe programmable capable d'HOGP. Un changement d'OS, de pilote ou
 de matériel nécessite une décision explicite ; aucune installation implicite.
+
+## Réalisation MC-HID-EXEC-001 — 20 novembre 2026
+
+La réalisation sépare quatre responsabilités :
+
+- `HogpTransport` : processus C++20/C++/WinRT, services HID `0x1812` et Battery
+  `0x180F`, rapports relatifs de six octets, chiffrement obligatoire et aucune
+  émission sans abonnement du Host ;
+- `PositionController` : sérialisation des commandes, mesures fraîches de moins
+  de 150 ms, corrections bornées, changement de session/topologie fail-closed ;
+- `TrajectoryEngine` : calcul pur de courbes quadratiques, profil progressif,
+  variations de vitesse et micro-variations bornées uniquement en mouvement ;
+- `SequenceRunner` : zones rectangle/cercle/polygone, graine reproductible,
+  modes automatique/commandé et états `IDLE` à `ERROR`.
+
+L'agent .NET Framework 4.8 de `MonOrdinateur` s'exécute visiblement dans la
+session console, lit position physique/DPI/topologie et ne possède aucune API
+d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
+épinglé, HMAC-SHA-256, séquence et horodatage. L'API de commande reste sur
+`127.0.0.1`, avec bearer DPAPI, TTL, idempotence et limite de débit.
+
+La base GATT se crée dans un exécutable Win32, mais Windows place sa publicité
+en `Aborted` tant que le processus n'a pas une identité de package déclarant la
+capacité `bluetooth`. Le paquet MSIX et son lanceur sont construits ; son
+installation de développement reste suspendue à l'approbation humaine du
+certificat utilisateur. Aucun rapport HID n'a donc été émis à ce stade.

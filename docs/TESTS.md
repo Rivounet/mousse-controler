@@ -67,3 +67,23 @@ comptes, chemins personnels, secrets ou journaux privés.
 
 La revue de code approfondie reste sur demande ou au jalon convenu ; livraison
 d'une PR Draft ne signifie ni validation, ni fusion.
+
+## MC-HID-EXEC-001
+
+Le 20 novembre 2026, `python -m unittest discover -v` a exécuté **103 tests en
+60,365 s : 103 PASS**. Les 24 tests ajoutés couvrent :
+
+- transport simulé, fraîcheur, correction et changements session/topologie ;
+- HMAC, anti-rejeu, horodatage et réception bornée ;
+- rectangle, cercle, polygone, graine et invalidation hors topologie ;
+- courbe, accélération/décélération, variation de vitesse et absence de jitter
+  à l'arrêt ;
+- A→B→C, attente automatique/commandée, pause/reprise, stop et absence de HID
+  après arrêt ;
+- API loopback, bearer constant-time, TTL et idempotence.
+
+Preuves réelles déjà obtenues : agent session console 1, deux écrans, échantillon
+HTTPS signé accepté, radio cible activée et publicité nominalement détectée lors
+des premières tentatives. Non qualifiés : appairage final, pilote HID, rapports
+souris, précision, P95, reconnexion et arrêt matériel. Le statut demeure donc
+`INCOMPLETE`, indépendamment des 103 PASS.

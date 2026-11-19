@@ -7,7 +7,7 @@
 | J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | Validé |
 | J1 — Environnement local | Qualifier mini-pc-backend comme machine de développement et d'exécution | Inventaire contrôlé, clone séparé des releases, tests reproductibles | OS/outils/Bluetooth observés, travaux Git préservés, suite locale exécutable | Validé |
 | J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS, diagnostic GATT et prototype HID minimal | MonOrdinateur reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | En cours — audit achevé, GO_WITH_RESERVATIONS |
-| J3 — API et position | Transformer des commandes API en événements souris corrigés par retour réel | API locale + moteur + adaptateur HID + agent position LAN | Positions, mouvements, clics et défilement testés de bout en bout | À faire |
+| J3 — API et position | Transformer des commandes API en événements souris corrigés par retour réel | API locale + moteur + adaptateur HID + agent position LAN | Positions, mouvements, clics et défilement testés de bout en bout | En cours — logiciel livré, agent réel opérationnel, HID réel bloqué |
 | J4 — Activation robuste | Automatiser artefact Git, lancement local, état, arrêt et rollback | Scripts versionnés ; accès distant optionnel | Version SHA confirmée, idempotence, erreurs gérées et rollback local testés | En cours |
 | J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | À faire |
 
@@ -29,6 +29,14 @@
 - **J4** réutilise les scripts de releases consolidés, mais se concentre sur
   l'activation locale. La maintenance distante est documentée séparément.
 - **J5** n'est pas une mise en production automatique.
+
+## Extension trajectoires et séquences
+
+Le code et les tests couvrent les trois géométries, le tirage déterministe, les
+courbes et profils de vitesse, A→B→C, les attentes automatique/commandée,
+pause/reprise/skip/stop et l'interruption sur perte de position ou topologie.
+La validation matérielle d'une séquence multi-zone reste couplée au déblocage
+de la publicité HOGP packagée et ne peut pas être déduite des tests simulés.
 
 ## Règle d'évolution
 

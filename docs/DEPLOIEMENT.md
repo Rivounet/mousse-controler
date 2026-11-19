@@ -58,3 +58,32 @@ Pour une activation : branche, SHA demandé, SHA actif, commande, résultat des
 tests, santé, rollback éventuel et fichiers de logs expurgés. Pour HOGP : ajouter
 reconnaissance côté cible, type de pilote chargé, événements minimaux observés et
 preuve d'arrêt.
+
+## Composants MC-HID-EXEC-001
+
+```powershell
+# Compilation de l'agent cible
+powershell.exe -NoProfile -File .\scripts\build\Build-PositionAgent.ps1
+
+# Compilation moteur + lanceur + MSIX (ne l'installe pas)
+powershell.exe -NoProfile -File .\scripts\build\Build-HogpPackage.ps1
+
+# Tests
+python -m unittest discover -v
+```
+
+Le paquet HOGP doit être signé par un certificat approuvé et installé pour
+l'utilisateur avant usage. Ne pas utiliser l'option non signée tous utilisateurs
+et ne pas activer le mode développeur. Le manifeste déclare uniquement
+`runFullTrust` et `bluetooth`; aucun service ou démarrage automatique.
+
+L'exécution contrôlée utilise `python -m mousse_controler.app serve --config
+<runtime-config>`. Le fichier de configuration reste hors Git, ACL utilisateur +
+SYSTEM, et ne contient que des blobs DPAPI. L'arrêt est `Ctrl+C` ou la commande
+locale authentifiée `stop`, qui libère les boutons, arrête la publicité et ferme
+les serveurs.
+
+Restauration : arrêter le contrôleur, désenregistrer les tâches temporaires
+cible, retirer la règle pare-feu privée dédiée, restaurer chaque radio à son état
+initial, supprimer le paquet `Rivounet.MousseControler.Hogp` et retirer uniquement
+les certificats `CN=MousseControler` dont l'empreinte correspond à l'installation.

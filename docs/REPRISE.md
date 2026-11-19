@@ -111,3 +111,27 @@ D-021 : mandats exclusivement dans le chat. D-022 : pas de revue automatique à
 chaque livraison. D-023 : autonomie technique de Codex dans les limites
 explicites. Aucune fusion, publicité Bluetooth, modification système ou émission
 HID n'est implicite.
+
+## Reprise MC-HID-EXEC-001 — 20 novembre 2026
+
+- branche de travail : `feat/mc-hid-exec-001`, sans fusion ;
+- Build Tools 17.14.45, MSVC 14.44 et SDK 10.0.26100 installés ;
+- moteur HOGP, contrôleur Python, API locale, canal HTTPS/HMAC, agent .NET 4.8,
+  zones/trajectoires/séquences et paquet MSIX implémentés ;
+- accès cible : OpenSSH existant à clé et host key stricte, jamais RustDesk ;
+- agent cible visible : tâche temporaire Interactive, processus et console en
+  session 1, deux écrans, premier échantillon accepté ;
+- tests : 103/103 PASS ;
+- radios : mini-PC On au début de l'exécution, cible passée Off→On ;
+- HOGP non packagé : base GATT créée, publicité `Aborted` car capacité manifeste
+  absente ; paquet signé prêt, mais installation suspendue à l'approbation de
+  l'ancre `CurrentUser` ;
+- appairage : trois tentatives contrôlées ont échoué sans paire résiduelle ; la
+  cérémonie `ConfirmOnly` a bien été reçue en session 1 ; aucun rapport HID ;
+- verdict provisoire : `INCOMPLETE`, pas PASS.
+
+À la reprise, ne retenter ni appairage ni publicité avant installation approuvée
+du MSIX et vérification WinRT `Started`. Ensuite exécuter mouvement minimal sur
+surface sûre, clic/scroll, reconnexion, précision, multi-écrans, perte réseau et
+arrêt ≤250 ms. Restaurer la radio cible et supprimer les tâches temporaires si
+la qualification est abandonnée.

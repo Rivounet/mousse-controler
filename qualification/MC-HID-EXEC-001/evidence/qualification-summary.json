@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "redacted": true,
+  "remote_access": {
+    "transport": "existing OpenSSH with key authentication and strict host-key checking",
+    "rustdesk_used": false
+  },
+  "build": {
+    "visual_studio_build_tools": "17.14.45",
+    "msvc": "14.44.35207",
+    "windows_sdk": "10.0.26100.0",
+    "native_engine_compiled": true,
+    "position_agent_compiled": true,
+    "msix_built_and_signed": true,
+    "msix_installed": false
+  },
+  "tests": {
+    "total": 103,
+    "passed": 103,
+    "failed": 0,
+    "duration_seconds": 60.365
+  },
+  "position_channel": {
+    "https_reachable": true,
+    "hmac_sample_accepted": true,
+    "interactive_session": true,
+    "display_count": 2
+  },
+  "bluetooth": {
+    "mini_initial_radio": "On",
+    "target_initial_radio": "Off",
+    "target_qualification_radio": "On",
+    "gatt_created": true,
+    "unpackaged_advertisement_status": "Aborted",
+    "pairing_attempts": 3,
+    "paired": false,
+    "hid_reports_emitted": false
+  },
+  "verdict": "INCOMPLETE",
+  "blocker": "human approval of the current-user development trust anchor before MSIX installation"
+}
