@@ -5,7 +5,7 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 ## Rôle et lieux
 
 - **Développer en local** sur le PC Windows avec Codex Desktop.
-- **Déployer et exécuter les tests matériels** sur `mini-pc-backend`.
+- **Déployer et exécuter les tests matériels** sur `mini-pc-backend` via un canal distant qualifié et des scripts versionnés, **pas via des manipulations manuelles non reproductibles**.
 - Le PC Windows de développement est aussi la **cible Bluetooth HID**. Aucun agent récepteur spécifique au projet ne doit y être installé.
 - **ChatGPT détient la responsabilité de la documentation de référence et des revues de code**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer de jalon validé sans revue.
 
@@ -26,7 +26,9 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Ne jamais publier de secrets ou d'identifiants, y compris dans les logs.
 - L'API doit rester protégée ; éviter toute exposition réseau non justifiée.
 - Ne pas émettre de clics/mouvements Bluetooth sans session de test autorisée et mécanisme d'arrêt effectif.
-- Préserver la possibilité de retour arrière sur mini-PC.
+- Préserver la possibilité de retour arrière sur mini-PC. Ne pas faire de `git reset --hard`, `git clean -fdx`, `git pull` aveugle ni écraser des modifications inconnues dans la copie distante.
+- Avant tout déploiement, vérifier identité de l'hôte, SHA exact, état de la copie Git distante, permissions, espace disque et disponibilité du rollback ; après déploiement, relever le SHA réellement actif.
+- Implémenter un mode `--dry-run`, des vérifications préalables, un verrou anti-déploiements concurrents, un contrôle de santé, une collecte de logs et un rollback sécurisé ; tester l'idempotence et les erreurs.
 - Indiquer l'état d'avancement et le temps écoulé aux étapes clés d'un travail long ; signaler les blocages.
 
 ## Principes de conception
@@ -39,5 +41,6 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Tâches et états : `docs/PLANNING.md`
 - Architecture : `docs/ARCHITECTURE.md`
 - Déploiement : `docs/DEPLOIEMENT.md`
+- Accès distant et synchronisation : `docs/ACCES-DISTANT-ET-SYNCHRONISATION.md`
 - Tests / revue : `docs/TESTS.md`
 - Décisions : `docs/DECISIONS.md`
