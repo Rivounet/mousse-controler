@@ -29,6 +29,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-019 | 2026-11-19 | Revue réalisée | PR #1 : 10 fichiers, 9 empreintes concordantes avec fins de ligne CRLF ; PASS documentaire, MC-INIT-001 PASS_WITH_RESERVATIONS | J1 reste ouvert ; PR Draft non fusionnée, MC-INIT-002 préparé sans autorisation implicite d'écriture distante |
 
+| D-020 | 2026-11-19 | Validé avec réserves | Revue PR #2 MC-INIT-002 : 14 fichiers, 13 empreintes concordantes, 31 tests locaux attestés, SSH/SFTP/transfert de 63 octets/arrêt témoin documentés | J1 clôturé avec réserves sur le canal distant ; synchronisation de release par SHA, exécution persistante et rollback transférés explicitement à J4 ; PR #2 reste Draft non fusionnée |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
