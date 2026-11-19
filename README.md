@@ -27,6 +27,7 @@ Un appairage Bluetooth initial reste nécessaire. Le protocole exact (BLE HID ov
 - [Planning opérationnel](docs/PLANNING.md)
 - [Architecture et choix à valider](docs/ARCHITECTURE.md)
 - [Déploiement et séparation des environnements](docs/DEPLOIEMENT.md)
+- [Accès distant, synchronisation et déploiement robuste](docs/ACCES-DISTANT-ET-SYNCHRONISATION.md)
 - [Tests et critères de validation](docs/TESTS.md)
 - [Registre des décisions](docs/DECISIONS.md)
 - [Consignes Codex](AGENTS.md)
@@ -34,7 +35,7 @@ Un appairage Bluetooth initial reste nécessaire. Le protocole exact (BLE HID ov
 ## État de réalisation
 
 - [x] Objectif et responsabilités cadrés.
-- [ ] Accès distant au mini-PC qualifié.
+- [ ] Accès distant au mini-PC qualifié et système de synchronisation/déploiement distant reproductible.
 - [ ] Capacité d'émulation Bluetooth HID vérifiée.
 - [ ] Prototype contrôlant le PC Windows par Bluetooth.
 - [ ] API de commandes intégrée et protégée.
