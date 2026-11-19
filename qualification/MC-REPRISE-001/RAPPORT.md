@@ -1,6 +1,6 @@
 # Rapport MC-REPRISE-001
 
-**Date :** 19 novembre 2026  
+**Date :** 19 novembre 2026
 **Verdict Bluetooth HID :** `GO_WITH_RESERVATIONS`
 
 ## 1. État de mini-pc-backend
