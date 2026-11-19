@@ -30,7 +30,7 @@
 - PR #1 des preuves MC-INIT-001 : Draft, non fusionnée.
 - PR #2 : Draft, non fusionnée ; revue COMMENT enregistrée sur GitHub, sans approbation de fusion ni déclenchement automatique.
 - Aucun contrôle direct des machines par ChatGPT ; les preuves brutes restent locales.
-- **MC-INIT-002 : PASS_WITH_RESERVATIONS**, fin du mandat. **J1 : VALIDÉ AVEC RÉSERVES**, pour le périmètre de qualification de l'environnement et du canal de transfert.
+- **MC-INIT-002 : PASS_WITH_RESERVATIONS**, fin du mandat (consignes du mandat fournies dans le chat ; pas d'archivage dans GitHub). **J1 : VALIDÉ AVEC RÉSERVES**, pour le périmètre de qualification de l'environnement et du canal de transfert.
 - **J4 : À faire**. Construire la synchronisation par SHA et le mécanisme versionné de release avant toute prétention de déploiement robuste.
 - **J2 : NON QUALIFIÉ** malgré les indicateurs BLE favorables. Aucun appairage, publicité GATT ou mouvement HID.
 - Les écritures distantes et modifications système d'un futur mandat restent soumises à autorisation explicite.
