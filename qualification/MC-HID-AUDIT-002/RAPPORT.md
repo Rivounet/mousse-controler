@@ -2,14 +2,14 @@
 
 **Date :** 19 novembre 2026
 **Portée :** radio Bluetooth du mini-PC, accès et prérequis de MonOrdinateur,
-sans activation, publicité, appairage, événement HID, installation ni changement
-système.
+avec activation radio temporaire explicitement autorisée, sans publicité,
+appairage, événement HID, installation ni changement permanent de configuration.
 
 ## Verdicts
 
 | Machine | Verdict | Motif |
 |---|---|---|
-| `mini-pc-backend` | `READY_WITH_RESERVATIONS` | contrôleur, pilote, services, PnP, BLE et rôle périphérique sains ; radio volontairement `Off`, donc création GATT impossible jusqu'à activation autorisée |
+| `mini-pc-backend` | `READY` | radio `On` temporaire confirmée ; fournisseurs HID et Battery, quatre caractéristiques HID et Report Reference créés sans publicité ; retour final à `Off` confirmé |
 | `MonOrdinateur` | `INCOMPLETE` | aucun canal natif existant utilisable depuis le mini-PC ; inventaire historique favorable, mais diagnostic courant de session/écrans/DPI/radio/réseau non exécuté |
 
 Ces verdicts portent sur les prérequis, pas sur une qualification HOGP
@@ -33,41 +33,47 @@ Le résultat est reproductible :
 - aucun événement d'erreur/avertissement des 30 derniers jours corrélé à
   l'identifiant de l'adaptateur.
 
-Le probe non diffusé reproduit `GattServiceProvider.CreateAsync =
-RadioNotAvailable` pour HID, Battery et Device Information. La cause immédiate
-est donc l'alimentation logicielle Bluetooth coupée. Il n'existe actuellement
-aucun indice d'une désactivation PnP, d'un kill-switch firmware, d'une stratégie
-administrative ou d'un défaut pilote. Seul un essai radio `On` permettra de
-prouver que cette cause est suffisante.
+Le probe non diffusé radio `Off` reproduit `GattServiceProvider.CreateAsync =
+RadioNotAvailable` pour HID, Battery et Device Information. Après autorisation,
+le même probe radio `On` retourne `Success` pour HID `0x1812` et Battery
+`0x180F`. Il crée aussi avec succès HID Information, Report Map, HID Control
+Point, Input Report et son descripteur Report Reference. `Off` était donc bien
+la seule cause de `RadioNotAvailable` pour les fournisseurs créables par
+l'application.
+
+Device Information `0x180A` retourne `DisabledByPolicy` radio `On`, résultat
+attendu pour un service réservé par Windows. Ce n'est pas un défaut du
+contrôleur Realtek, mais cela maintient l'obligation de vérifier pendant la
+qualification comment la pile système satisfait la dépendance HOGP.
 
 Microsoft distingue `Off` (état opérationnel éteint) de `Disabled` (firmware ou
 commutateur matériel). La lecture de l'état ne demande pas d'autorisation ; le
 changement par `SetStateAsync` exige un consentement et reste soumis au matériel
 et aux stratégies.
 
-### Activation proposée — non exécutée
+### Activation temporaire — exécutée et restaurée
 
-Procédure recommandée après autorisation complémentaire :
+Le protocole transactionnel a observé :
 
-1. ouvrir **Paramètres > Bluetooth et appareils** (`ms-settings:bluetooth`) ;
-2. relever l'état initial `Off`, puis basculer Bluetooth sur `On` ;
-3. attendre l'état WinRT `On` sans lancer de recherche d'appareil ;
-4. exécuter `Inspect-BluetoothRadio.ps1`, puis le probe GATT non diffusé ;
-5. ne jamais appeler `StartAdvertising` ;
-6. pour restaurer, replacer le bouton sur `Off` et confirmer WinRT `Off`.
+1. état initial `Off` ;
+2. `Radio.RequestAccessAsync = Allowed` ;
+3. `SetStateAsync(On) = Allowed`, état WinRT `On` confirmé ;
+4. probe GATT dans un processus séparé, sans `StartAdvertising` ;
+5. sortie du processus et libération de toutes ses références WinRT ;
+6. `SetStateAsync(Off) = Allowed`, état `Off` confirmé dans le bloc `finally` ;
+7. diagnostic indépendant final : Bluetooth `Off`, PnP `OK`, problème `0`.
 
-Effets attendus : alimentation et réénumération des enfants Bluetooth, service
-GATT créable en mémoire. Risques : émission RF normale et reconnexion automatique
-possible à un appareil déjà appairé. Aucune nouvelle association n'est créée par
-le simple bouton. Pour cette raison, l'activation n'a pas été faite dans l'audit.
+Deux tentatives intermédiaires ont rencontré uniquement des erreurs de projection
+PowerShell sur `GattLocalDescriptorParameters` puis `IBuffer`. Chaque tentative
+a restauré `Off`. Le correctif utilise `ReadProtectionLevel` et
+`WindowsRuntimeBufferExtensions.AsBuffer`; le troisième cycle est entièrement
+réussi.
 
-Résultat discriminant :
-
-- `Success` radio `On` : `RadioNotAvailable` provenait uniquement de l'état Off ;
-- autre erreur : conserver son enum, vérifier permission/contexte puis table
-  GATT, sans publicité ;
-- radio impossible à activer ou `Disabled` : investiguer stratégie, firmware ou
-  pilote avant MC-HID-EXEC-001.
+Windows a déclenché `BTAGService` lors de l'activation. Son mode reste `Manual`
+et aucune commande de service n'a été exécutée ; il était encore `Running` lors
+du dernier relevé, malgré la radio `Off`. Il s'agit d'un état d'exécution
+déclenché par la pile, pas d'une modification de configuration. L'arrêter
+manuellement n'était pas autorisé et n'est pas nécessaire pour conclure sur GATT.
 
 ## B — accès à MonOrdinateur
 
@@ -166,20 +172,19 @@ pendant la qualification.
 
 ## Autorisations encore nécessaires
 
-1. activer temporairement la radio Bluetooth du mini-PC et accepter le risque de
-   reconnexion à des appareils déjà bondés ;
-2. installer Build Tools/MSVC/Windows SDK sur le mini-PC ;
-3. fournir un canal natif existant vers MonOrdinateur ou exécuter localement le
+1. installer Build Tools/MSVC/Windows SDK sur le mini-PC ;
+2. fournir un canal natif existant vers MonOrdinateur ou exécuter localement le
    diagnostic et transmettre sa sortie hors Git ;
-4. plus tard seulement : publicité, appairage et rapports HID bornés ;
-5. règle de pare-feu privée mini-PC uniquement si le test du serveur HTTPS la
+3. plus tard seulement : publicité, appairage et rapports HID bornés ;
+4. règle de pare-feu privée mini-PC uniquement si le test du serveur HTTPS la
    rend nécessaire.
 
 ## Préparation de MC-HID-EXEC-001
 
-Le mandat peut démarrer après deux portes :
+La **porte radio est franchie** : état `On` et créations GATT non diffusées ont
+réussi, puis l'état initial `Off` a été restauré. Le mandat peut démarrer après
+la porte restante :
 
-- **Porte radio :** état `On` autorisé et `CreateAsync` non diffusé réussi ;
 - **Porte cible :** diagnostic schéma 2 courant reçu avec verdict au moins
   `READY_WITH_RESERVATIONS`.
 

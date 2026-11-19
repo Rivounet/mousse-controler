@@ -41,7 +41,7 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-025 | 2026-11-19 | Validé | Conserver les composants SSH/SFTP et releases sans les supprimer, en les classant comme maintenance/rollback secondaires | Le travail des PR #2 et #3 est préservé ; il ne bloque pas J2 et devra être requalifié avant un nouvel usage distant réel |
 
-| D-026 | 2026-11-19 | Qualification partielle | Le Realtek et Windows exposent rôle périphérique BLE, serveur GATT, notifications, publicité et appairage ; verdict HOGP `GO_WITH_RESERVATIONS` | `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels ; protocole soumis à autorisation |
+| D-026 | 2026-11-19 | Qualification renforcée | Le Realtek et Windows exposent rôle périphérique BLE ; radio On temporaire, fournisseurs HID/Battery, quatre caractéristiques HID et Report Reference créés sans publicité puis radio restaurée Off | Device Information est réservé (`DisabledByPolicy`) ; `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels |
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 

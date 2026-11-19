@@ -70,6 +70,14 @@ class GattProbeSafetyTests(unittest.TestCase):
         self.assertNotIn(".SetStateAsync(", source)
         self.assertNotIn(".StartAdvertising(", source)
 
+    def test_temporary_activation_is_explicit_and_restores_in_finally(self):
+        diagnostic = SCRIPT.with_name("Test-BluetoothRadioTemporary.ps1")
+        source = diagnostic.read_text(encoding="utf-8")
+        self.assertIn("ConfirmTemporaryActivation", source)
+        self.assertIn("finally", source)
+        self.assertIn("Wait-RadioState -Expected 'Off'", source)
+        self.assertNotIn(".StartAdvertising(", source)
+
 
 if __name__ == "__main__":
     unittest.main()

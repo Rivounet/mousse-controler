@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "protocol": "temporary Bluetooth radio activation with guaranteed restoration attempt",
+  "initial_state": "Off",
+  "request_access_status": "Allowed",
+  "set_on_status": "Allowed",
+  "confirmed_on": true,
+  "state_before_probe": "On",
+  "gatt_probe": {
+    "adapter_present": true,
+    "peripheral_role_supported": true,
+    "radio_state": "On",
+    "hid_service": {
+      "provider_error": "Success",
+      "provider_created": true,
+      "advertising_called": false,
+      "characteristics": {
+        "hid_information": "Success",
+        "report_map": "Success",
+        "hid_control_point": "Success",
+        "input_report": "Success",
+        "report_reference_descriptor": "Success"
+      }
+    },
+    "battery_service": {
+      "provider_error": "Success",
+      "provider_created": true,
+      "advertising_called": false
+    },
+    "device_information_reserved_service": {
+      "provider_error": "DisabledByPolicy",
+      "provider_created": false,
+      "advertising_called": false
+    }
+  },
+  "probe_process_exit_code": 0,
+  "resources_released": true,
+  "set_off_status": "Allowed",
+  "final_state": "Off",
+  "restoration_confirmed": true,
+  "error": null,
+  "not_executed": ["StartAdvertising", "pairing", "connection", "notification", "HID report"]
+}

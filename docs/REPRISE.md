@@ -40,8 +40,8 @@ ouvertes en Draft. #1 est indépendante ; #3 est empilée sur #2. Leurs cinq
 commits utiles sont conservés dans la branche de consolidation issue de `main`,
 sans fusion ni réécriture des branches historiques.
 
-`python -m unittest discover` exécute désormais **78 tests**, tous réussis sur
-mini-pc-backend (72 à la consolidation, puis six gardes d'audit). La
+`python -m unittest discover` exécute désormais **79 tests**, tous réussis sur
+mini-pc-backend (72 à la consolidation, puis sept gardes d'audit). La
 découverte racine qui annonçait auparavant zéro test est corrigée.
 
 ### Bluetooth HID
@@ -61,11 +61,12 @@ Son probe GATT non diffusé a trouvé la radio `Off` et a reçu
 n'était pas accessible : son script de diagnostic est prêt, mais ses
 caractéristiques restent inconnues.
 
-MC-HID-AUDIT-002 a confirmé que Realtek/PnP/pilote/services sont sains : l'état
-Bluetooth est `Off`, non `Disabled`, et explique immédiatement
-`RadioNotAvailable`. Une activation autorisée reste nécessaire pour démontrer
-`CreateAsync` radio On. Aucun accès natif à MonOrdinateur n'est configuré depuis
-le mini-PC ; la cible reste `INCOMPLETE` et le diagnostic schéma 2 est prêt.
+MC-HID-AUDIT-002 a confirmé que Realtek/PnP/pilote/services sont sains et que
+`Off` causait `RadioNotAvailable` : radio On temporaire, HID/Battery,
+caractéristiques HID et Report Reference créés avec succès sans publicité ;
+Device Information réservé retourne `DisabledByPolicy`. Toutes les ressources
+ont été libérées et l'état final `Off` confirmé. Aucun accès natif à
+MonOrdinateur n'est configuré depuis le mini-PC ; la cible reste `INCOMPLETE`.
 
 ## Réalisé, simulé, non qualifié
 
@@ -74,10 +75,11 @@ le mini-PC ; la cible reste `INCOMPLETE` et le diagnostic schéma 2 est prêt.
 | Inventaire local et diagnostic Bluetooth | Réalisé en lecture seule |
 | Consolidation des trois PR historiques | Réalisée localement, publication à finaliser |
 | Tests artefacts/releases/distant hors ligne | 69 PASS |
-| Tests diagnostics Bluetooth/cible et garde anti-publicité | 7 PASS |
+| Tests diagnostics Bluetooth/cible et gardes de restauration | 10 PASS |
 | Release locale et rollback | Modèle et tests présents ; activation applicative réelle à requalifier |
 | SSH/SFTP | Qualifié historiquement, non relancé dans la nouvelle organisation |
-| Service HOGP, publicité, bonding, mouvement | Non exécutés — autorisation requise |
+| Forme GATT HID/Battery non diffusée | Créée avec succès puis libérée |
+| Publicité, bonding, pilote souris, mouvement | Non exécutés — autorisation requise |
 | API de commandes | Non développée |
 
 ## Prochaine action

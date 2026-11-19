@@ -72,7 +72,11 @@ function New-ServiceProbe {
         }
         if ($definition.name -eq 'Input Report' -and $characteristic.created) {
             $descriptorParameters = New-Object Windows.Devices.Bluetooth.GenericAttributeProfile.GattLocalDescriptorParameters
-            $descriptorParameters.ProtectionLevel = 2
+            $descriptorParameters.ReadProtectionLevel = 2
+            $descriptorParameters.StaticValue = `
+                [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::AsBuffer(
+                    [byte[]](0, 1) # Report ID 0, Input Report type 1
+                )
             $descriptor = Convert-AsyncOperationToResult `
                 -Operation ($created.Characteristic.CreateDescriptorAsync([Guid]'00002908-0000-1000-8000-00805f9b34fb', $descriptorParameters)) `
                 -ResultType ([Windows.Devices.Bluetooth.GenericAttributeProfile.GattLocalDescriptorResult])

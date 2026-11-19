@@ -36,15 +36,17 @@ WinRT retourne `true` pour BLE et le rôle périphérique. Les API de serveur GA
 création de caractéristiques, notification, publicité et appairage sont présentes.
 Le service Bluetooth principal est actif.
 
-Ces résultats prouvent les préconditions, pas HOGP : aucun service HID n'a été
-créé, publié ou appairé. Le verdict est `GO_WITH_RESERVATIONS` jusqu'à la
+Ces résultats prouvent les préconditions, pas HOGP complet : le fournisseur HID
+et sa forme minimale ont été créés sans publicité, mais jamais publiés ou
+appairés. Le verdict produit reste `GO_WITH_RESERVATIONS` jusqu'à la
 démonstration décrite dans
 [`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md).
 
-Le probe non diffusé MC-HID-AUDIT-001 a ensuite observé la radio `Off` et
-`GattServiceProvider.CreateAsync = RadioNotAvailable`. Il n'a appelé ni
-publicité, ni appairage, ni notification. Le diagnostic confirme donc que la
-création réelle reste à démontrer, sans invalider les capacités annoncées.
+Le complément MC-HID-AUDIT-002 a confirmé que `Off` était la cause de
+`RadioNotAvailable` : radio `On`, les fournisseurs HID et Battery, quatre
+caractéristiques HID et Report Reference retournent `Success`. Device
+Information retourne `DisabledByPolicy`, service réservé par Windows. Aucun
+appel à la publicité, à l'appairage ou aux notifications ; état final `Off`.
 
 ## Contraintes HOGP à respecter
 

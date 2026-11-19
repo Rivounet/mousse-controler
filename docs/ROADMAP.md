@@ -23,9 +23,9 @@
 - L'audit MC-HID-AUDIT-001 fournit l'architecture, les choix recommandés et le
   plan d'un mandat exécutoire unique ; le diagnostic réel de MonOrdinateur reste
   une précondition de ce mandat.
-- MC-HID-AUDIT-002 attribue `RadioNotAvailable` à la radio logicielle Off, sans
-  défaut PnP/pilote observé. Une activation autorisée et le diagnostic courant
-  de MonOrdinateur restent les deux portes avant exécution.
+- MC-HID-AUDIT-002 démontre radio On que HID/Battery et la forme HID minimale se
+  créent sans publicité, puis restaure Off. La porte radio est franchie ; le
+  diagnostic courant de MonOrdinateur reste la porte avant exécution.
 - **J4** réutilise les scripts de releases consolidés, mais se concentre sur
   l'activation locale. La maintenance distante est documentée séparément.
 - **J5** n'est pas une mise en production automatique.

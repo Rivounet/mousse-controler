@@ -20,23 +20,39 @@
   "bluetooth_problem_device_count": 0,
   "services": [
     {"name": "bthserv", "status": "Running", "start_type": "Manual"},
-    {"name": "btagservice", "status": "Stopped", "start_type": "Manual"},
+    {"name": "btagservice", "initial_status": "Stopped", "final_status": "Running", "start_type": "Manual", "configuration_changed": false},
     {"name": "rmsvc", "status": "Running", "start_type": "Manual"}
   ],
   "bluetooth_policy_location_count": 0,
   "adapter_error_or_warning_event_count_30d": 0,
   "gatt_probe": {
-    "hid": "RadioNotAvailable",
-    "battery": "RadioNotAvailable",
-    "device_information": "RadioNotAvailable",
+    "radio_off": {
+      "hid": "RadioNotAvailable",
+      "battery": "RadioNotAvailable",
+      "device_information": "RadioNotAvailable"
+    },
+    "radio_on": {
+      "hid": "Success",
+      "battery": "Success",
+      "device_information": "DisabledByPolicy",
+      "hid_characteristics_created": 4,
+      "report_reference_descriptor": "Success"
+    },
     "start_advertising_called": false
   },
   "not_executed": [
-    "Radio.RequestAccessAsync",
-    "Radio.SetStateAsync",
     "StartAdvertising",
     "pairing",
     "HID report emission",
-    "driver, service, policy or Bluetooth configuration change"
-  ]
+    "driver, service, policy or permanent Bluetooth configuration change"
+  ],
+  "temporary_radio_cycle": {
+    "initial_state": "Off",
+    "request_access_status": "Allowed",
+    "set_on_status": "Allowed",
+    "confirmed_on": true,
+    "set_off_status": "Allowed",
+    "final_state": "Off",
+    "restoration_confirmed": true
+  }
 }
