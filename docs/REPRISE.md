@@ -42,17 +42,21 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 **Qualifié selon le rapport et les preuves expurgées de la [PR #1](https://github.com/Rivounet/mousse-controler/pull/1) (examinés par ChatGPT) :** Windows 11 Famille sur le poste de développement, Windows 11 Pro sur mini-pc-backend ; accès SSH par clé et listing SFTP réussis ; adaptateur Realtek sur les deux PC et indicateur WinRT de rôle périphérique BLE positif. Le mini-PC dispose d'un compte SSH administrateur : privilégier les droits minimaux pour les opérations courantes.
 
-**Non démontré :** transfert SFTP aller-retour avec hash, droits effectifs d'écriture dans la racine dédiée, scripts de synchronisation/déploiement, arrêt et rollback, émission GATT/HID, appairage et mouvement de souris. La compatibilité HID reste ouverte. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
+**MC-INIT-002 (preuves examinées en [PR #2](https://github.com/Rivounet/mousse-controler/pull/2)) :** 31 tests locaux déclarés PASS et code lu ; 13 empreintes SHA-256 publiées revérifiées ; SSH, UTF-8, délais, transfert SFTP aller-retour d'un témoin de 63 octets, nettoyage borné et arrêt d'un processus témoin au cours d'une session SSH démontrés sur pièces. Le compte distant reste administrateur.
+
+**Non démontré :** livraison d'une release Git par SHA, démarrage persistant après déconnexion SSH, gestion applicative des processus, santé, verrou de déploiement et rollback, émission GATT/HID, appairage et mouvement de souris. La compatibilité HID reste ouverte. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
 
 **Git pendant MC-INIT-001 :** `main` local conservé à `84dbade9fe74ed8c38f4aa1b089a44c194dfa288` ; `origin/main` observé à `1527797a555b97ae2bced2b1864f1a010422cb9a` après fetch. Avant la suite, vérifier de nouveau les SHA et effectuer un fast-forward seulement si l'état local le permet et si le mandat l'autorise. Aucun push ou commit Codex déclaré. Ces références sont un instantané du rapport, pas une affirmation de l'état Git actuel.
 
-**Jalons :** J0 cadrage documentaire validé ; **J1 partiellement qualifié (inventaire, SSH, listing SFTP ; transfert et rollback à tester)** ; J2 faisabilité Bluetooth HID ; J3 API ; J4 déploiement robuste ; J5 qualification MVP.
+**Jalons :** J0 validé ; **J1 validé avec réserves** (SSH et transfert réversible qualifiés, automatisation applicative reportée à J4) ; J2 HID non qualifié ; J3 API à faire ; J4 déploiement robuste à faire ; J5 qualification MVP à faire.
 
 ## 6. Prochaine action
 
 **MC-INIT-001** : exécuté selon le rapport du 19 novembre 2026 ; [revue ChatGPT](REVUES/MC-INIT-001.md) = **PASS_WITH_RESERVATIONS** après lecture des preuves publiées. **Publication MC-INIT-001 : PASS**, PR #1 Draft au SHA `8886cab1230039add8e2712a5114c4e312c0f49b`, sans fusion. **J1 reste ouvert.**
 
-**Prochaine étape : [MC-INIT-002](MANDATS/MC-INIT-002.md), mandat préparé ; aucune écriture distante avant autorisation explicite** : transfert réversible d'un fichier témoin dans une racine dédiée autorisée, vérification des hash, gestion des erreurs, contexte PowerShell, collecte de logs et arrêt d'un processus de test sans HID. Pas de déploiement permanent ni de modification système implicite.
+**MC-INIT-002** : terminé avec réserves, [revue](REVUES/MC-INIT-002.md) publiée après examen des 14 fichiers de la PR #2 au SHA `cf3c37200541d3291f6b506731e14ce020bcf630`. **PR #1 et PR #2 sont en Draft, non fusionnées.**
+
+**Prochaine étape :** décider de l'intégration séparée des PR #1 et #2 avant la réalisation de la chaîne de release. Préparer [MC-INIT-003](MANDATS/MC-INIT-003.md) : sync par SHA, staging, version active, arrêt et rollback sous tests contrôlés, sans HID et sans modification système implicite.
 
 ## 7. Où retrouver les détails ?
 
@@ -70,4 +74,4 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 ## Publication des preuves et revues
 
-**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 ont été publiées et relues dans la PR #1 ; toute nouvelle preuve suit le même processus.
+**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 et MC-INIT-002 ont été publiées et relues dans les PR #1 et #2 ; toute nouvelle preuve suit le même processus.
