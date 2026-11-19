@@ -9,8 +9,8 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Séparer le clone `source/` des releases et états d'exécution. Les outils
   SSH/SFTP existants sont secondaires : maintenance distante ou reprise, pas
   chemin normal de développement.
-- `MonOrdinateur` est exclusivement la **cible Bluetooth HID**. Aucun agent
-  récepteur spécifique au projet ne doit y être installé.
+- `MonOrdinateur` reçoit les commandes par son **pilote Bluetooth HID natif**. Un **agent Windows visible** y mesure et transmet la position réelle sur LAN privé sécurisé ; cet agent ne reçoit ni n'exécute de commandes souris.
+- Codex sur mini-pc-backend est responsable de l'intégration sur les deux machines dans le périmètre autorisé ; l'accès distant authentifié à MonOrdinateur doit être vérifié/établi sans supposer un accès à sa session interactive.
 - **ChatGPT détient la responsabilité de la documentation de référence et peut effectuer des revues de code à la demande ou aux jalons convenus, sans revue systématique à chaque livraison**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer un jalon validé sans vérification adaptée.
 
 ## Pour chaque mandat
@@ -40,7 +40,7 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 
 ## Principes de conception
 
-Privilégier les composants indépendants : réception API, validation/ordonnancement, adaptateur HID. Préférer un adaptateur simulé pour les tests unitaires. Ne pas supposer que Bluetooth Windows peut fonctionner comme périphérique HID tant que J2 ne l'a pas démontré. Éviter frameworks, services et abstractions non nécessaires au MVP.
+Privilégier les composants indépendants : réception API, validation/ordonnancement, moteur de séquences de zones, moteur de trajectoires, contrôleur de position sur mesures réelles, adaptateur HID et agent LAN sortant. Préférer un adaptateur simulé pour les tests unitaires. Ne pas supposer que Bluetooth Windows peut fonctionner comme périphérique HID tant que J2 ne l'a pas démontré. Les zones sont rectangle/cercle/polygone, avec point aléatoire interne ; les séquences A→B→C utilisent une attente temporisée ou une nouvelle commande. Les trajectoires courbes, vitesses variables et micro-variations pendant le mouvement sont configurables et testables, sans objectif de dissimulation d'automatisation ou d'usurpation Logitech. Éviter frameworks, services et abstractions non nécessaires au MVP.
 
 ## Sources de vérité
 
