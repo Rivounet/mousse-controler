@@ -2,7 +2,7 @@
 
 **Phase :** démarrage *from scratch* — qualification initiale J1.
 **Dépôt :** https://github.com/Rivounet/mousse-controler
-**Statut :** préparé, non attesté comme exécuté.
+**Statut :** exécuté selon le rapport ; [revue](../REVUES/MC-INIT-001.md) PASS_WITH_RESERVATIONS ; preuves sélectionnées dans la [PR #1 Draft](https://github.com/Rivounet/mousse-controler/pull/1), non fusionnée.
 **Type :** investigation non destructive, préparation du développement, sans code applicatif.
 
 ## Contexte et rôle
