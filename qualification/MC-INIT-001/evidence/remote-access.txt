@@ -1,0 +1,34 @@
+
+        Scope ExecutionPolicy
+        ----- ---------------
+MachinePolicy       Undefined
+   UserPolicy       Undefined
+      Process       Undefined
+  CurrentUser    RemoteSigned
+ LocalMachine       Undefined
+
+
+ UTILISATEUR           SESSION            ID  �TAT    TEMPS INACT TEMPS SESSION
+[SESSION UTILISATEUR ACTIVE ; compte et détails de session expurgés]
+[EMPREINTE ET IDENTITE HOTE EXPURGEES]
+[EMPREINTE ET IDENTITE HOTE EXPURGEES]
+[EMPREINTE ET IDENTITE HOTE EXPURGEES]
+
+1527797a555b97ae2bced2b1864f1a010422cb9a	HEAD
+1527797a555b97ae2bced2b1864f1a010422cb9a	refs/heads/main
+DefaultShell
+------------
+cmd.exe
+False
+
+
+
+
+--- Extrait SFTP existant (listing personnel exclu) ---
+sftp> pwd
+Remote working directory: [REPERTOIRE UTILISATEUR EXPURGE]
+sftp> ls
+[CONTENU PERSONNEL EXPURGE]
+sftp> quit
+
+Les tests pwd/ls/quit sont historiques ; aucun transfert aller-retour démontré. Le booléen False après DefaultShell provient du Test-Path du runtime .NET au chemin standard (chemin expurgé). Les options SSH et la correspondance des empreintes sont décrites dans le rapport ; leur sortie détaillée ne figure pas dans ce fichier brut.

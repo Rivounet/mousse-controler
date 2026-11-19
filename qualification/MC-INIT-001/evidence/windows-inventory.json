@@ -1,0 +1,127 @@
+{
+  "Time": "2026-11-19T13:50:32.1114234+01:00",
+  "OS": {
+    "Caption": "Microsoft Windows 11 Famille",
+    "Version": "10.0.26300",
+    "BuildNumber": "26300",
+    "OSArchitecture": "64 bits",
+    "FreePhysicalMemory": 942324
+  },
+  "Hardware": [
+    {
+      "Manufacturer": "ASUSTeK COMPUTER INC.",
+      "Model": "VivoBook_ASUSLaptop X513UA_M513UA",
+      "TotalPhysicalMemory": 7928717312
+    },
+    {
+      "Name": "AMD Ryzen 5 5500U with Radeon Graphics         ",
+      "NumberOfCores": 6,
+      "NumberOfLogicalProcessors": 12
+    }
+  ],
+  "Shell": [
+    "\r\nName                           Value\r\n----                           -----\r\nPSVersion                      7.6.9\r\nPSEdition                      Core\r\nGitCommitId                    7.6.9\r\nOS                             Microsoft Windows 10.0.26300\r\nPlatform                       Win32NT\r\nPSCompatibleVersions           {1.0, 2.0, 3.0, 4.0…}\r\nPSRemotingProtocolVersion      2.4\r\nSerializationVersion           1.1.0.1\r\nWSManStackVersion              3.0\r\n\r\n",
+    true,
+    false
+  ],
+  "Versions": [
+    "git :",
+    "git version 2.54.0.windows.1",
+    "node :",
+    "v26.12.1",
+    "python :",
+    "Python 3.12.10",
+    "gh :",
+    "gh version 2.95.0 (2026-06-17)",
+    "https://github.com/cli/cli/releases/tag/v2.95.0"
+  ],
+  "Storage": {
+    "DeviceID": "C:",
+    "Size": 209715195904,
+    "FreeSpace": 20967362560
+  },
+  "Tools": [
+    {
+      "Name": "git.exe"
+    },
+    {
+      "Name": "ssh.exe"
+    },
+    {
+      "Name": "scp.exe"
+    },
+    {
+      "Name": "sftp.exe"
+    },
+    {
+      "Name": "python.exe"
+    },
+    {
+      "Name": "py.exe"
+    },
+    {
+      "Name": "node.exe"
+    },
+    {
+      "Name": "npm.ps1"
+    },
+    {
+      "Name": "gh.exe"
+    },
+    {
+      "Name": "code.cmd"
+    },
+    {
+      "Name": "pwsh.exe"
+    },
+    {
+      "Name": "wt.exe"
+    },
+    {
+      "Name": "wsl.exe"
+    }
+  ],
+  "Bluetooth": [
+    {
+      "Status": "OK",
+      "FriendlyName": "Realtek Bluetooth Adapter",
+      "HardwareType": "VID_13D3&PID_3556"
+    }
+  ],
+  "BluetoothDrivers": {
+    "DeviceName": "Realtek Bluetooth Adapter",
+    "DriverVersion": "1.1072.2312.2502",
+    "DriverDate": "2025-02-13T01:00:00+01:00",
+    "Manufacturer": "Realtek Semiconductor Corp.",
+    "InfName": "oem11.inf"
+  },
+  "Network": {
+    "Name": "Wi-Fi",
+    "InterfaceDescription": "Realtek 8821CE Wireless LAN 802.11ac PCI-E NIC",
+    "Status": "Up",
+    "LinkSpeed": "325 Mbps"
+  },
+  "RemoteServices": [
+    {
+      "Name": "bthserv",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "ssh-agent",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "TermService",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "WinRM",
+      "Status": 1,
+      "StartType": 3
+    }
+  ],
+  "SelectionNote": "Extrait structuré par liste de champs autorisés ; chemins, comptes, SID/ACL, PIDs, ports, inventaire de projets et périphériques personnels exclus. Statut service 4=Running, 1=Stopped ; StartType 2=Automatic, 3=Manual, 4=Disabled. Valeurs historiques, aucun nouveau diagnostic."
+}
