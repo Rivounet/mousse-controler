@@ -44,25 +44,25 @@ def build_plan(config, local_directory, token):
     scripts['02-upload.sftp'] = f'put "{local}/witness.txt" "{sftp_path}"\nquit\n'
     scripts['04-download.sftp'] = f'get "{sftp_path}" "{local}/returned.txt"\nquit\n'
     # No automatic directory deletion: the created list must be reviewed first.
-    sleeper = "$ErrorActionPreference='Stop';Start-Sleep -Seconds 120"
+    sleeper = "$ErrorActionPreference='Stop';Start-Sleep -Seconds 120 # MC-INIT-002-" + token
     encoded = base64.b64encode(sleeper.encode('utf-16-le')).decode('ascii')
     scripts['07-start-bounded-process.ps1'] = (
         f"$a='-NoProfile -NonInteractive -EncodedCommand {encoded}';"
         "$p=Start-Process -FilePath \"$PSHOME\\powershell.exe\" -ArgumentList $a -WindowStyle Hidden -PassThru;"
         "$c=Get-CimInstance Win32_Process -Filter ('ProcessId='+$p.Id);"
-        "[ordered]@{pid=$p.Id;creation=$c.CreationDate.ToUniversalTime().ToString('o');command=$c.CommandLine;"
+        "[ordered]@{pid=$p.Id;creation=$c.CreationDate.ToUniversalTime().ToString('o');start_time=$p.StartTime.ToUniversalTime().ToString('o');command=$c.CommandLine;"
         "executable=$c.ExecutablePath}|ConvertTo-Json -Compress;"
     )
     scripts['08-stop-process.TEMPLATE.ps1'] = (
         "# Fill exclusively from the reviewed result of 07. Never guess a PID.\n"
-        "$ExpectedPid=0;$ExpectedCreation='';$ExpectedCommand='';$ExpectedExecutable='';\n"
-        "if($ExpectedPid -le 0 -or -not $ExpectedCreation -or -not $ExpectedCommand -or -not $ExpectedExecutable){throw 'Incomplete process identity'};"
+        "$ExpectedPid=0;$ExpectedCreation='';$ExpectedStartTime='';$ExpectedCommand='';$ExpectedExecutable='';\n"
+        "if($ExpectedPid -le 0 -or -not $ExpectedCreation -or -not $ExpectedStartTime -or -not $ExpectedCommand -or -not $ExpectedExecutable){throw 'Incomplete process identity'};"
         "$c=Get-CimInstance Win32_Process -Filter ('ProcessId='+$ExpectedPid);"
         "if($null -eq $c){'ALREADY_EXITED';exit 0};"
         "if($c.CreationDate.ToUniversalTime().ToString('o') -cne $ExpectedCreation -or $c.CommandLine -cne $ExpectedCommand -or $c.ExecutablePath -ine $ExpectedExecutable){throw 'Process identity mismatch: no stop'};"
         "$p=Get-Process -Id $ExpectedPid -ErrorAction Stop;"
-        "if($p.StartTime.ToUniversalTime().ToString('o') -cne $ExpectedCreation){throw 'PID reused'};"
-        "$p.Kill();$p.WaitForExit(5000);if(-not $p.HasExited){throw 'Process remains'};'STOPPED';"
+        "if($p.StartTime.ToUniversalTime().ToString('o') -cne $ExpectedStartTime){throw 'PID reused'};"
+        "$p.Kill();[void]$p.WaitForExit(5000);if(-not $p.HasExited){throw 'Process remains'};'STOPPED';"
     )
     scripts['09-cleanup-empty-created.TEMPLATE.ps1'] = (
         "# Fill only with the exact created list returned by 01. Empty by default.\n"

@@ -1,0 +1,16 @@
+{
+  "mode": "PLAN_ONLY",
+  "sha": "532167ce270a1288db3ad3c25447a9f1bcdd4a50",
+  "remote_contacted": false,
+  "remote_checks": "NON_EXÉCUTÉ",
+  "artifact_created": false,
+  "target": "<RACINE_AUTORISÉE>\\staging\\532167ce270a1288db3ad3c25447a9f1bcdd4a50",
+  "steps": [
+    "doctor",
+    "check remote source state if present",
+    "build immutable artifact and manifest",
+    "transfer after authorization",
+    "verify remote artifact hash"
+  ],
+  "execution": "NON_IMPLEMENTED"
+}

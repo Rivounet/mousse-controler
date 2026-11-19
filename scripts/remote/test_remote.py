@@ -254,10 +254,13 @@ class Tests(unittest.TestCase):
         start = plan['scripts']['07-start-bounded-process.ps1']
         self.assertIn('-WindowStyle Hidden', start)
         self.assertIn('creation=', start)
+        self.assertIn('start_time=$p.StartTime', start)
         stop = plan['scripts']['08-stop-process.TEMPLATE.ps1']
         self.assertIn('Incomplete process identity', stop)
         self.assertIn('Process identity mismatch: no stop', stop)
         self.assertIn('PID reused', stop)
+        self.assertIn("-cne $ExpectedStartTime", stop)
+        self.assertIn("$c.CreationDate.ToUniversalTime().ToString('o') -cne $ExpectedCreation", stop)
         self.assertNotIn('Stop-Process -Name', stop)
 
     def test_witness_token_refusals(self):

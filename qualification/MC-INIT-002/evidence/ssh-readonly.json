@@ -1,0 +1,48 @@
+{
+  "observed_at": "2026-11-19T13:20:19.416454+00:00",
+  "doctor": {
+    "computer": "mini-pc-backend (alias du projet)",
+    "ps_version": "5.1.26100.9818",
+    "administrator": true,
+    "root_exists": false,
+    "parent_exists": true,
+    "ancestor_reparse_point": false,
+    "parent_acl_readable": true,
+    "write_access_tested": false,
+    "git_version": "git version 2.54.0.windows.1",
+    "utf8": "été — témoin"
+  },
+  "authentication": {
+    "preferred": "publickey",
+    "password": false,
+    "keyboard_interactive": false,
+    "strict_host_key_checking": true,
+    "host_key_update": false
+  },
+  "streams": {
+    "code": 37,
+    "stdout": "été stdout\r\n",
+    "stderr": "échec stderr\r\n",
+    "elapsed_seconds": 0.969,
+    "expected_code": 37,
+    "assessment": "PASS"
+  },
+  "sftp": {
+    "code": 0,
+    "elapsed_seconds": 0.563,
+    "commands": [
+      "pwd",
+      "quit"
+    ],
+    "stdout": "[chemin utilisateur expurgé]",
+    "assessment": "PASS"
+  },
+  "timeout": {
+    "error": "CLIENT_TIMEOUT: remote completion is not guaranteed",
+    "client_timeout_seconds": 1,
+    "remote_wait_seconds": 4,
+    "assessment": "PASS (délai attendu)",
+    "remote_immediate_termination_demonstrated": false
+  },
+  "scope": "lecture seule ; aucun Bluetooth, service ou fichier applicatif distant créé"
+}
