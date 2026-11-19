@@ -38,3 +38,7 @@ Pour les tâches longues, Codex doit communiquer des points de progression aux �
 ## Mise à jour
 
 Maintenir ce tableau à jour lors de chaque revue de jalon ; utiliser les GitHub Issues pour le suivi détaillé lorsque les travaux commencent, sans recopier tout leur contenu ici.
+
+## Livrables des mandats
+
+Codex publie rapports et preuves expurgés dans une branche GitHub et une PR Draft, selon `AGENTS.md`. Pour **MC-INIT-001**, la revue reste assortie d'une réserve tant que les preuves individuelles n'ont pas été publiées et examinées. Ne pas joindre manuellement des fichiers à ChatGPT comme procédure standard.
