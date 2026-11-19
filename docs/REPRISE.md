@@ -40,15 +40,19 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 **Acquis :** dépôt GitHub initialisé avec README, consignes Codex, roadmap, planning, architecture, procédure de déploiement, spécification d'accès distant, stratégie de tests, registre des décisions et ce document de reprise.
 
-**Non démontré :** connexion distante vers mini-pc-backend, version de son OS et matériel Bluetooth exact, capacité du mode périphérique HID, méthode de synchronisation, scripts effectifs, prototype HID, API et tests réels. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
+**Qualifié selon le rapport MC-INIT-001 (preuves individuelles non jointes) :** Windows 11 Famille sur le poste de développement, Windows 11 Pro sur mini-pc-backend ; accès SSH par clé et listing SFTP réussis ; adaptateur Realtek sur les deux PC et indicateur WinRT de rôle périphérique BLE positif. Le mini-PC dispose d'un compte SSH administrateur : privilégier les droits minimaux pour les opérations courantes.
 
-**Jalons :** J0 cadrage documentaire validé ; **J1 environnement et accès distant à démarrer** ; J2 faisabilité Bluetooth HID ; J3 API ; J4 déploiement robuste ; J5 qualification MVP.
+**Non démontré :** transfert SFTP aller-retour avec hash, droits effectifs d'écriture dans la racine dédiée, scripts de synchronisation/déploiement, arrêt et rollback, émission GATT/HID, appairage et mouvement de souris. La compatibilité HID reste ouverte. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
+
+**Git pendant MC-INIT-001 :** `main` local conservé à `84dbade9fe74ed8c38f4aa1b089a44c194dfa288` ; `origin/main` observé à `1527797a555b97ae2bced2b1864f1a010422cb9a` après fetch. Avant la suite, vérifier de nouveau les SHA et effectuer un fast-forward seulement si l'état local le permet et si le mandat l'autorise. Aucun push ou commit Codex déclaré. Ces références sont un instantané du rapport, pas une affirmation de l'état Git actuel.
+
+**Jalons :** J0 cadrage documentaire validé ; **J1 partiellement qualifié (inventaire, SSH, listing SFTP ; transfert et rollback à tester)** ; J2 faisabilité Bluetooth HID ; J3 API ; J4 déploiement robuste ; J5 qualification MVP.
 
 ## 6. Prochaine action
 
-**Premier mandat : [MC-INIT-001 — démarrage from scratch](MANDATS/MC-INIT-001.md)**, à exécuter avec Codex Desktop sur le PC Windows. Objectif : vérifier le dépôt local et GitHub, inventorier Windows et mini-pc-backend **en lecture seule**, identifier les moyens d'accès distant, proposer la solution de synchronisation et les pistes HID. **Ne pas encore installer, reconfigurer ou développer le prototype Bluetooth.**
+**MC-INIT-001** : exécuté selon le rapport du 19 novembre 2026, [revue ChatGPT](REVUES/MC-INIT-001.md) = **PASS_WITH_RESERVATIONS** sur le rapport seul ; fichiers de preuves individuels encore à examiner. **J1 reste ouvert.**
 
-Après le rapport Codex : ChatGPT vérifie les faits, écarts Git et risques, consigne la revue et prépare un second mandat ciblé (accès distant/déploiement), après arbitrages éventuels.
+**Prochaine étape : MC-INIT-002 à préparer après revue des preuves** : transfert réversible d'un fichier témoin dans une racine dédiée autorisée, vérification des hash, gestion des erreurs, contexte PowerShell, collecte de logs et arrêt d'un processus de test sans HID. Pas de déploiement permanent ni de modification système implicite.
 
 ## 7. Où retrouver les détails ?
 
