@@ -20,7 +20,7 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-013 | 2026-11-19 | Validé | ChatGPT rédige les mandats Codex et supervise la gestion Git/GitHub | Mandats ciblés ; contrôle du diff, des SHA, des PR et des fusions avant validation |
 | D-014 | 2026-11-19 | Validé | Premier mandat = amorçage from scratch et diagnostic non destructif | Pas de prototype HID ou de changement système avant vérification de l'environnement |
 
-| D-015 | 2026-11-19 | Validé | Centraliser la reprise future dans `docs/REPRISE.md` et versionner les mandats Codex | Reprise fondée sur l'état Git, le jalon en cours et des livrables vérifiables |
+| D-015 | 2026-11-19 | Amendé par D-021 | Centraliser la reprise future dans `docs/REPRISE.md` ; ancien archivage des mandats abandonné | Reprise fondée sur l'état Git, le jalon en cours et des livrables vérifiables |
 
 | D-016 | 2026-11-19 | Qualification partielle | Rapport MC-INIT-001 : SSH et listing SFTP opérationnels, indicateur BLE périphérique favorable sur les deux PC | J1 reste ouvert ; HID, transfert réversible et rollback non démontrés ; preuves expurgées désormais examinées dans PR #1 ; contrôles matériels restants ouverts |
 | D-017 | 2026-11-19 | Proposition retenue pour qualification | Privilégier OpenSSH/SFTP existants et scripts compatibles PowerShell 5.1 distant | Tester les droits minimaux, l'identité hôte, les hash, les erreurs et le rollback avant déploiement réel |
@@ -30,6 +30,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-019 | 2026-11-19 | Revue réalisée | PR #1 : 10 fichiers, 9 empreintes concordantes avec fins de ligne CRLF ; PASS documentaire, MC-INIT-001 PASS_WITH_RESERVATIONS | J1 reste ouvert ; PR Draft non fusionnée, MC-INIT-002 préparé sans autorisation implicite d'écriture distante |
 
 | D-020 | 2026-11-19 | Validé avec réserves | Revue PR #2 MC-INIT-002 : 14 fichiers, 13 empreintes concordantes, 31 tests locaux attestés, SSH/SFTP/transfert de 63 octets/arrêt témoin documentés | J1 clôturé avec réserves sur le canal distant ; synchronisation de release par SHA, exécution persistante et rollback transférés explicitement à J4 ; PR #2 reste Draft non fusionnée |
+
+| D-021 | 2026-11-19 | Validé | ChatGPT fournit tous les mandats Codex intégralement dans le chat, **sans enregistrement dans GitHub** | Conserver sur GitHub seulement documentation de référence, roadmap/planning, décisions, revues, code, rapports et preuves ; retirer les fichiers de mandats existants |
 
 ## En cas de changement
 
