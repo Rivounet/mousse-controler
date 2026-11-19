@@ -37,8 +37,19 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-023 | 2026-11-19 | Validé | Mandats Codex orientés vers un objectif fonctionnel complet et vérifiable, autonomie technique encadrée plutôt que micro-mandats | Codex conçoit, implémente, teste et corrige dans le même mandat ; points d'étape significatifs ; arrêt seulement pour décisions structurantes ou opérations sensibles ; PR Draft cohérentes, revues sur demande |
 
+| D-024 | 2026-11-19 | Validé, remplace D-002 et D-003 pour l'organisation courante | Codex, Git, développement, tests et exécution résident directement sur `mini-pc-backend` ; `MonOrdinateur` est uniquement la cible HID | Suppression du transfert distant dans le cycle quotidien ; preuves Bluetooth toujours observées sur les deux machines |
+
+| D-025 | 2026-11-19 | Validé | Conserver les composants SSH/SFTP et releases sans les supprimer, en les classant comme maintenance/rollback secondaires | Le travail des PR #2 et #3 est préservé ; il ne bloque pas J2 et devra être requalifié avant un nouvel usage distant réel |
+
+| D-026 | 2026-11-19 | Qualification partielle | Le Realtek et Windows exposent rôle périphérique BLE, serveur GATT, notifications, publicité et appairage ; verdict HOGP `GO_WITH_RESERVATIONS` | `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels ; protocole soumis à autorisation |
+
+| D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
 
-**Inconnues majeures :** contrôleur Bluetooth effectif, compatibilité émission HID sous l'OS réel, canal d'accès distant, pile logicielle et mécanisme de déploiement.
+**Inconnues majeures :** acceptation réelle du service HOGP par le pilote,
+bonding/chiffrement avec MonOrdinateur, chargement du pilote souris natif,
+reconnexion et stabilité. L'accès distant n'est plus une inconnue bloquante du
+MVP ; l'activation locale réelle et le rollback restent à qualifier.

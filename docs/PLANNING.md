@@ -1,48 +1,51 @@
-# Planning opérationnel — progression par jalons
+# Planning opérationnel
 
-Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire → En cours → En revue → Validé** ; **Bloqué** indique un obstacle documenté. Un passage à *Validé* nécessite une preuve ou une revue adaptée.
+Progression sans échéances fixes : **À faire → En cours → En revue → Validé**.
+Un état validé exige une preuve adaptée ; une capacité déclarée par Windows ne
+valide pas à elle seule le fonctionnement HID.
 
-**MC-INIT-001 :** PASS_WITH_RESERVATIONS, publication [PR #1 Draft](https://github.com/Rivounet/mousse-controler/pull/1) PASS documentaire. **MC-INIT-002 :** [PR #2 Draft](https://github.com/Rivounet/mousse-controler/pull/2) examinée, [revue](REVUES/MC-INIT-002.md) **PASS_WITH_RESERVATIONS**, **J1 validé avec réserves** sur le canal distant et le témoin réversible. **J4 reste ouvert** pour la chaîne de releases et rollback. Aucune PR fusionnée. Voir [REPRISE.md](REPRISE.md).
+## Situation consolidée
 
-## Prochaines tâches (ordre recommandé)
+- MC-INIT-001 à 003 : travaux préservés dans les PR Draft #1 à #3 et réunis
+  sans fusion dans la branche MC-REPRISE-001.
+- Environnement local : inventorié ; clone officiel dans `source/` ; artefacts
+  d'exécution préexistants préservés.
+- Tests : 72 PASS sur mini-pc-backend.
+- Bluetooth : rôles BLE et API GATT favorables ; aucune émission exécutée.
 
-| ID | Jalon | Travail | Responsable d'exécution | Livrable/preuve | État |
-|---|---|---|---|---|---|
-| MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
-| MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport et preuves MC-INIT-001 revus, réserves consignées | Validé avec réserves |
-| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | SSH, UTF-8, SFTP aller-retour, SHA-256 et arrêt témoin examinés en PR #2 ; privilèges admin résiduels | Validé avec réserves |
-| MC-003A | J4 | Qualifier synchronisation d'une release par SHA et état Git distant si un clone existe | Codex Desktop | Plan local livré en PR #2, **aucune synchronisation applicative exécutée** | À faire |
-| MC-003B | J4 | Développer la chaîne distante (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | doctor/status/sondes/plan seulement en PR #2 ; mutation, santé, verrou et rollback restant à faire | En cours |
-| MC-004 | J2 | Mesurer le rôle périphérique BLE/HID disponible sur le mini-PC | Codex Desktop | Matrice matériel/OS, résultats et limites | À faire |
-| MC-005 | J2 | Tester l'appairage et un mouvement HID minimal | Codex Desktop | Démonstration + traces côté émetteur/cible | À faire |
-| MC-006 | J3 | Définir le contrat API et le moteur de commandes | Codex Desktop | Contrat versionné, tests automatisés | À faire |
-| MC-007 | J3 | Intégrer le Bluetooth HID et les sécurités | Codex Desktop | Démo API → souris sur PC Windows | À faire |
-| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves ; prochain mandat à fournir dans le chat après arbitrage des PR | À faire |
-| MC-009 | J5 | Qualifier robustesse, déconnexions, sécurité, non-régression | Codex Desktop | Rapport et preuves | À faire |
-| MC-010 | J5 | Effectuer la revue finale du code et de la documentation | ChatGPT | Verdict motivé + réserves | À faire |
+## Tâches
 
-## Définition de « terminé »
+| ID | Jalon | Travail | Livrable / preuve | État |
+|---|---|---|---|---|
+| MC-001 | J0 | Documentation de référence | documents du dépôt | Validé |
+| MC-002 | J1 | Inventorier mini-pc-backend sans modification | `MC-REPRISE-001/evidence/environment.json` | Validé |
+| MC-003 | J1 | Consolider Git et rendre les tests reproductibles | branche unique, 72 PASS | En revue |
+| MC-003A | J4 | Artefact par SHA, staging et release locale | code/tests MC-INIT-003 consolidés | En cours |
+| MC-003B | J4 | Activation, santé, arrêt et rollback locaux réels | preuve sur une application témoin | À faire |
+| MC-003C | J4 | Maintenance SSH/SFTP optionnelle | requalification seulement si nécessaire | Secondaire |
+| MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
+| MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | En attente d'autorisation d'essai |
+| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | En attente d'autorisation |
+| MC-006 | J3 | Contrat API et moteur de commandes | contrat + adaptateur simulé + tests | À faire après décision J2 |
+| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | À faire |
+| MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
+| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
 
-Une tâche technique est terminée quand ses changements sont localisés, ses tests et leurs résultats sont rapportés, et son comportement est vérifié sur **mini-pc-backend** quand pertinent. Toute livraison distante doit identifier le **SHA demandé et le SHA réellement déployé** ; aucun écrasement de données du clone distant n'est acceptable. Le code ne passe pas en `main` sans décision de fusion explicite de l'utilisateur ; la revue de code préalable n'est pas automatique et dépend du contrôle demandé ou convenu. Une tâche documentaire n'est terminée qu'après publication GitHub et vérification des liens/cohérences.
+## Prochaine décision
 
-## Cadence de travail
+Autoriser ou refuser le protocole
+[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md) :
+création du service GATT/HID, publicité visible, appairage avec MonOrdinateur et
+mouvement relatif minimal. La commande d'arrêt et les effets sont décrits avant
+toute exécution.
 
-1. Choisir **une tâche ciblée**, avec un résultat observable.
-2. Codex Desktop annonce périmètre, diagnostic initial et risques, puis implémente localement.
-3. Codex transfère sur mini-PC, exécute les tests réels autorisés et fournit logs, commandes et résultats.
-4. ChatGPT enregistre l'avancement et contrôle la cohérence Git/GitHub. **La revue de code approfondie n'est effectuée que sur demande explicite ou lors d'un jalon de contrôle convenu** ; elle donne alors un verdict motivé : **PASS**, **PASS_WITH_RESERVATIONS** ou **NO-GO**.
-5. Une intégration ou fusion ne se fait qu'après autorisation applicable.
+Sans cette autorisation, J2 reste en cours et le développement applicatif
+complexe ne démarre pas.
 
-Pour les tâches longues, Codex doit communiquer des points de progression aux étapes clés avec le temps écoulé et les éventuels blocages.
+## Règles de livraison
 
-## Mise à jour
-
-Maintenir ce tableau à jour lors de chaque revue de jalon ; utiliser les GitHub Issues pour le suivi détaillé lorsque les travaux commencent, sans recopier tout leur contenu ici.
-
-## Livrables des mandats
-
-Codex publie rapports et preuves expurgés dans une branche GitHub et une PR Draft, selon `AGENTS.md`. Pour **MC-INIT-001**, les preuves expurgées ont été publiées et examinées via PR #1 ; les réserves concernent les éléments non démontrés, et non plus l'absence des fichiers. Ne pas joindre manuellement des fichiers à ChatGPT comme procédure standard.
-
-## Organisation des prochains mandats
-
-**D-023 :** confier à Codex un objectif fonctionnel complet avec critères de réussite et autonomie technique, sans fractionnement artificiel. Prochain lot : démontrer une chaîne de déploiement réelle et réversible d'application témoin sur mini-pc-backend, incluant préparation par SHA, transfert, démarrage, état, arrêt et rollback, avec points d'arrêt sur opérations sensibles. Les tests et corrections ordinaires restent dans le même mandat ; publication dans une PR Draft, sans fusion automatique. Revue de code seulement sur demande ou au point de contrôle convenu.
+Codex travaille sur mini-pc-backend, publie une PR Draft cohérente avec rapport
+et preuves expurgées, puis s'arrête avant fusion. Les mandats restent dans le
+chat (D-021), une livraison ne déclenche pas automatiquement une revue exhaustive
+(D-022) et l'autonomie technique reste bornée par les opérations sensibles
+(D-023).

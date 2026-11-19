@@ -1,54 +1,78 @@
-# Architecture technique — cible et inconnues
+# Architecture technique
 
-## Parcours des commandes
+## Parcours cible
 
 ```text
 Client API autorisé
-    │ HTTP local / LAN privé (à choisir)
+    │ HTTP local par défaut
     ▼
 mini-pc-backend
-    ├── Réception et authentification API
-    ├── Validation, file de commandes, temporisation
-    ├── Sécurité : bornes, arrêt immédiat, journalisation
-    └── Adaptateur d'émulation Bluetooth HID
-                 │
-                 │ Bluetooth appairé
-                 ▼
-PC Windows cible (également poste de développement Codex)
-    └── Pile Bluetooth + pilote HID natifs → curseur
+    ├── API et authentification
+    ├── validation, file bornée et expiration
+    ├── arrêt immédiat et journalisation expurgée
+    └── interface HidAdapter
+          ├── SimulatedHidAdapter (tests)
+          └── WindowsHogpAdapter (production)
+                         │ Bluetooth LE appairé
+                         ▼
+MonOrdinateur
+    └── pile Bluetooth + pilote HID natifs → curseur
 ```
 
-## Contraintes validées
+## Rôles des machines
 
-- Le code est **développé localement via Codex Desktop sur PC Windows**.
-- Son exécution, ses diagnostics et ses tests d'intégration s'effectuent sur **mini-pc-backend**.
-- Le PC cible est Windows, reçoit les événements Bluetooth HID, sans application réceptrice dédiée.
-- La souris physique du PC doit rester utilisable ; le système ne doit pas exiger le remplacement de son pilote.
-- Les commandes proviennent d'une API ; elles ne sont pas générées directement depuis le PC cible par un agent installé sur celui-ci.
+- **mini-pc-backend** : Codex, clone Git, développement, tests, exécution,
+  future API et émission HOGP.
+- **MonOrdinateur** : cible Bluetooth HID seulement. Aucun récepteur Mousse-
+  controler, outil de développement ou analyseur d'écran n'y est requis.
+- **GitHub** : source versionnée officielle, sans être un mécanisme d'exécution.
 
-## Points **non vérifiés**
+## État qualifié au 19 novembre 2026
 
-- Version exacte de Windows et caractéristiques Bluetooth sur mini-pc-backend ; inventaire à obtenir.
-- Support effectif du rôle **périphérique BLE**, du serveur GATT et du profil **HID over GATT (HOGP)** sous l'OS et le pilote présents.
-- Gestion de l'appairage, publicité BLE, reconnexion, stabilité en fonctionnement prolongé.
-- Accès distant/permissions et mécanisme de transfert depuis Codex Desktop.
-- Contrat précis de l'API, langage, bibliothèque Bluetooth et mode de lancement.
+Le mini-PC exécute Windows 11 Professionnel 26H2 x64 avec un adaptateur Realtek.
+WinRT retourne `true` pour BLE et le rôle périphérique. Les API de serveur GATT,
+création de caractéristiques, notification, publicité et appairage sont présentes.
+Le service Bluetooth principal est actif.
 
-La présence d'un adaptateur Bluetooth ou d'un pilote HID **ne prouve pas** à elle seule la capacité à simuler une souris Bluetooth. Il faut une preuve d'appairage et de réception d'événements côté cible.
+Ces résultats prouvent les préconditions, pas HOGP : aucun service HID n'a été
+créé, publié ou appairé. Le verdict est `GO_WITH_RESERVATIONS` jusqu'à la
+démonstration décrite dans
+[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md).
 
-## Interfaces envisagées (proposition, non implémentée)
+## Contraintes HOGP à respecter
 
-- `move(dx, dy)` : mouvement relatif en unités HID.
-- `click(button)` : appui puis relâchement ; `press`/`release` si glisser-déposer ultérieur.
-- `scroll(delta)` : défilement.
-- `status()`, `stop()` : état et arrêt d'urgence.
+- service HID `0x1812`, Report Map de souris relative et Report characteristic ;
+- services/attributs complémentaires exigés par le profil ;
+- notifications vers le Host et gestion du Client Characteristic Configuration ;
+- lien chiffré, mode bondable et appairage ;
+- publicité connectable/découvrable arrêtée explicitement ;
+- aucune émission avant abonnement du Host et consentement de la session de test.
 
-Les coordonnées absolues nécessitent une connaissance fiable de la position et une calibration distincte ; elles ne sont **pas promises au MVP**.
+## Organisation locale
 
-## Sécurité dès le prototype
+```text
+Mousse-controler/
+    source/       # clone Git et tests
+    releases/     # artefacts immuables par SHA
+    staging/      # préparation contrôlée
+    state/        # activation, verrous et états
+    logs/         # journaux locaux expurgés
+```
 
-API liée par défaut à `127.0.0.1` sur mini-PC ; toute ouverture LAN doit être volontaire, filtrée et authentifiée. Limiter les amplitudes et fréquences de mouvements, prévoir expiration des commandes en attente, journaliser sans secrets. Tester dans une session contrôlée, avec possibilité de couper immédiatement l'émission Bluetooth/API. Aucun contrôle invisible du PC cible, aucun contournement des politiques Bluetooth.
+Le clone n'est jamais remplacé par une release. Les composants SSH/SFTP restent
+isolés dans `scripts/remote/` et ne sont pas une dépendance de l'application.
 
-## Alternative si le Bluetooth natif échoue
+## Limites du MVP
 
-Comparer les solutions selon preuve de compatibilité, coût, maintien d'une absence d'agent sur le PC cible, simplicité de déploiement : OS/hôte différent si compatible, puis périphérique externe Bluetooth HID programmable. Toute modification matérielle est une décision explicite.
+Commandes prévues : `move(dx, dy)`, `click(button)`, `press`, `release`,
+`scroll(delta)`, `status()` et `stop()`. Les coordonnées absolues, l'analyse de
+l'écran et le contrôle intelligent des applications sont hors périmètre.
+
+L'API est liée à `127.0.0.1` par défaut. Toute ouverture LAN est une décision
+distincte avec authentification, filtrage et limites de débit.
+
+## Alternative en cas de NO-GO
+
+Si le prototype conforme échoue sur la pile Windows/Realtek, comparer d'abord un
+adaptateur externe programmable capable d'HOGP. Un changement d'OS, de pilote ou
+de matériel nécessite une décision explicite ; aucune installation implicite.

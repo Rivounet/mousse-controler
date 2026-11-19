@@ -1,45 +1,58 @@
-# Stratégie de tests et revue technique
+# Stratégie de tests et qualification
 
-## Niveaux de vérification
+## Commande locale de référence
 
-| Niveau | But | Environnement | Preuve minimale |
-|---|---|---|---|
-| T0 — Contrôles statiques | Typage, lint, analyse des dépendances quand définis | PC Windows / CI éventuelle | Commandes, versions, statut |
-| T1 — Unitaires | Parseur API, limites de valeurs, commandes, arrêt, adaptateur simulé | PC Windows / mini-PC | Rapport automatisé |
-| T2 — Intégration technique | Service sur mini-PC, pilote/adaptateur Bluetooth, appairage ; synchronisation et transfert distants | mini-pc-backend + PC cible | Inventaire, SHA, contrôles d'accès et journaux datés |
-| T3 — Bout en bout | API → souris : déplacements, clics, scroll | mini-PC + PC cible | Cas testés, résultats observés |
-| T4 — Robustesse/sûreté | Coupure Bluetooth, reconnexion, commandes invalides, saturation et arrêt d'urgence | mini-PC + PC cible | Anomalies, repro, correction ou réserve |
+```powershell
+python -m unittest discover
+```
 
-## Tests d'acceptation MVP
+MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécute
+désormais 72 tests au lieu d'en annoncer zéro. Le 19 novembre 2026, les 72 tests
+ont réussi sur mini-pc-backend en 31,876 secondes.
 
-- Le PC cible reconnaît une souris Bluetooth HID native après appairage.
-- Aucun logiciel récepteur propre au projet n'est installé sur le PC cible.
-- Un client API autorisé peut commander mouvement relatif, clic gauche/droit et défilement.
-- Une commande non autorisée ou malformée n'entraîne aucun événement HID.
-- Une déconnexion Bluetooth est détectée ; aucune séquence obsolète ne s'exécute après reconnexion.
-- Un arrêt d'urgence stoppe rapidement l'émission ; une souris physique reste fonctionnelle.
-- Un cycle de synchronisation/déploiement/retour arrière depuis Codex Desktop est reproductible, avec SHA demandé et SHA observé.
-- La synchronisation refuse un clone distant présentant des modifications imprévues, sans les écraser.
-- Les actions de déploiement sont idempotentes et exclusives ; une interruption réseau ou un échec de contrôle post-déploiement ne détruit pas la version précédente.
-- Une procédure de récupération manuelle documentée existe en cas de perte de connectivité distante.
-- Les limites matérielles, versions et conditions de test sont documentées.
+La suite couvre 69 tests historiques d'artefacts, releases, chemins, erreurs,
+verrous et client distant hors ligne, plus trois tests du diagnostic Bluetooth
+en lecture seule. Elle ne crée pas de publicité et n'émet aucun rapport HID.
 
-## Précautions
+## Niveaux
 
-Les commandes de souris peuvent déplacer le curseur et cliquer sur une application en cours. Exiger une fenêtre de test volontaire, une procédure d'arrêt et des mouvements de faible amplitude. Les tests ne doivent ni modifier des données non liées, ni installer d'agent sur le PC cible.
+| Niveau | But | État |
+|---|---|---|
+| T0 | cohérence Git, syntaxe et documentation | exécuté dans MC-REPRISE-001 |
+| T1 | unités, artefacts, releases, diagnostic Bluetooth | 72 PASS |
+| T2 | service GATT, publicité, bonding et pilote HID | non exécuté, autorisation requise |
+| T3 | API → mouvement/clic/scroll | non développé |
+| T4 | reconnexion, saturation, arrêt d'urgence | non développé |
 
-## Compte rendu standard d'un lot
+## Qualification Bluetooth en deux portes
 
-- Identifiant du lot, branche et SHA.
-- Inventaire des fichiers modifiés, objectif et limites.
-- Environnement réellement testé (poste local / mini-PC / cible).
-- Commandes lancées et résultats **PASS / FAIL / NON_EXÉCUTÉ**.
-- Logs utiles expurgés de secrets.
-- Régressions, réserves, retour arrière possible.
-- Lien PR ou diff à relire.
+1. **Lecture seule** : pilote, services, rôles BLE et surface WinRT. Autorisée
+   sans interaction avec la cible ; script `scripts/bluetooth/diagnose.ps1`.
+2. **Matérielle** : service HOGP, publicité, appairage et mouvement minimal.
+   Exécutée seulement après autorisation selon
+   `qualification/MC-REPRISE-001/PROTOCOLE-HID.md`.
 
-## Revue de code — responsabilité ChatGPT
+Un résultat positif de porte 1 ne peut produire qu'un
+`GO_WITH_RESERVATIONS`. `GO` requiert la reconnaissance comme souris et un
+événement réellement observé sur MonOrdinateur.
 
-Pour chaque PR avant fusion : vérifier adéquation au besoin, séparation API/HID, compatibilité et gestion d'erreurs, sécurité des commandes, tests réels attestés, impact sur mini-PC et PC cible, qualité de la synchronisation et du rollback, absence d'écrasement Git distant, dette ajoutée, actualisation des documents. Rendre un verdict **PASS**, **PASS_WITH_RESERVATIONS** ou **NO-GO**, justifié par éléments contrôlables.
+## Acceptation MVP
 
-**Un rapport Codex n'est pas à lui seul une revue indépendante.** ChatGPT examine le diff et les preuves disponibles ; indique explicitement ce qu'il n'a pas pu contrôler. La fusion ou le déploiement durable n'est jamais implicite.
+- MonOrdinateur reconnaît une souris Bluetooth native après appairage ;
+- aucun logiciel récepteur propre au projet sur MonOrdinateur ;
+- mouvement relatif, clic gauche/droit et défilement via un client autorisé ;
+- aucune commande invalide ou expirée émise ;
+- reconnexion sans rejeu de commandes obsolètes ;
+- arrêt d'urgence mesuré, publicité arrêtée et souris physique disponible ;
+- API non exposée publiquement ;
+- activation par SHA et rollback reproductibles sur mini-pc-backend.
+
+## Compte rendu d'un lot
+
+Indiquer branche et SHA, machine, commandes, total de tests, durée, PASS/FAIL,
+opérations non exécutées, effets Bluetooth éventuels, arrêt/rollback et preuves
+expurgées. Ne publier ni adresses Bluetooth, identifiants matériels uniques,
+comptes, chemins personnels, secrets ou journaux privés.
+
+La revue de code approfondie reste sur demande ou au jalon convenu ; livraison
+d'une PR Draft ne signifie ni validation, ni fusion.

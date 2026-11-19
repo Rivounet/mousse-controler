@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "diagnostic_mode": "read-only",
+  "machine": {
+    "expected_role": "mini-pc-backend",
+    "name": "mini-pc-backend",
+    "architecture": "64 bits"
+  },
+  "os": {
+    "caption": "Microsoft Windows 11 Professionnel",
+    "version": "10.0.26300",
+    "build": "26300.9974",
+    "display_version": "26H2",
+    "edition": "Professional"
+  },
+  "runtimes": {
+    "powershell": "5.1.26100.9818",
+    "python": "Python 3.12.10",
+    "git": "git version 2.54.0.windows.1",
+    "codex": "codex-cli 0.169.1"
+  },
+  "bluetooth": {
+    "adapter": {
+      "name": "Realtek Bluetooth Adapter",
+      "manufacturer": "Realtek Semiconductor Corp.",
+      "driver_version": "1.1061.2312.2501",
+      "driver_date": "2024-05-20"
+    },
+    "capabilities": {
+      "central_role": true,
+      "peripheral_role": true,
+      "low_energy": true,
+      "classic": true
+    },
+    "winrt_api": {
+      "gatt_service_provider": true,
+      "gatt_create_async": true,
+      "gatt_start_advertising": true,
+      "local_characteristic": true,
+      "notify_value_async": true,
+      "advertisement_publisher": true,
+      "device_pairing": true
+    },
+    "services": [
+      {"name": "BluetoothUserService_<session>", "status": "Stopped", "start_type": "Manual"},
+      {"name": "BTAGService", "status": "Stopped", "start_type": "Manual"},
+      {"name": "bthserv", "status": "Running", "start_type": "Manual"}
+    ]
+  },
+  "not_executed": [
+    "GATT service creation",
+    "BLE advertising",
+    "pairing",
+    "HID report emission",
+    "driver or Bluetooth configuration change"
+  ]
+}

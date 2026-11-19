@@ -1,87 +1,93 @@
 # Reprise du projet Mousse-controler
 
-**Dernière consolidation : 19 novembre 2026.** Ce document est le point d'entrée pour reprendre le projet dans une nouvelle conversation ChatGPT ou une nouvelle session Codex Desktop. Ne pas le confondre avec une preuve d'exécution.
+**Dernière consolidation : 19 novembre 2026 — MC-REPRISE-001.** Ce document est
+le point d'entrée d'une nouvelle session. Les mandats complets restent dans le
+chat et ne sont pas archivés dans le dépôt.
 
-## 1. Objectif produit
+## Objectif
 
-Le mini-PC nommé **mini-pc-backend** doit recevoir des commandes d'une API et se présenter par Bluetooth comme une **souris HID** auprès d'un **PC Windows cible**. Windows doit utiliser sa pile et son pilote HID natifs, **sans application réceptrice dédiée** sur le PC cible ; l'appairage Bluetooth est permis. Les actions visées incluent déplacement relatif, clic et défilement. La compatibilité du contrôleur Bluetooth existant et de la pile logicielle **reste à démontrer**.
+`mini-pc-backend` doit se présenter comme souris Bluetooth HID auprès de
+`MonOrdinateur`, qui utilise exclusivement sa pile et ses pilotes natifs. Une API
+locale protégée commandera ensuite mouvement relatif, clic et défilement.
 
-## 2. Machines et dépôt
+## Organisation actuelle
 
 | Élément | Rôle |
 |---|---|
-| PC Windows | Poste local de développement avec **Codex Desktop** ; également ordinateur cible recevant la souris Bluetooth |
-| `mini-pc-backend` | Machine distante où le code est déployé, exécuté et testé ; émetteur Bluetooth HID et hôte de l'API |
-| [GitHub Rivounet/mousse-controler](https://github.com/Rivounet/mousse-controler) | **Seule source de vérité officielle** pour le code et la documentation |
+| `mini-pc-backend` | Codex, Git, développement, tests, exécution, future API et émission HOGP |
+| `MonOrdinateur` | cible Windows Bluetooth HID, sans agent Mousse-controler |
+| GitHub | source officielle et PR Draft |
 
-Le développement et les tests unitaires préliminaires sont effectués depuis Windows ; les essais d'intégration et de comportement Bluetooth doivent être attestés sur **mini-pc-backend** et le PC cible.
+Le clone Git est dans le sous-dossier local `source/`, séparé des releases,
+staging, états et journaux d'exécution. SSH/SFTP reste une capacité secondaire de
+maintenance, non une étape du développement courant.
 
-## 3. Responsabilités permanentes
+## État vérifié
 
-| Acteur | Responsabilités |
+### Machine
+
+- Windows 11 Professionnel 26H2 x64, build 26300.9974 ;
+- Intel Celeron N5105, Python 3.12.10, Git 2.54.0, Codex CLI 0.169.1 ;
+- adaptateur Realtek, pilote 1.1061.2312.2501 ;
+- service Bluetooth principal actif.
+
+### Git et tests
+
+`origin/main` a été observé à
+`2b42ea12aaeaeb9dad7512a621e66257f7f8a37a`. Les PR #1, #2 et #3 restent
+ouvertes en Draft. #1 est indépendante ; #3 est empilée sur #2. Leurs cinq
+commits utiles sont conservés dans la branche de consolidation issue de `main`,
+sans fusion ni réécriture des branches historiques.
+
+`python -m unittest discover` exécute **72 tests**, tous réussis sur
+mini-pc-backend. La découverte racine qui annonçait auparavant zéro test est
+corrigée.
+
+### Bluetooth HID
+
+Le matériel retourne `true` pour BLE, le rôle périphérique et le rôle central.
+Les API WinRT de serveur GATT, création de caractéristiques, notification,
+publicité et appairage sont présentes. La documentation Microsoft et la
+spécification Bluetooth SIG rendent une implémentation HOGP crédible.
+
+**Verdict : `GO_WITH_RESERVATIONS`.** Aucun service GATT n'a été créé, aucune
+publicité démarrée, aucun appairage effectué et aucun événement HID émis. Ces
+étapes sont indispensables avant `GO`.
+
+## Réalisé, simulé, non qualifié
+
+| Domaine | État |
 |---|---|
-| **Utilisateur** | Définit les objectifs, tranche les choix engageants, autorise modifications système, fusions et opérations sensibles |
-| **ChatGPT** | Définit les mandats Codex, tient la documentation et les décisions à jour dans GitHub, pilote la roadmap et le planning, supervise Git/GitHub, effectue les revues indépendantes de code et de preuves sur demande explicite ou au jalon convenu, jamais automatiquement à chaque implémentation |
-| **Codex Desktop** | Exécute les mandats, développe localement, prépare les branches et PR, effectue diagnostics, transferts/déploiements autorisés, tests distants et comptes rendus |
+| Inventaire local et diagnostic Bluetooth | Réalisé en lecture seule |
+| Consolidation des trois PR historiques | Réalisée localement, publication à finaliser |
+| Tests artefacts/releases/distant hors ligne | 69 PASS |
+| Tests du diagnostic Bluetooth | 3 PASS |
+| Release locale et rollback | Modèle et tests présents ; activation applicative réelle à requalifier |
+| SSH/SFTP | Qualifié historiquement, non relancé dans la nouvelle organisation |
+| Service HOGP, publicité, bonding, mouvement | Non exécutés — autorisation requise |
+| API de commandes | Non développée |
 
-**Cycle :** mandat ChatGPT **fourni dans le chat, non archivé dans GitHub** → travaux Codex → rapport, SHA, diff/PR et preuves sur GitHub → suivi du livrable et de GitHub par ChatGPT → revue de code **uniquement à la demande ou au jalon convenu** (PASS / PASS_WITH_RESERVATIONS / NO-GO) → décision utilisateur si nécessaire → mise à jour documentaire. Ne jamais présenter une validation de ChatGPT comme une exécution ou une supervision continue automatique : elle intervient à la demande, sur preuves consultables.
+## Prochaine action
 
-## 4. Principes de gestion
+Décider l'autorisation du
+[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md). Il
+prévoit un prototype au premier plan, arrêt par `Ctrl+C` avec
+`StopAdvertising()`, appairage volontaire et mouvement de cinq pixels dans une
+surface sûre. Sans autorisation, ne pas passer au développement complexe de
+l'API.
 
-- **Planning par jalons, sans dates imposées**. L'état opérationnel des tâches est dans [PLANNING.md](PLANNING.md) ; les critères de jalon sont dans [ROADMAP.md](ROADMAP.md).
-- Développement ciblé, branches de travail et PR **Draft** pour les modifications applicatives. **Pas de fusion implicite**, ni modification directe de `main` par Codex.
-- Conserver les modifications préexistantes, contrôler SHA et état Git avant toute manipulation ; pas de force-push ni de nettoyage destructif.
-- Séparer source Git distante et versions déployées sur mini-PC. Toute synchronisation vise une **révision SHA exacte**.
-- Accès distant sécurisé, vérification de l'hôte, scripts reproductibles, journaux rapatriés, déploiement idempotent, verrou contre la concurrence, contrôles de santé et rollback.
-- Pas d'installation/configuration réseau/Bluetooth non autorisée ; pas d'API exposée publiquement. Préserver la souris physique du PC et éviter les clics de test intempestifs.
-- Favoriser la simplicité : documents utiles, décisions courtes, pas de gouvernance supplémentaire sans nécessité.
+## Sources de vérité
 
-## 5. État connu et inconnues
+- [Rapport MC-REPRISE-001](../qualification/MC-REPRISE-001/RAPPORT.md)
+- [Roadmap](ROADMAP.md) et [planning](PLANNING.md)
+- [Architecture](ARCHITECTURE.md)
+- [Déploiement local](DEPLOIEMENT.md)
+- [Accès distant secondaire](ACCES-DISTANT-ET-SYNCHRONISATION.md)
+- [Tests](TESTS.md), [décisions](DECISIONS.md) et [consignes Codex](../AGENTS.md)
 
-**Acquis :** dépôt GitHub initialisé avec README, consignes Codex, roadmap, planning, architecture, procédure de déploiement, spécification d'accès distant, stratégie de tests, registre des décisions et ce document de reprise.
+## Gouvernance
 
-**Qualifié selon le rapport et les preuves expurgées de la [PR #1](https://github.com/Rivounet/mousse-controler/pull/1) (examinés par ChatGPT) :** Windows 11 Famille sur le poste de développement, Windows 11 Pro sur mini-pc-backend ; accès SSH par clé et listing SFTP réussis ; adaptateur Realtek sur les deux PC et indicateur WinRT de rôle périphérique BLE positif. Le mini-PC dispose d'un compte SSH administrateur : privilégier les droits minimaux pour les opérations courantes.
-
-**MC-INIT-002 (preuves examinées en [PR #2](https://github.com/Rivounet/mousse-controler/pull/2)) :** 31 tests locaux déclarés PASS et code lu ; 13 empreintes SHA-256 publiées revérifiées ; SSH, UTF-8, délais, transfert SFTP aller-retour d'un témoin de 63 octets, nettoyage borné et arrêt d'un processus témoin au cours d'une session SSH démontrés sur pièces. Le compte distant reste administrateur.
-
-**Non démontré :** livraison d'une release Git par SHA, démarrage persistant après déconnexion SSH, gestion applicative des processus, santé, verrou de déploiement et rollback, émission GATT/HID, appairage et mouvement de souris. La compatibilité HID reste ouverte. Ne pas confondre une spécification publiée avec un logiciel déjà fonctionnel.
-
-**Git pendant MC-INIT-001 :** `main` local conservé à `84dbade9fe74ed8c38f4aa1b089a44c194dfa288` ; `origin/main` observé à `1527797a555b97ae2bced2b1864f1a010422cb9a` après fetch. Avant la suite, vérifier de nouveau les SHA et effectuer un fast-forward seulement si l'état local le permet et si le mandat l'autorise. Aucun push ou commit Codex déclaré. Ces références sont un instantané du rapport, pas une affirmation de l'état Git actuel.
-
-**Jalons :** J0 validé ; **J1 validé avec réserves** (SSH et transfert réversible qualifiés, automatisation applicative reportée à J4) ; J2 HID non qualifié ; J3 API à faire ; J4 déploiement robuste à faire ; J5 qualification MVP à faire.
-
-## 6. Prochaine action
-
-**MC-INIT-001** : exécuté selon le rapport du 19 novembre 2026 ; [revue ChatGPT](REVUES/MC-INIT-001.md) = **PASS_WITH_RESERVATIONS** après lecture des preuves publiées. **Publication MC-INIT-001 : PASS**, PR #1 Draft au SHA `8886cab1230039add8e2712a5114c4e312c0f49b`, sans fusion. **J1 reste ouvert.**
-
-**MC-INIT-002** : terminé avec réserves, [revue](REVUES/MC-INIT-002.md) publiée après examen des 14 fichiers de la PR #2 au SHA `cf3c37200541d3291f6b506731e14ce020bcf630`. **PR #1 et PR #2 sont en Draft, non fusionnées.**
-
-**Prochaine étape :** décider de l'intégration séparée des PR #1 et #2 avant la réalisation de la chaîne de release. Mandat MC-INIT-003 à fournir intégralement dans le chat, sans fichier GitHub : sync par SHA, staging, version active, arrêt et rollback sous tests contrôlés, sans HID et sans modification système implicite.
-
-## 7. Où retrouver les détails ?
-
-- [README.md](../README.md) : présentation et navigation.
-- [ROADMAP.md](ROADMAP.md) / [PLANNING.md](PLANNING.md) : jalons et tâches.
-- [ARCHITECTURE.md](ARCHITECTURE.md) : architecture et inconnues Bluetooth.
-- [ACCES-DISTANT-ET-SYNCHRONISATION.md](ACCES-DISTANT-ET-SYNCHRONISATION.md) / [DEPLOIEMENT.md](DEPLOIEMENT.md) : contrat de gestion distante et déploiement.
-- [TESTS.md](TESTS.md) : validations et revue de code.
-- [DECISIONS.md](DECISIONS.md) : décisions datées.
-- [AGENTS.md](../AGENTS.md) : instructions opérationnelles Codex.
-
-## 8. Règle de mise à jour
-
-À chaque jalon ou décision structurante, **ChatGPT met à jour** les documents concernés et résume ici : état réellement vérifié, prochaine action, blocages et références PR/SHA utiles. Ne pas dupliquer l'intégralité des rapports, pointer vers leurs preuves.
-
-## Règle des mandats et publication des preuves
-
-**Mandats Codex :** uniquement dans le chat, en version intégrale et directement copiable. Le dépôt ne contient aucun fichier de mandat ; la reprise s'appuie sur les décisions, jalons, revues et livrables, sans copier les consignes opérationnelles de mandat dans GitHub.
-
-## Publication des preuves et revues
-
-**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT peut lire directement la PR et les preuves lorsque la revue est demandée, sans transfert manuel à l'utilisateur. Une publication de PR n'impose pas une revue de code complète. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 et MC-INIT-002 ont été publiées et relues dans les PR #1 et #2 ; toute nouvelle preuve suit le même processus.
-
-## Méthode de réalisation validée — autonomie Codex
-
-**Décision D-023 :** un objectif fonctionnel vérifiable par mandat, avec autonomie de conception, développement, tests et corrections dans les limites explicitement autorisées. Les points d'étape significatifs indiquent le temps écoulé ; seules les décisions engageantes ou les opérations sensibles nécessitent un arrêt pour accord. Pas de micro-mandats successifs ni de revue de code systématique. Ne pas créer de fichier de mandat GitHub : le mandat complet est remis dans le chat. Les PR Draft restent non fusionnées jusqu'à décision explicite.
-
-**Prochain objectif proposé :** chaîne de déploiement réellement opérationnelle sur mini-pc-backend, depuis un SHA Git exact jusqu'au transfert, lancement, état, arrêt et retour arrière d'une application témoin ; réutiliser les PR #2 et #3, sous autorisation distincte pour les écritures et changements sensibles. La PR #3 dépend de la PR #2 ; aucune fusion implicite.
+D-021 : mandats exclusivement dans le chat. D-022 : pas de revue automatique à
+chaque livraison. D-023 : autonomie technique de Codex dans les limites
+explicites. Aucune fusion, publicité Bluetooth, modification système ou émission
+HID n'est implicite.
