@@ -17,7 +17,7 @@ Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire
 | MC-005 | J2 | Tester l'appairage et un mouvement HID minimal | Codex Desktop | Démonstration + traces côté émetteur/cible | À faire |
 | MC-006 | J3 | Définir le contrat API et le moteur de commandes | Codex Desktop | Contrat versionné, tests automatisés | À faire |
 | MC-007 | J3 | Intégrer le Bluetooth HID et les sécurités | Codex Desktop | Démo API → souris sur PC Windows | À faire |
-| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves ; prochain mandat MC-INIT-003 après arbitrage des PR | À faire |
+| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves ; prochain mandat à fournir dans le chat après arbitrage des PR | À faire |
 | MC-009 | J5 | Qualifier robustesse, déconnexions, sécurité, non-régression | Codex Desktop | Rapport et preuves | À faire |
 | MC-010 | J5 | Effectuer la revue finale du code et de la documentation | ChatGPT | Verdict motivé + réserves | À faire |
 
