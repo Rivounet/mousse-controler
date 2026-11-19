@@ -23,7 +23,7 @@ Un appairage Bluetooth initial reste nécessaire. Le protocole exact (BLE HID ov
 
 ## Reprendre le projet
 
-**[REPRISE.md — état, décisions, responsabilités et prochaine action](docs/REPRISE.md)** est le point d'entrée d'une nouvelle session ChatGPT ou Codex Desktop. Le premier mandat est [MC-INIT-001](docs/MANDATS/MC-INIT-001.md).
+**[REPRISE.md — état, décisions, responsabilités et prochaine action](docs/REPRISE.md)** est le point d'entrée d'une nouvelle session ChatGPT ou Codex Desktop. Les mandats Codex sont fournis intégralement dans le chat, sans archivage dans GitHub.
 
 ## Documentation
 
