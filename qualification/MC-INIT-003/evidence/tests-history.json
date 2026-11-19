@@ -1,0 +1,25 @@
+{
+  "initial": {
+    "tests": 65,
+    "errors": 19,
+    "result": "FAIL",
+    "cause": "Longueur des chemins temporaires Windows et destination finale SHA-hash non contrôlée assez tôt"
+  },
+  "correction": "Budget final explicite avant copie ; MC_TEST_TMP local court pour les nouveaux tests ; aucun réglage Windows modifié",
+  "second": {
+    "tests": 65,
+    "result": "PASS"
+  },
+  "final_before_commit": {
+    "tests": 69,
+    "result": "PASS"
+  },
+  "final_committed": {
+    "tests": 69,
+    "result": "PASS",
+    "code_sha": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9"
+  },
+  "existing_tests": 31,
+  "existing_files_modified": false,
+  "raw_failure_traces": "Conservées uniquement en local car elles contiennent des chemins personnels"
+}

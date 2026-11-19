@@ -1,0 +1,43 @@
+{
+  "after_rollback": {
+    "active": {
+      "artifact_sha256": "e6af134580cdf6cbd126dbe1ca47bf21c94c0897f3b5498ff83093a930ec030f",
+      "git_sha": "cf3c37200541d3291f6b506731e14ce020bcf630",
+      "key": "cf3c37200541d3291f6b506731e14ce020bcf630-e6af134580cdf6cbd126dbe1ca47bf21c94c0897f3b5498ff83093a930ec030f"
+    },
+    "healthy": true,
+    "previous": {
+      "artifact_sha256": "bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428",
+      "git_sha": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9",
+      "key": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9-bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428"
+    }
+  },
+  "after_stop": {
+    "application": "ABSENT",
+    "healthy": false
+  },
+  "archive_bytes": 101481,
+  "archive_sha256": "bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428",
+  "before_rollback": {
+    "active": {
+      "artifact_sha256": "bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428",
+      "git_sha": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9",
+      "key": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9-bf5d0098c39b67c490a4fa78b72cb3d20e4a63576465ae7e86a78075a339e428"
+    },
+    "healthy": true,
+    "previous": {
+      "artifact_sha256": "e6af134580cdf6cbd126dbe1ca47bf21c94c0897f3b5498ff83093a930ec030f",
+      "git_sha": "cf3c37200541d3291f6b506731e14ce020bcf630",
+      "key": "cf3c37200541d3291f6b506731e14ce020bcf630-e6af134580cdf6cbd126dbe1ca47bf21c94c0897f3b5498ff83093a930ec030f"
+    }
+  },
+  "file_count": 10,
+  "mode": "LOCAL_FILESYSTEM_AND_SIMULATED_RUNTIME",
+  "old_sha": "cf3c37200541d3291f6b506731e14ce020bcf630",
+  "prepared_sha": "1a438e1422b05a5a77f4f35c860aaf0eb165feb9",
+  "remote_contacted": false,
+  "remote_synced": false,
+  "repeated_archive_bytes_identical": true,
+  "repeated_bundle_result": "REUSED_IDENTICAL",
+  "repeated_manifest_bytes_identical": true
+}
