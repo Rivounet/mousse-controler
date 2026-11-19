@@ -20,6 +20,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-013 | 2026-11-19 | Validé | ChatGPT rédige les mandats Codex et supervise la gestion Git/GitHub | Mandats ciblés ; contrôle du diff, des SHA, des PR et des fusions avant validation |
 | D-014 | 2026-11-19 | Validé | Premier mandat = amorçage from scratch et diagnostic non destructif | Pas de prototype HID ou de changement système avant vérification de l'environnement |
 
+| D-015 | 2026-11-19 | Validé | Centraliser la reprise future dans `docs/REPRISE.md` et versionner les mandats Codex | Reprise fondée sur l'état Git, le jalon en cours et des livrables vérifiables |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
