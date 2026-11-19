@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "diagnostic_mode": "read-only",
+  "radios": [
+    {"kind": "WiFi", "state": "On"},
+    {"kind": "Bluetooth", "state": "Off"}
+  ],
+  "bluetooth_adapter": {
+    "present": true,
+    "friendly_name": "Realtek Bluetooth Adapter",
+    "pnp_status": "OK",
+    "problem_code": 0,
+    "config_flags": 0,
+    "driver_version": "1.1061.2312.2501",
+    "driver_date": "2024-05-20",
+    "low_energy_supported": true,
+    "peripheral_role_supported": true
+  },
+  "bluetooth_present_device_count": 1,
+  "bluetooth_problem_device_count": 0,
+  "services": [
+    {"name": "bthserv", "status": "Running", "start_type": "Manual"},
+    {"name": "btagservice", "status": "Stopped", "start_type": "Manual"},
+    {"name": "rmsvc", "status": "Running", "start_type": "Manual"}
+  ],
+  "bluetooth_policy_location_count": 0,
+  "adapter_error_or_warning_event_count_30d": 0,
+  "gatt_probe": {
+    "hid": "RadioNotAvailable",
+    "battery": "RadioNotAvailable",
+    "device_information": "RadioNotAvailable",
+    "start_advertising_called": false
+  },
+  "not_executed": [
+    "Radio.RequestAccessAsync",
+    "Radio.SetStateAsync",
+    "StartAdvertising",
+    "pairing",
+    "HID report emission",
+    "driver, service, policy or Bluetooth configuration change"
+  ]
+}

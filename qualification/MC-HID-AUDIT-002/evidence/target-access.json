@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "diagnostic_mode": "read-only",
+  "rustdesk_used": false,
+  "ssh": {
+    "exact_target_alias": false,
+    "known_host_entry": false,
+    "target_name_resolves": false,
+    "authenticated_access_succeeded": false
+  },
+  "target_diagnostic_executed": false,
+  "verdict": "INCOMPLETE",
+  "next_safe_action": "Run scripts/diagnostics/Inspect-MonOrdinateur.ps1 locally in the target interactive session, or provide an existing native authenticated endpoint."
+}

@@ -4,15 +4,16 @@
 
 | Sujet | État | Effet |
 |---|---|---|
-| Deux canaux distincts : HOGP commande, LAN retour | validé par le mandat ; journalisé D-028 | aucune commande souris par le LAN cible |
+| Deux canaux distincts : HOGP commande, LAN retour | validé par le mandat ; consolidé dans D-024 après fusion de la PR #4 | aucune commande souris par le LAN cible |
 | Développement/exécution sur mini-pc-backend | D-024 | Git et composants principaux restent sur le mini-PC |
 | Pas d'analyse écran ni contrôle intelligent | validé | l'agent ne publie que curseur/topologie/session |
 | Pas de fusion ou opération matérielle implicite | D-010/D-023 | portes d'autorisation explicites |
 
-Le texte du mandat attribue les deux canaux à D-024. Le journal historique
-D-024 ne contient pas cette décision et qualifiait la cible de « uniquement
-HID ». Il n'est pas réécrit : D-028 enregistre la nouvelle décision et amende
-explicitement D-004/D-024 sur ce seul point.
+Lors de la première publication, le journal historique D-024 ne contenait que le
+rôle des machines ; l'audit avait donc proposé D-028 sans réécrire l'historique.
+Après fusion de la PR #4, `main` a explicitement complété D-024 avec le canal de
+retour. Le réalignement de la PR #5 consolide les deux volets en une seule ligne
+D-024 et retire la proposition D-028 devenue redondante.
 
 ## Recommandations techniques
 

@@ -7,13 +7,14 @@ python -m unittest discover
 ```
 
 MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécutait
-72 tests au lieu d'en annoncer zéro. MC-HID-AUDIT-001 ajoute quatre gardes ; le
-19 novembre 2026, les **76 tests** ont réussi sur mini-pc-backend en 30,360 s
+72 tests au lieu d'en annoncer zéro. MC-HID-AUDIT-001/002 ajoutent six gardes ;
+le 19 novembre 2026, les **78 tests** ont réussi sur mini-pc-backend en 34,492 s
 avec un chemin temporaire court.
 
 La suite couvre 69 tests historiques d'artefacts, releases, chemins, erreurs,
 verrous et client distant hors ligne, trois tests du diagnostic Bluetooth et
-quatre tests du diagnostic cible/garde anti-publicité. Elle ne crée pas de
+six tests du diagnostic cible/gardes anti-publicité et anti-changement radio.
+Elle ne crée pas de
 publicité et n'émet aucun rapport HID.
 
 ## Niveaux
@@ -21,8 +22,8 @@ publicité et n'émet aucun rapport HID.
 | Niveau | But | État |
 |---|---|---|
 | T0 | cohérence Git, syntaxe et documentation | exécuté dans MC-REPRISE-001 |
-| T1 | unités, artefacts, releases, diagnostics non intrusifs | 76 PASS |
-| T1A | probe GATT non diffusé et diagnostic cible réutilisable | probe exécuté : radio Off / RadioNotAvailable ; cible non exécutée |
+| T1 | unités, artefacts, releases, diagnostics non intrusifs | 78 PASS |
+| T1A | radio et diagnostic cible réutilisable | PnP sain, radio Off / RadioNotAvailable ; cible non exécutée |
 | T2 | service GATT, publicité, bonding et pilote HID | non exécuté, autorisation requise |
 | T3 | API → mouvement/clic/scroll | non développé |
 | T4 | reconnexion, saturation, arrêt d'urgence | non développé |

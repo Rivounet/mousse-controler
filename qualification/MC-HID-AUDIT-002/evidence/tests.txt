@@ -1,0 +1,19 @@
+MC-HID-AUDIT-002 validation locale
+Date: 2026-11-19
+Command: python -m unittest discover
+Result: 78 tests, OK
+Duration: 34.492 seconds
+Temporary directory: workspace-local short path, removed after execution
+
+Validated safeguards:
+- target diagnostic schema 2 executes in read-only mode
+- cursor, physical cursor, input desktop, monitor DPI and Bluetooth fields exist
+- no user, host, address, adapter ID or firewall rule is emitted
+- radio diagnostic contains no call to RequestAccessAsync, SetStateAsync or StartAdvertising
+- GATT probe contains no call to StartAdvertising
+
+Not executed:
+- target diagnostic on MonOrdinateur
+- Bluetooth radio activation
+- GATT provider creation with radio On
+- advertising, pairing, connection, notification or HID report

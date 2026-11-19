@@ -46,14 +46,14 @@ python -m unittest discover
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bluetooth\diagnose.ps1
 ```
 
-La suite locale compte 76 tests. Le diagnostic Bluetooth est strictement en
+La suite locale compte 78 tests. Le diagnostic Bluetooth est strictement en
 lecture seule : il ne crée pas de service GATT et ne démarre aucune publicité.
 
 ## État vérifié
 
 - [x] Dépôt et travaux des PR #1 à #3 consolidés sans fusion.
 - [x] Environnement réel de mini-pc-backend inventorié.
-- [x] 76 tests locaux réussis.
+- [x] 78 tests locaux réussis.
 - [x] Rôle périphérique BLE et API serveur GATT présents.
 - [ ] Service HOGP créé et annoncé sur le matériel réel.
 - [ ] Appairage avec MonOrdinateur et reconnaissance comme souris.
@@ -70,6 +70,7 @@ appairage et pourrait émettre un événement souris.
 - [Reprise et état courant](docs/REPRISE.md)
 - [Rapport MC-REPRISE-001](qualification/MC-REPRISE-001/RAPPORT.md)
 - [Audit et plan MC-HID-AUDIT-001](qualification/MC-HID-AUDIT-001/RAPPORT.md)
+- [Complément radio et cible MC-HID-AUDIT-002](qualification/MC-HID-AUDIT-002/RAPPORT.md)
 - [Roadmap](docs/ROADMAP.md) et [planning](docs/PLANNING.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Développement et déploiement](docs/DEPLOIEMENT.md)

@@ -10,10 +10,13 @@ valide pas à elle seule le fonctionnement HID.
   sans fusion dans la branche MC-REPRISE-001.
 - Environnement local : inventorié ; clone officiel dans `source/` ; artefacts
   d'exécution préexistants préservés.
-- Tests : 76 PASS sur mini-pc-backend après ajout des gardes d'audit.
+- Tests : 78 PASS sur mini-pc-backend après ajout des gardes d'audit.
 - Bluetooth : rôles BLE et API GATT favorables ; aucune émission exécutée.
 - Audit deux canaux : architecture et plan prêts ; radio observée Off pendant le
   probe GATT non diffusé ; cible non accessible et donc non diagnostiquée.
+- Audit complémentaire : PnP/pilote/services sains ; `RadioNotAvailable` causé
+  immédiatement par la radio logicielle Off. MonOrdinateur reste `INCOMPLETE`
+  faute de canal natif existant depuis le mini-PC.
 
 ## Tâches
 
@@ -29,6 +32,7 @@ valide pas à elle seule le fonctionnement HID.
 | MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | En attente d'autorisation d'essai |
 | MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | En attente d'autorisation |
 | MC-005C | J2/J3 | Auditer HOGP, retour position et boucle précise | `MC-HID-AUDIT-001` | En revue — audit livré |
+| MC-005D | J2/J3 | Qualifier cause radio et prérequis cible | `MC-HID-AUDIT-002` | En revue — mini-PC READY_WITH_RESERVATIONS, cible INCOMPLETE |
 | MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | À faire après décision J2 |
 | MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | À faire |
 | MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |

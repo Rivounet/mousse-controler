@@ -29,6 +29,7 @@ class TargetDiagnosticTests(unittest.TestCase):
         cls.result = json.loads(completed.stdout)
 
     def test_is_explicitly_read_only(self):
+        self.assertEqual(self.result["schema"], 2)
         self.assertEqual(self.result["diagnostic_mode"], "read-only")
         forbidden = self.result["not_executed"]
         self.assertIn("firewall change", forbidden)
@@ -49,6 +50,11 @@ class TargetDiagnosticTests(unittest.TestCase):
             self.assertNotIn(forbidden, serialized)
         self.assertIn("no address", self.result["network"]["note"].lower())
 
+    def test_reports_session_bluetooth_and_optional_network_probe(self):
+        self.assertIn("input_desktop_readable", self.result["session"])
+        self.assertIn("radio_state", self.result["bluetooth"])
+        self.assertFalse(self.result["network"]["mini_pc_tcp_probe"]["requested"])
+
 
 class GattProbeSafetyTests(unittest.TestCase):
     def test_probe_never_calls_start_advertising(self):
@@ -56,6 +62,13 @@ class GattProbeSafetyTests(unittest.TestCase):
         source = probe.read_text(encoding="utf-8")
         self.assertNotIn(".StartAdvertising(", source)
         self.assertIn("advertising_called = $false", source)
+
+    def test_radio_diagnostic_cannot_change_radio_state(self):
+        diagnostic = SCRIPT.with_name("Inspect-BluetoothRadio.ps1")
+        source = diagnostic.read_text(encoding="utf-8")
+        self.assertNotIn("[Windows.Devices.Radios.Radio]::RequestAccessAsync", source)
+        self.assertNotIn(".SetStateAsync(", source)
+        self.assertNotIn(".StartAdvertising(", source)
 
 
 if __name__ == "__main__":

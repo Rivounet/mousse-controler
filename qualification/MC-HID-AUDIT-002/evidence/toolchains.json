@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "observed_on": "mini-pc-backend",
+  "visual_studio_installer_present": false,
+  "visual_studio_instance_count": 0,
+  "windows_sdk_root_present": false,
+  "windows_sdk_versions": [],
+  "in_path": {
+    "cl": false,
+    "msbuild": false,
+    "dotnet": false,
+    "python": "3.12.10"
+  },
+  "required_future_components": [
+    "Microsoft.VisualStudio.Workload.VCTools",
+    "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+    "Microsoft.VisualStudio.Component.Windows11SDK.26100"
+  ],
+  "installation_executed": false
+}
