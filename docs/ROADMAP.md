@@ -5,18 +5,23 @@
 | Jalon | Finalité | Livrable attendu | Critère de sortie | État |
 |---|---|---|---|---|
 | J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | Validé |
-| J1 — Environnement et accès distant | Qualifier le canal PC Windows → mini-pc-backend | Inventaire contrôlé, accès distant sécurisé, transfert et commandes réversibles | Identité SSH, SFTP aller-retour avec hash, exécution témoin, arrêt et collecte de sorties démontrés ; synchronisation applicative par SHA reportée à J4 | Validé avec réserves |
-| J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS et prototype HID minimal | PC Windows reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | À faire |
+| J1 — Environnement local | Qualifier mini-pc-backend comme machine de développement et d'exécution | Inventaire contrôlé, clone séparé des releases, tests reproductibles | OS/outils/Bluetooth observés, travaux Git préservés, suite locale exécutable | Validé |
+| J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS, diagnostic GATT et prototype HID minimal | MonOrdinateur reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | En cours — GO_WITH_RESERVATIONS |
 | J3 — API fonctionnelle | Transformer des commandes API en événements souris | API locale + moteur de commandes + adaptateur HID | Mouvements, clics et défilement testés de bout en bout | À faire |
-| J4 — Déploiement robuste | Automatiser synchronisation Git, livraison, lancement, tests distants et rollback | Scripts versionnés + procédure [d'accès distant](ACCES-DISTANT-ET-SYNCHRONISATION.md) | Déploiement depuis Codex Desktop, version SHA confirmée, idempotence, erreurs gérées et rollback testés | À faire |
+| J4 — Activation robuste | Automatiser artefact Git, lancement local, état, arrêt et rollback | Scripts versionnés ; accès distant optionnel | Version SHA confirmée, idempotence, erreurs gérées et rollback local testés | En cours |
 | J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | À faire |
 
 ## Dépendances et points de décision
 
-- **J1 avant essais réels** : ne pas modifier un environnement distant sans diagnostic, sauvegarde adaptée et moyen de retour arrière. L'accès distant et la synchronisation sont des capacités structurantes, pas des opérations manuelles ad hoc.
-- **J2 est un jalon de décision GO / NO-GO** : si le contrôleur intégré ne permet pas le rôle périphérique Bluetooth HID, comparer une voie logicielle alternative ou un module HID externe (ex. ESP32), sans achat automatique.
+- **J1 avant essais réels** : la machine locale, le clone, les outils et le
+  Bluetooth sont inventoriés. L'accès distant historique est secondaire.
+- **J2 est un jalon de décision GO / NO-GO** : les préconditions donnent
+  `GO_WITH_RESERVATIONS`. Une publicité, un appairage et un mouvement autorisés
+  restent nécessaires avant `GO`. En cas d'échec, comparer un module HID externe
+  sans achat automatique.
 - **J3 dépend de J2**, mais l'API peut être maquettée et testée indépendamment grâce à un adaptateur simulé.
-- **J4 commence techniquement dès J1** (accès, transfert, diagnostic) ; il est finalisé après intégration de l'API. Les détails de robustesse sont définis dans [ACCES-DISTANT-ET-SYNCHRONISATION.md](ACCES-DISTANT-ET-SYNCHRONISATION.md).
+- **J4** réutilise les scripts de releases consolidés, mais se concentre sur
+  l'activation locale. La maintenance distante est documentée séparément.
 - **J5** n'est pas une mise en production automatique.
 
 ## Règle d'évolution

@@ -1,0 +1,63 @@
+{
+  "authorization": "Accord explicite utilisateur reçu après protocole détaillé local ; opérations bornées au témoin et processus d’attente",
+  "initial_root_absent": true,
+  "directories_created": 3,
+  "acl_observed": "Héritage lu sans modification ; accès Modify pour utilisateurs authentifiés, propriétaire groupe administrateurs ; détails ACL et chemins gardés locaux",
+  "repeat_directory_creation": {
+    "code": 1,
+    "result": "REFUS ATTENDU",
+    "existing_directory_reused": false
+  },
+  "upload": {
+    "code": 0,
+    "elapsed_seconds": 0.547
+  },
+  "download": {
+    "code": 0,
+    "elapsed_seconds": 0.562
+  },
+  "roundtrip": {
+    "integrity": "PASS",
+    "bytes": 63,
+    "local_sha256": "1bf9a33ba5c8b4a59dabb33a09541316eb9499b76aaa6b07cb9e74c2df92f99a",
+    "remote_sha256": "1bf9a33ba5c8b4a59dabb33a09541316eb9499b76aaa6b07cb9e74c2df92f99a",
+    "bytes_equal": true
+  },
+  "witness_removed": true,
+  "empty_created_directories_removed": true,
+  "final_root_absent": true,
+  "process_attempts": [
+    {
+      "result": "NON_EXÉCUTÉ pour arrêt contrôlé",
+      "observed_stop_output": "ALREADY_EXITED",
+      "note": "Le processus avait déjà disparu au contrôle après fermeture de sa session de lancement ; causalité non prouvée"
+    },
+    {
+      "result": "FAIL intermédiaire",
+      "error": "PID reused (refus de sécurité)",
+      "note": "Comparaison erronée entre précision CIM et StartTime ; corrigée en conservant une référence pour chaque API"
+    },
+    {
+      "result": "FAIL du contrôle de sortie intermédiaire",
+      "code": 0,
+      "observed": [
+        "ALIVE_CONFIRMED",
+        "True",
+        "STOPPED",
+        "ABSENT_CONFIRMED"
+      ],
+      "note": "Arrêt effectué mais sortie booléenne parasite de WaitForExit ; suppression avec [void]"
+    },
+    {
+      "result": "PASS",
+      "code": 0,
+      "stdout": "ALIVE_CONFIRMED\r\nSTOPPED\r\nABSENT_CONFIRMED\r\n",
+      "stderr": "",
+      "elapsed_seconds": 2.188,
+      "scope": "Start and verified stop within a single SSH session; no persistence claim"
+    }
+  ],
+  "final_matching_witness_processes": 0,
+  "assessment": "PASS pour transfert, intégrité, nettoyage et arrêt contrôlé dans une session SSH unique",
+  "caveat": "Le champ outcome=PASS du collecteur initial ne suffisait pas à qualifier l’arrêt : ALREADY_EXITED a été reclassé, puis preuve complémentaire obtenue. Aucun déploiement/rollback applicatif ni persistance après déconnexion qualifié."
+}

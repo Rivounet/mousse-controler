@@ -1,0 +1,24 @@
+{
+  "initial_branch": "docs/mc-init-001-evidence",
+  "initial_head": "8886cab1230039add8e2712a5114c4e312c0f49b",
+  "initial_main": "86ed1088bc1e2ae7984c4c4ccfd0bb0af8755b02",
+  "main_after_fast_forward": "6033e0d99e391528f3c131818dde1a19dd32f0f8",
+  "branch": "feat/mc-init-002-remote-qualification",
+  "pr_1": {
+    "url": "https://github.com/Rivounet/mousse-controler/pull/1",
+    "draft": true,
+    "merged": false,
+    "head": "8886cab1230039add8e2712a5114c4e312c0f49b"
+  },
+  "initial_dirty": false,
+  "unpublished_commits_found": false,
+  "commands": [
+    "git fetch origin",
+    "git status --porcelain=v1",
+    "git log --all --not --remotes --oneline",
+    "git merge-base --is-ancestor main origin/main",
+    "git merge --ff-only origin/main",
+    "git switch -c feat/mc-init-002-remote-qualification"
+  ],
+  "note": "Constats du début du mandat ; SHA final disponible sur la tête de la PR et dans le compte rendu. Aucune intégration de la PR #1 dans cette branche."
+}

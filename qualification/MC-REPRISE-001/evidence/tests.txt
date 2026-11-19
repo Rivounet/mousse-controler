@@ -1,0 +1,14 @@
+MC-REPRISE-001 — tests locaux sur mini-pc-backend
+Date locale : 2026-11-19
+Commande : python -m unittest discover
+Résultat : PASS
+Tests : 72
+Durée : 31.876 s
+
+Répartition :
+- 69 tests historiques de transfert, artefacts, releases et sécurité locale.
+- 3 tests du diagnostic Bluetooth en lecture seule.
+
+Le lanceur racine test_all.py corrige l'ancienne situation où unittest discover
+depuis la racine annonçait 0 test. Aucun accès SSH, publicité BLE, appairage ou
+événement HID n'est exécuté par cette suite.

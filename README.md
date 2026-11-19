@@ -1,52 +1,79 @@
 # Mousse-controler
 
-Contrôle d'une souris sur un PC Windows cible depuis **mini-pc-backend**, via Bluetooth HID, au moyen de commandes reçues par une API.
+Contrôle de la souris de **MonOrdinateur** depuis **mini-pc-backend**, au moyen
+d'un périphérique Bluetooth HID natif et, à terme, de commandes reçues par une
+API locale protégée.
 
-> **Statut : cadrage initial.** La compatibilité Bluetooth HID du mini-PC n'est pas encore vérifiée. Aucun fonctionnement effectif n'est revendiqué à ce stade.
+> **Statut : reprise consolidée, faisabilité HOGP favorable mais non démontrée.**
+> Les capacités BLE/GATT locales sont présentes ; aucune publicité, aucun
+> appairage et aucun événement souris n'ont encore été exécutés.
 
-## Architecture cible
+## Organisation actuelle
 
-1. **PC Windows de développement** : Codex Desktop développe le code, gère Git et pilote les opérations distantes.
-2. **mini-pc-backend** : reçoit les commandes API, les traduit en événements HID, les émet par Bluetooth ; héberge les exécutables et les essais réels.
-3. **PC Windows cible** : reçoit les événements au moyen de sa pile Bluetooth/HID native, **sans application réceptrice dédiée**. Il s'agit aussi du PC utilisé pour développer.
+1. **mini-pc-backend** : machine unique de développement et d'exécution.
+   Codex, Git, Python, les tests, les diagnostics et la future émission HID y
+   résident.
+2. **MonOrdinateur** : cible Windows recevant les événements via ses pilotes HID
+   natifs, sans logiciel récepteur propre au projet.
+3. **GitHub** : source officielle du code et de la documentation. Le clone de
+   développement reste séparé des releases et états d'exécution locaux.
 
-Un appairage Bluetooth initial reste nécessaire. Le protocole exact (BLE HID over GATT ou autre solution HID compatible) dépendra de la qualification matérielle.
+L'analyse d'écran et le contrôle intelligent des applications ne font pas partie
+du périmètre actuel.
 
-## Principes
+## Architecture simple visée
 
-- Priorité au Bluetooth déjà présent, sans matériel additionnel si faisable.
-- Aucun logiciel spécifique installé sur le PC cible pour recevoir les commandes.
-- API non exposée publiquement, accès authentifié et contrôles de sécurité.
-- Tests réels exécutés sur **mini-pc-backend**, pas seulement sur le poste de développement.
-- Simplicité : jalons plutôt que dates fixes, GitHub Issues pour les tâches, changements de code examinés avant fusion.
-- Aucun pilote constructeur particulier n'est requis par principe : viser l'interface HID native de Windows.
+```text
+client autorisé
+      │
+      ▼
+API locale protégée → validation / file / arrêt → adaptateur HOGP Windows
+                                                    │ Bluetooth LE
+                                                    ▼
+                                  MonOrdinateur + pilote HID natif
+```
 
-## Reprendre le projet
+L'adaptateur HID restera remplaçable et simulable. Les scripts SSH/SFTP et de
+releases issus des travaux précédents sont conservés comme capacités secondaires
+de maintenance et de rollback ; ils ne sont plus requis pour développer au
+quotidien sur mini-pc-backend.
 
-**[REPRISE.md — état, décisions, responsabilités et prochaine action](docs/REPRISE.md)** est le point d'entrée d'une nouvelle session ChatGPT ou Codex Desktop. Les mandats Codex sont fournis intégralement dans le chat, sans archivage dans GitHub.
+## Développement et tests
+
+```powershell
+python -m unittest discover
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bluetooth\diagnose.ps1
+```
+
+La suite locale compte 72 tests. Le diagnostic Bluetooth est strictement en
+lecture seule : il ne crée pas de service GATT et ne démarre aucune publicité.
+
+## État vérifié
+
+- [x] Dépôt et travaux des PR #1 à #3 consolidés sans fusion.
+- [x] Environnement réel de mini-pc-backend inventorié.
+- [x] 72 tests locaux réussis.
+- [x] Rôle périphérique BLE et API serveur GATT présents.
+- [ ] Service HOGP créé et annoncé sur le matériel réel.
+- [ ] Appairage avec MonOrdinateur et reconnaissance comme souris.
+- [ ] Mouvement HID minimal observé.
+- [ ] API de commandes intégrée et protégée.
+
+Le verdict détaillé est `GO_WITH_RESERVATIONS`. Le prochain essai nécessite une
+autorisation explicite car il rendrait un service GATT visible, créerait un
+appairage et pourrait émettre un événement souris.
 
 ## Documentation
 
-- [Roadmap par jalons](docs/ROADMAP.md)
-- [Planning opérationnel](docs/PLANNING.md)
-- [Architecture et choix à valider](docs/ARCHITECTURE.md)
-- [Déploiement et séparation des environnements](docs/DEPLOIEMENT.md)
-- [Accès distant, synchronisation et déploiement robuste](docs/ACCES-DISTANT-ET-SYNCHRONISATION.md)
-- [Tests et critères de validation](docs/TESTS.md)
-- [Registre des décisions](docs/DECISIONS.md)
+- [Reprise et état courant](docs/REPRISE.md)
+- [Rapport MC-REPRISE-001](qualification/MC-REPRISE-001/RAPPORT.md)
+- [Roadmap](docs/ROADMAP.md) et [planning](docs/PLANNING.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Développement et déploiement](docs/DEPLOIEMENT.md)
+- [Accès distant secondaire](docs/ACCES-DISTANT-ET-SYNCHRONISATION.md)
+- [Tests](docs/TESTS.md) et [décisions](docs/DECISIONS.md)
 - [Consignes Codex](AGENTS.md)
 
-## État de réalisation
-
-- [x] Objectif et responsabilités cadrés.
-- [ ] Accès distant au mini-PC qualifié et système de synchronisation/déploiement distant reproductible.
-- [ ] Capacité d'émulation Bluetooth HID vérifiée.
-- [ ] Prototype contrôlant le PC Windows par Bluetooth.
-- [ ] API de commandes intégrée et protégée.
-- [ ] Déploiement reproductible et tests validés.
-
-Voir [PLANNING.md](docs/PLANNING.md) pour les prochaines tâches et leurs dépendances.
-
-## Gouvernance légère
-
-**Codex Desktop** : implémentation, tests et déploiements techniques, avec preuves. **ChatGPT** : rédaction des mandats Codex, responsabilité de la documentation de référence, revue de code, supervision Git/GitHub et critères de validation. **Utilisateur** : arbitrages de périmètre et autorisations d'opérations sensibles. Aucune fusion ou mise en production n'est implicite.
+Les mandats Codex restent exclusivement dans le chat. Les changements sont
+publiés en PR Draft ; aucune fusion ou opération Bluetooth sensible n'est
+implicite.

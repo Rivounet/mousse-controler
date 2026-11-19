@@ -1,0 +1,6 @@
+{
+    "IsCentralRoleSupported":  true,
+    "IsPeripheralRoleSupported":  true,
+    "IsLowEnergySupported":  true,
+    "IsClassicSupported":  true
+}
