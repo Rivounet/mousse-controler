@@ -45,6 +45,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 
+| D-024 | 2026-11-19 | Validé | Retour de position réelle du curseur depuis MonOrdinateur via un canal LAN privé sécurisé, distinct du Bluetooth HID | Agent Windows léger et visible limité à la mesure et à la transmission de coordonnées (GetCursorPos), avec horodatage, référentiel multi-écrans/DPI, contrôle de fraîcheur et boucle de correction HID ; l'agent ne reçoit ni n'exécute les commandes souris ; documenter l'installation, l'arrêt et les protections réseau |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
