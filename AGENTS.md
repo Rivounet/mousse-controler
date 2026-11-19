@@ -54,3 +54,11 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Codex exécute le mandat dans le périmètre autorisé et publie une PR **Draft** pour les changements applicatifs, sans fusion ; il fournit à ChatGPT les traces de validation.
 - Démarrage *from scratch* : commencer par vérifier le clone Git local et les environnements ; ne pas supposer que le mini-PC ou une connexion distante sont prêts.
 - Aucun `push --force`, rebase destructif, nettoyage irréversible, reset de travail non committé, modification de `main` ni fusion sans mandat explicite.
+
+## Publication obligatoire des livrables de revue
+
+- **Codex publie sur GitHub les rapports et preuves utiles de chaque mandat**, dans une branche dédiée et une PR Draft, afin que ChatGPT les consulte directement sans transfert manuel par l'utilisateur.
+- Convention : `qualification/<MANDAT>/RAPPORT.md` et `qualification/<MANDAT>/evidence/` pour les preuves sélectionnées, reproductibles et expurgées. Les scripts utiles au produit restent dans leurs dossiers techniques appropriés.
+- Avant toute publication, examiner les fichiers et **exclure** secrets, clés, empreintes d'hôte non nécessaires, comptes, chemins privés, adresses réseau privées, journaux sensibles et artefacts volumineux ou binaires inutiles. Conserver localement les preuves brutes non publiables et indiquer leur existence, sans exposer leur contenu.
+- Rapporter l'URL de PR, la branche, le SHA publié et la liste des preuves, en distinguant résultats vérifiés, déclarés et non exécutés. Ne jamais pousser directement sur `main` ni fusionner sans arbitrage.
+- Si la publication est bloquée, documenter la cause et demander une décision ; **ne pas imposer à l'utilisateur un transfert manuel de fichiers comme procédure normale**.
