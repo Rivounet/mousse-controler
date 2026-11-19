@@ -5,7 +5,7 @@
 | Jalon | Finalité | Livrable attendu | Critère de sortie | État |
 |---|---|---|---|---|
 | J0 — Cadrage | Source de vérité commune | README, architecture, planning, tests, déploiement, décisions, consignes Codex | Documents cohérents et publiés | Validé |
-| J1 — Environnement et accès distant | Qualifier le canal PC Windows → mini-pc-backend | Inventaire contrôlé, accès distant sécurisé, transfert et commandes réversibles | Identité de l'hôte, synchronisation test, exécution et collecte de logs démontrées sur mini-PC | À faire |
+| J1 — Environnement et accès distant | Qualifier le canal PC Windows → mini-pc-backend | Inventaire contrôlé, accès distant sécurisé, transfert et commandes réversibles | Identité SSH, SFTP aller-retour avec hash, exécution témoin, arrêt et collecte de sorties démontrés ; synchronisation applicative par SHA reportée à J4 | Validé avec réserves |
 | J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS et prototype HID minimal | PC Windows reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | À faire |
 | J3 — API fonctionnelle | Transformer des commandes API en événements souris | API locale + moteur de commandes + adaptateur HID | Mouvements, clics et défilement testés de bout en bout | À faire |
 | J4 — Déploiement robuste | Automatiser synchronisation Git, livraison, lancement, tests distants et rollback | Scripts versionnés + procédure [d'accès distant](ACCES-DISTANT-ET-SYNCHRONISATION.md) | Déploiement depuis Codex Desktop, version SHA confirmée, idempotence, erreurs gérées et rollback testés | À faire |
