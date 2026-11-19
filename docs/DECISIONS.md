@@ -17,6 +17,9 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-011 | 2026-11-19 | Validé | Prévoir une procédure et du code robustes pour l'accès distant, la synchronisation Git et le déploiement vers mini-pc-backend | J1 qualifie l'accès ; J4 livre et teste l'automatisation |
 | D-012 | 2026-11-19 | Cible à qualifier | GitHub reste la référence officielle ; copie distante et versions exécutées sur mini-PC sont isolées | Pas de deuxième source de vérité, pas de réinitialisation Git destructive ; choix transport soumis à inventaire |
 
+| D-013 | 2026-11-19 | Validé | ChatGPT rédige les mandats Codex et supervise la gestion Git/GitHub | Mandats ciblés ; contrôle du diff, des SHA, des PR et des fusions avant validation |
+| D-014 | 2026-11-19 | Validé | Premier mandat = amorçage from scratch et diagnostic non destructif | Pas de prototype HID ou de changement système avant vérification de l'environnement |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
