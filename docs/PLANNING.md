@@ -42,3 +42,7 @@ Maintenir ce tableau à jour lors de chaque revue de jalon ; utiliser les GitHub
 ## Livrables des mandats
 
 Codex publie rapports et preuves expurgés dans une branche GitHub et une PR Draft, selon `AGENTS.md`. Pour **MC-INIT-001**, les preuves expurgées ont été publiées et examinées via PR #1 ; les réserves concernent les éléments non démontrés, et non plus l'absence des fichiers. Ne pas joindre manuellement des fichiers à ChatGPT comme procédure standard.
+
+## Organisation des prochains mandats
+
+**D-023 :** confier à Codex un objectif fonctionnel complet avec critères de réussite et autonomie technique, sans fractionnement artificiel. Prochain lot : démontrer une chaîne de déploiement réelle et réversible d'application témoin sur mini-pc-backend, incluant préparation par SHA, transfert, démarrage, état, arrêt et rollback, avec points d'arrêt sur opérations sensibles. Les tests et corrections ordinaires restent dans le même mandat ; publication dans une PR Draft, sans fusion automatique. Revue de code seulement sur demande ou au point de contrôle convenu.
