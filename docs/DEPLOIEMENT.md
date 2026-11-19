@@ -1,5 +1,7 @@
 # Développement, déploiement et exécution
 
+La spécification complète du canal d'accès, de la synchronisation et des scripts est dans [ACCES-DISTANT-ET-SYNCHRONISATION.md](ACCES-DISTANT-ET-SYNCHRONISATION.md). Il s'agit d'une exigence du projet, pas d'une automatisation déjà en service.
+
 ## Séparation stricte
 
 | Environnement | Utilisation | N'y faire pas |
@@ -25,9 +27,9 @@ Avant tout déploiement, relever et conserver :
 1. Codex crée une branche courte à partir de `main` et apporte une modification ciblée.
 2. Exécute les vérifications locales pertinentes.
 3. Prépare un artefact versionné/reproductible, avec SHA Git identifié.
-4. Transfère l'artefact dans un répertoire dédié sur mini-pc-backend.
-5. Arrête proprement l'instance de test précédente si nécessaire, effectue un déploiement réversible et lance l'application.
-6. Vérifie l'état du service et réalise les tests autorisés avec le PC cible.
+4. Vérifie l'identité du mini-PC, l'état de la copie Git distante si présente et prépare la révision exacte dans un répertoire de livraison **distinct** ; tout état inattendu bloque l'opération.
+5. Prépare une version isolée, conserve la version fonctionnelle précédente, active de façon contrôlée, puis lance l'application. Les opérations doivent être idempotentes et protégées contre la concurrence.
+6. Vérifie l'état du service et le SHA effectivement actif, réalise les tests autorisés avec le PC cible ; en cas d'échec du contrôle de santé, effectue un rollback explicite.
 7. Récupère sorties, logs, erreurs et SHA effectivement déployé.
 8. Rédige le résultat, soumet le code à revue ChatGPT ; la fusion reste distincte du déploiement de test.
 
@@ -36,9 +38,9 @@ Avant tout déploiement, relever et conserver :
 - Démarrer sur commande ; ne pas rendre le service persistant au démarrage avant décision explicite.
 - Conserver une méthode d'arrêt d'urgence utilisable depuis le mini-PC et isoler les tests Bluetooth.
 - Interdire des modifications non liées aux travaux sur mini-pc-backend.
-- Définir un rollback documenté avant tout remplacement d'une version fonctionnelle.
+- Définir et **tester** un rollback avant tout remplacement d'une version fonctionnelle ; protéger la copie Git distante contre les réinitialisations destructrices.
 - Ne pas exposer l'API sur Internet ; ne pas exposer de port LAN sans décision et authentification.
 
 ## État actuel
 
-La méthode de connexion, les chemins, les outils de compilation et les scripts sont **à définir après qualification J1**. Ce document évite volontairement des commandes de déploiement fictives.
+La méthode de connexion, les chemins, les outils de compilation et les scripts sont **à définir et à implémenter après qualification J1**. Ce document évite volontairement des commandes de déploiement fictives.
