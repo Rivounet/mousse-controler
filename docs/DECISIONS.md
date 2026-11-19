@@ -14,6 +14,8 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-008 | 2026-11-19 | À qualifier | OS, pilote et rôle BLE périphérique de mini-pc-backend | Inventaire J1/J2 préalable à tout choix de bibliothèque |
 | D-009 | 2026-11-19 | Proposé | Contrat API local, authentifié, commandes relatives et arrêt d'urgence | Design à valider pendant J3 |
 | D-010 | 2026-11-19 | Validé | Pas de fusion ni de déploiement durable implicite | Arbitrage explicite après revue |
+| D-011 | 2026-11-19 | Validé | Prévoir une procédure et du code robustes pour l'accès distant, la synchronisation Git et le déploiement vers mini-pc-backend | J1 qualifie l'accès ; J4 livre et teste l'automatisation |
+| D-012 | 2026-11-19 | Cible à qualifier | GitHub reste la référence officielle ; copie distante et versions exécutées sur mini-PC sont isolées | Pas de deuxième source de vérité, pas de réinitialisation Git destructive ; choix transport soumis à inventaire |
 
 ## En cas de changement
 
