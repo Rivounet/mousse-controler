@@ -45,7 +45,14 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 
-| D-024 | 2026-11-19 | Validé | Retour de position réelle du curseur depuis MonOrdinateur via un canal LAN privé sécurisé, distinct du Bluetooth HID | Agent Windows léger et visible limité à la mesure et à la transmission de coordonnées (GetCursorPos), avec horodatage, référentiel multi-écrans/DPI, contrôle de fraîcheur et boucle de correction HID ; l'agent ne reçoit ni n'exécute les commandes souris ; documenter l'installation, l'arrêt et les protections réseau |
+| D-028 | 2026-11-19 | Validé ; complète D-024 et amende D-004 | Retour de position réelle depuis MonOrdinateur via LAN privé sécurisé, distinct du Bluetooth HID | Agent Windows visible limité à GetCursorPos, topologie, session et transmission HTTPS authentifiée ; aucune exécution de commandes souris ; D-024 reste la décision de localisation de Codex |
+
+| D-029 | 2026-11-19 | Validé | Priorité au Bluetooth LE HID natif entre mini-pc-backend et MonOrdinateur ; récepteur USB Logitech Nano 046D:C534 exclu du transport | Les pilotes HID natifs Windows reçoivent les commandes ; pont HID matériel seulement en repli après arbitrage ; aucune usurpation Logitech ni garantie d'indétectabilité |
+| D-030 | 2026-11-19 | Validé | MC-HID-EXEC-001 confié à Codex exécuté sur mini-pc-backend, avec intervention autorisée sur MonOrdinateur via accès distant authentifié à établir/qualifier | Développement et qualification des deux côtés coordonnés dans un mandat unique ; pas de deuxième mandat cible indépendant, ni fusion automatique |
+| D-031 | 2026-11-19 | Validé | Contrôle par séquences de zones A→B→C : rectangle, cercle ou polygone ; sélection aléatoire d'un point interne par zone | Position réelle confirmée par agent LAN et correction HID ; graine de test reproductible ; validation géométrique et multi-écrans |
+| D-032 | 2026-11-19 | Validé | Trajectoires courbes, vitesse variable avec accélération/décélération et micro-variations bornées seulement pendant les déplacements | Moteur de trajectoires indépendant du transport HID ; comportement paramétrable et interruptible, sans objectif de dissimulation d'automatisation |
+| D-033 | 2026-11-19 | Validé | Après arrivée : attente temporisée configurable ou attente de commande explicite, combinables dans une séquence | États de séquence, pause/reprise/étape suivante/arrêt, aucune reprise/reconnexion ne rejoue les actions déjà effectuées |
+| D-034 | 2026-11-19 | Qualification partielle | La radio du mini-PC activée temporairement permet la création GATT HID/Battery et caractéristiques sans publicité ; retour Off confirmé | Lever l'ancienne incertitude RadioNotAvailable ; HOGP réel, publicité, pairing, mouvement et retour LAN restent non qualifiés (preuves PR #5) |
 
 ## En cas de changement
 
