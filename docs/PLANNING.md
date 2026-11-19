@@ -2,7 +2,7 @@
 
 Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire → En cours → En revue → Validé** ; **Bloqué** indique un obstacle documenté. Un passage à *Validé* nécessite une preuve ou une revue adaptée.
 
-**MC-INIT-001 :** exécuté ; [revue](REVUES/MC-INIT-001.md) **PASS_WITH_RESERVATIONS** après examen des preuves. Publication en [PR #1 Draft](https://github.com/Rivounet/mousse-controler/pull/1) **PASS documentaire, non fusionnée**. **J1 reste ouvert** ; [mandat MC-INIT-002](MANDATS/MC-INIT-002.md) préparé (écritures distantes soumises à autorisation explicite). Voir [REPRISE.md](REPRISE.md).
+**MC-INIT-001 :** PASS_WITH_RESERVATIONS, publication [PR #1 Draft](https://github.com/Rivounet/mousse-controler/pull/1) PASS documentaire. **MC-INIT-002 :** [PR #2 Draft](https://github.com/Rivounet/mousse-controler/pull/2) examinée, [revue](REVUES/MC-INIT-002.md) **PASS_WITH_RESERVATIONS**, **J1 validé avec réserves** sur le canal distant et le témoin réversible. **J4 reste ouvert** pour la chaîne de releases et rollback. Aucune PR fusionnée. Voir [REPRISE.md](REPRISE.md).
 
 ## Prochaines tâches (ordre recommandé)
 
@@ -10,14 +10,14 @@ Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire
 |---|---|---|---|---|---|
 | MC-001 | J0 | Publier la documentation de référence | ChatGPT | Documents du dépôt | Validé |
 | MC-002 | J1 | Inventorier mini-pc-backend (OS, Bluetooth, versions, accès) **sans modification** | Codex Desktop | Rapport et preuves MC-INIT-001 revus, réserves consignées | Validé avec réserves |
-| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | SSH et listing SFTP déclarés PASS ; transfert aller-retour et droits d'écriture à tester | En cours |
-| MC-003A | J1 | Qualifier la copie Git distante et le modèle de synchronisation par SHA | Codex Desktop | Preuve de synchronisation non destructive, contrôle d'état Git et manifeste version | À faire |
-| MC-003B | J1/J4 | Concevoir puis implémenter les scripts distants (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | Scripts, configuration externe et tests d'échec/idempotence | À faire |
+| MC-003 | J1 | Qualifier le canal sécurisé PC → mini-PC, identité hôte et droits | Codex Desktop | SSH, UTF-8, SFTP aller-retour, SHA-256 et arrêt témoin examinés en PR #2 ; privilèges admin résiduels | Validé avec réserves |
+| MC-003A | J4 | Qualifier synchronisation d'une release par SHA et état Git distant si un clone existe | Codex Desktop | Plan local livré en PR #2, **aucune synchronisation applicative exécutée** | À faire |
+| MC-003B | J4 | Développer la chaîne distante (doctor, sync, status, deploy, test, logs, stop, rollback) | Codex Desktop | doctor/status/sondes/plan seulement en PR #2 ; mutation, santé, verrou et rollback restant à faire | En cours |
 | MC-004 | J2 | Mesurer le rôle périphérique BLE/HID disponible sur le mini-PC | Codex Desktop | Matrice matériel/OS, résultats et limites | À faire |
 | MC-005 | J2 | Tester l'appairage et un mouvement HID minimal | Codex Desktop | Démonstration + traces côté émetteur/cible | À faire |
 | MC-006 | J3 | Définir le contrat API et le moteur de commandes | Codex Desktop | Contrat versionné, tests automatisés | À faire |
 | MC-007 | J3 | Intégrer le Bluetooth HID et les sécurités | Codex Desktop | Démo API → souris sur PC Windows | À faire |
-| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves | À faire |
+| MC-008 | J4 | Qualifier la chaîne complète de synchronisation, déploiement, arrêt, rollback et reprise sur incident | Codex Desktop | Cas normaux et dégradés exécutés sur mini-PC, SHA/version active et preuves ; prochain mandat MC-INIT-003 après arbitrage des PR | À faire |
 | MC-009 | J5 | Qualifier robustesse, déconnexions, sécurité, non-régression | Codex Desktop | Rapport et preuves | À faire |
 | MC-010 | J5 | Effectuer la revue finale du code et de la documentation | ChatGPT | Verdict motivé + réserves | À faire |
 
