@@ -22,6 +22,9 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-015 | 2026-11-19 | Validé | Centraliser la reprise future dans `docs/REPRISE.md` et versionner les mandats Codex | Reprise fondée sur l'état Git, le jalon en cours et des livrables vérifiables |
 
+| D-016 | 2026-11-19 | Qualification partielle | Rapport MC-INIT-001 : SSH et listing SFTP opérationnels, indicateur BLE périphérique favorable sur les deux PC | J1 reste ouvert ; HID, transfert réversible et rollback non démontrés ; examen des preuves individuelles en attente |
+| D-017 | 2026-11-19 | Proposition retenue pour qualification | Privilégier OpenSSH/SFTP existants et scripts compatibles PowerShell 5.1 distant | Tester les droits minimaux, l'identité hôte, les hash, les erreurs et le rollback avant déploiement réel |
+
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
