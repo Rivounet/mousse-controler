@@ -11,7 +11,7 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 
 ## Pour chaque mandat
 
-1. Lire `README.md`, `docs/ROADMAP.md`, `docs/PLANNING.md`, `docs/ARCHITECTURE.md` et les documents concernés.
+1. Lire `docs/REPRISE.md` (état et mandat courant), puis `README.md`, `docs/ROADMAP.md`, `docs/PLANNING.md`, `docs/ARCHITECTURE.md` et les documents concernés.
 2. Vérifier branche, état Git et fichiers préexistants. Ne jamais écraser des changements non liés.
 3. Annoncer objectif, périmètre, risques et critères de réussite avant les modifications.
 4. Faire une modification ciblée et testable. Utiliser une branche de travail et une PR pour les changements applicatifs ; ne pas pousser de code directement sur `main`.
@@ -44,6 +44,8 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 - Accès distant et synchronisation : `docs/ACCES-DISTANT-ET-SYNCHRONISATION.md`
 - Tests / revue : `docs/TESTS.md`
 - Décisions : `docs/DECISIONS.md`
+- Reprise : `docs/REPRISE.md`
+- Mandat initial : `docs/MANDATS/MC-INIT-001.md`
 
 ## Mandats, revue et GitHub
 
