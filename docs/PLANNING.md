@@ -23,14 +23,14 @@ Il n'y a **aucune date cible obligatoire**. Les tâches passent par : **À faire
 
 ## Définition de « terminé »
 
-Une tâche technique est terminée quand ses changements sont localisés, ses tests et leurs résultats sont rapportés, et son comportement est vérifié sur **mini-pc-backend** quand pertinent. Toute livraison distante doit identifier le **SHA demandé et le SHA réellement déployé** ; aucun écrasement de données du clone distant n'est acceptable. Le code ne passe pas en `main` sans revue de ChatGPT et décision de fusion explicite. Une tâche documentaire n'est terminée qu'après publication GitHub et vérification des liens/cohérences.
+Une tâche technique est terminée quand ses changements sont localisés, ses tests et leurs résultats sont rapportés, et son comportement est vérifié sur **mini-pc-backend** quand pertinent. Toute livraison distante doit identifier le **SHA demandé et le SHA réellement déployé** ; aucun écrasement de données du clone distant n'est acceptable. Le code ne passe pas en `main` sans décision de fusion explicite de l'utilisateur ; la revue de code préalable n'est pas automatique et dépend du contrôle demandé ou convenu. Une tâche documentaire n'est terminée qu'après publication GitHub et vérification des liens/cohérences.
 
 ## Cadence de travail
 
 1. Choisir **une tâche ciblée**, avec un résultat observable.
 2. Codex Desktop annonce périmètre, diagnostic initial et risques, puis implémente localement.
 3. Codex transfère sur mini-PC, exécute les tests réels autorisés et fournit logs, commandes et résultats.
-4. ChatGPT réalise revue de code / documentation et publie son verdict : **PASS**, **PASS_WITH_RESERVATIONS** ou **NO-GO**, avec motifs.
+4. ChatGPT enregistre l'avancement et contrôle la cohérence Git/GitHub. **La revue de code approfondie n'est effectuée que sur demande explicite ou lors d'un jalon de contrôle convenu** ; elle donne alors un verdict motivé : **PASS**, **PASS_WITH_RESERVATIONS** ou **NO-GO**.
 5. Une intégration ou fusion ne se fait qu'après autorisation applicable.
 
 Pour les tâches longues, Codex doit communiquer des points de progression aux étapes clés avec le temps écoulé et les éventuels blocages.
