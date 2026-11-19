@@ -1,58 +1,33 @@
 # Stratégie de tests et qualification
 
-## Commande locale de référence
+## Référence
 
 ```powershell
 python -m unittest discover
 ```
 
-MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécute
-désormais 72 tests au lieu d'en annoncer zéro. Le 19 novembre 2026, les 72 tests
-ont réussi sur mini-pc-backend en 31,876 secondes.
+La PR #4 a livré 72 tests réussis selon MC-REPRISE-001. La PR #5 a déclaré **79 tests réussis** après les audits radio, mais elle reste Draft ; ne pas attribuer ce total à `main` sans réexécution.
 
-La suite couvre 69 tests historiques d'artefacts, releases, chemins, erreurs,
-verrous et client distant hors ligne, plus trois tests du diagnostic Bluetooth
-en lecture seule. Elle ne crée pas de publicité et n'émet aucun rapport HID.
+## Matrice de qualification
 
-## Niveaux
-
-| Niveau | But | État |
+| Niveau | Vérifications | Statut |
 |---|---|---|
-| T0 | cohérence Git, syntaxe et documentation | exécuté dans MC-REPRISE-001 |
-| T1 | unités, artefacts, releases, diagnostic Bluetooth | 72 PASS |
-| T2 | service GATT, publicité, bonding et pilote HID | non exécuté, autorisation requise |
-| T3 | API → mouvement/clic/scroll | non développé |
-| T4 | reconnexion, saturation, arrêt d'urgence | non développé |
+| T0 | Git, documentation, compilation, provenance dépendances | Partiel |
+| T1 | Géométrie rectangle/cercle/polygone, sélection aléatoire intérieure, graine de test, trajectoires courbes, profils de vitesse et micro-variations seulement en mouvement | À faire |
+| T2 | Séquences A→B→C, modes temporisé/commandé, pause/reprise/étape suivante/arrêt, état et non-rejeu | À faire |
+| T3 | HOGP GATT, publicité, pairing, chiffrement, pilote HID natif, mouvement/clic/scroll et relâchement boutons | GATT non diffusé qualifié en PR #5 ; reste à faire |
+| T4 | Agent GetCursorPos, topologie/DPI/session, HTTPS épinglé/HMAC, anti-rejeu, mesures fraîches, coupures LAN | GetCursorPos local observé ; intégration à faire |
+| T5 | Correction par feedback réel, arrivée dans zone, multi-écrans, vitesse, concurrence souris physique, latence, arrêt d'urgence et reconnexion | À faire |
 
-## Qualification Bluetooth en deux portes
+## Critères d'acceptation
 
-1. **Lecture seule** : pilote, services, rôles BLE et surface WinRT. Autorisée
-   sans interaction avec la cible ; script `scripts/bluetooth/diagnose.ps1`.
-2. **Matérielle** : service HOGP, publicité, appairage et mouvement minimal.
-   Exécutée seulement après autorisation selon
-   `qualification/MC-REPRISE-001/PROTOCOLE-HID.md`.
+- **Souris HID native** reconnue sur MonOrdinateur, sans pilote personnalisé sur la cible ; rapport HID réel observé.
+- **Retour réel** de coordonnées physiques signées par agent visible ; horodatage, source, session et génération topologique.
+- **Séquences** de zones A→B→C ; les trois géométries ; point cible tiré dans le périmètre ; trajectoires courbes, vitesse variable et micro-variations bornées pendant mouvement seulement.
+- **Modes** : délai configurable ou commande explicite, avec pause/reprise/arrêt sans rejeu.
+- **Précision cible proposée** : erreur ≤ 2 px sur trois mesures, P95 ≤ 4 px, réussite ≥ 99 % sous 2 s ; mesure > 150 ms refusée ; arrêt cible ≤ 250 ms. Ce ne sont pas des performances démontrées.
+- **Sécurité** : arrêt d'urgence, commandes TTL/idempotentes, relâchement boutons, pas de commande via l'agent cible, aucune donnée sensible publiée.
 
-Un résultat positif de porte 1 ne peut produire qu'un
-`GO_WITH_RESERVATIONS`. `GO` requiert la reconnaissance comme souris et un
-événement réellement observé sur MonOrdinateur.
+Distinguer les tests simulés, locaux et **observés sur les deux machines**. Une compilation ou un test simulé ne valide pas le fonctionnement réel. La qualification ne vise ni l'usurpation Logitech ni l'évasion de détection d'automatisation.
 
-## Acceptation MVP
-
-- MonOrdinateur reconnaît une souris Bluetooth native après appairage ;
-- aucun logiciel récepteur propre au projet sur MonOrdinateur ;
-- mouvement relatif, clic gauche/droit et défilement via un client autorisé ;
-- aucune commande invalide ou expirée émise ;
-- reconnexion sans rejeu de commandes obsolètes ;
-- arrêt d'urgence mesuré, publicité arrêtée et souris physique disponible ;
-- API non exposée publiquement ;
-- activation par SHA et rollback reproductibles sur mini-pc-backend.
-
-## Compte rendu d'un lot
-
-Indiquer branche et SHA, machine, commandes, total de tests, durée, PASS/FAIL,
-opérations non exécutées, effets Bluetooth éventuels, arrêt/rollback et preuves
-expurgées. Ne publier ni adresses Bluetooth, identifiants matériels uniques,
-comptes, chemins personnels, secrets ou journaux privés.
-
-La revue de code approfondie reste sur demande ou au jalon convenu ; livraison
-d'une PR Draft ne signifie ni validation, ni fusion.
+Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.
