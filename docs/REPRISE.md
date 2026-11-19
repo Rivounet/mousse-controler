@@ -21,10 +21,10 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 | Acteur | Responsabilités |
 |---|---|
 | **Utilisateur** | Définit les objectifs, tranche les choix engageants, autorise modifications système, fusions et opérations sensibles |
-| **ChatGPT** | Définit les mandats Codex, tient la documentation et les décisions à jour dans GitHub, pilote la roadmap et le planning, supervise Git/GitHub, effectue les revues indépendantes de code et de preuves |
+| **ChatGPT** | Définit les mandats Codex, tient la documentation et les décisions à jour dans GitHub, pilote la roadmap et le planning, supervise Git/GitHub, effectue les revues indépendantes de code et de preuves sur demande explicite ou au jalon convenu, jamais automatiquement à chaque implémentation |
 | **Codex Desktop** | Exécute les mandats, développe localement, prépare les branches et PR, effectue diagnostics, transferts/déploiements autorisés, tests distants et comptes rendus |
 
-**Cycle :** mandat ChatGPT **fourni dans le chat, non archivé dans GitHub** → travaux Codex → rapport, SHA, diff/PR et preuves sur GitHub → revue ChatGPT (PASS / PASS_WITH_RESERVATIONS / NO-GO) → décision utilisateur si nécessaire → mise à jour documentaire. Ne jamais présenter une validation de ChatGPT comme une exécution ou une supervision continue automatique : elle intervient à la demande, sur preuves consultables.
+**Cycle :** mandat ChatGPT **fourni dans le chat, non archivé dans GitHub** → travaux Codex → rapport, SHA, diff/PR et preuves sur GitHub → suivi du livrable et de GitHub par ChatGPT → revue de code **uniquement à la demande ou au jalon convenu** (PASS / PASS_WITH_RESERVATIONS / NO-GO) → décision utilisateur si nécessaire → mise à jour documentaire. Ne jamais présenter une validation de ChatGPT comme une exécution ou une supervision continue automatique : elle intervient à la demande, sur preuves consultables.
 
 ## 4. Principes de gestion
 
@@ -78,4 +78,4 @@ Le développement et les tests unitaires préliminaires sont effectués depuis W
 
 ## Publication des preuves et revues
 
-**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT lit directement la PR et les preuves, sans demander un transfert manuel à l'utilisateur. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 et MC-INIT-002 ont été publiées et relues dans les PR #1 et #2 ; toute nouvelle preuve suit le même processus.
+**Règle permanente :** Codex publie les rapports et preuves nécessaires aux revues dans GitHub, sur une branche dédiée et une PR Draft, sous `qualification/<MANDAT>/`. Les données brutes sensibles restent hors dépôt public. ChatGPT peut lire directement la PR et les preuves lorsque la revue est demandée, sans transfert manuel à l'utilisateur. Une publication de PR n'impose pas une revue de code complète. Le rapport MC-INIT-001 a été transmis séparément avant cette règle ; les preuves de MC-INIT-001 et MC-INIT-002 ont été publiées et relues dans les PR #1 et #2 ; toute nouvelle preuve suit le même processus.
