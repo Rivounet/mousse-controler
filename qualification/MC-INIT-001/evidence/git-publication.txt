@@ -1,0 +1,9 @@
+État Git de publication, 19 novembre 2026 (commandes locales/GitHub uniquement)
+git status --porcelain=v1 : aucune sortie avant fast-forward
+git merge-base --is-ancestor main origin/main : code 0
+git merge --ff-only origin/main : succès
+main : 84dbade9fe74ed8c38f4aa1b089a44c194dfa288 -> 86ed1088bc1e2ae7984c4c4ccfd0bb0af8755b02
+git switch -c docs/mc-init-001-evidence : succès
+origin : https://github.com/Rivounet/mousse-controler.git
+Les commits reçus concernent la documentation de reprise, qualification et publication obligatoire des preuves.
+evidence/git-final.txt conserve séparément l’état historique antérieur : main en retard de 6 commits.

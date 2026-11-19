@@ -1,0 +1,8 @@
+## main...origin/main [behind 6]
+origin	https://github.com/Rivounet/mousse-controler.git (fetch)
+origin	https://github.com/Rivounet/mousse-controler.git (push)
+* main                84dbade [origin/main: behind 6] docs: formaliser mandats Codex et supervision GitHub
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/main 1527797 docs: relier reprise et mandat initial au referentiel
+84dbade9fe74ed8c38f4aa1b089a44c194dfa288
+1527797a555b97ae2bced2b1864f1a010422cb9a

@@ -1,0 +1,162 @@
+{
+  "Time": "2026-11-19T13:51:03.0924018+01:00",
+  "OS": {
+    "Caption": "Microsoft Windows 11 Professionnel",
+    "Version": "10.0.26300",
+    "BuildNumber": "26300",
+    "OSArchitecture": "64 bits",
+    "FreePhysicalMemory": 7589292
+  },
+  "Hardware": [
+    {
+      "Manufacturer": "Intel Corporation",
+      "Model": "Jasper Lake Client Platform",
+      "TotalPhysicalMemory": 17016598528
+    },
+    {
+      "Name": "Intel(R) Celeron(R) N5105 @ 2.00GHz",
+      "NumberOfCores": 4,
+      "NumberOfLogicalProcessors": 4
+    }
+  ],
+  "Shell": [
+    "\r\nName                           Value                                                                                   \r\n----                           -----                                                                                   \r\nPSVersion                      5.1.26100.9818                                                                          \r\nPSEdition                      Desktop                                                                                 \r\nPSCompatibleVersions           {1.0, 2.0, 3.0, 4.0...}                                                                 \r\nBuildVersion                   10.0.26100.9818                                                                         \r\nCLRVersion                     4.0.30319.42000                                                                         \r\nWSManStackVersion              3.0                                                                                     \r\nPSRemotingProtocolVersion      2.3                                                                                     \r\nSerializationVersion           1.1.0.1                                                                                 \r\n\r\n\r\n",
+    true,
+    true
+  ],
+  "Versions": [
+    "git :",
+    "git version 2.54.0.windows.1",
+    "node :",
+    "v26.12.1",
+    "python :",
+    "Python 3.12.10",
+    "gh :",
+    "gh version 2.94.0 (2026-06-10)",
+    "https://github.com/cli/cli/releases/tag/v2.94.0"
+  ],
+  "Storage": {
+    "DeviceID": "C:",
+    "Size": 510728859648,
+    "FreeSpace": 362410680320
+  },
+  "Tools": [
+    {
+      "Name": "git.exe"
+    },
+    {
+      "Name": "ssh.exe"
+    },
+    {
+      "Name": "scp.exe"
+    },
+    {
+      "Name": "sftp.exe"
+    },
+    {
+      "Name": "python.exe"
+    },
+    {
+      "Name": "py.exe"
+    },
+    {
+      "Name": "node.exe"
+    },
+    {
+      "Name": "npm.ps1"
+    },
+    {
+      "Name": "gh.exe"
+    },
+    {
+      "Name": "code.cmd"
+    },
+    {
+      "Name": "pwsh.exe"
+    },
+    {
+      "Name": "wt.exe"
+    },
+    {
+      "Name": "wsl.exe"
+    }
+  ],
+  "Bluetooth": [
+    {
+      "Status": "OK",
+      "FriendlyName": "Realtek Bluetooth Adapter",
+      "HardwareType": "VID_0BDA&PID_C821"
+    }
+  ],
+  "BluetoothDrivers": {
+    "DeviceName": "Realtek Bluetooth Adapter",
+    "DriverVersion": "1.1061.2312.2501",
+    "DriverDate": "/Date(1716163200000)/",
+    "Manufacturer": "Realtek Semiconductor Corp.",
+    "InfName": "oem31.inf"
+  },
+  "Network": [
+    {
+      "Name": "Ethernet",
+      "InterfaceDescription": "Realtek PCIe GbE Family Controller",
+      "Status": "Disconnected",
+      "LinkSpeed": "0 bps"
+    },
+    {
+      "Name": "vEthernet (WSL (Hyper-V firewall))",
+      "InterfaceDescription": "Hyper-V Virtual Ethernet Adapter #2",
+      "Status": "Up",
+      "LinkSpeed": "10 Gbps"
+    },
+    {
+      "Name": "vEthernet (Default Switch)",
+      "InterfaceDescription": "Hyper-V Virtual Ethernet Adapter",
+      "Status": "Up",
+      "LinkSpeed": "10 Gbps"
+    },
+    {
+      "Name": "Wi-Fi",
+      "InterfaceDescription": "Realtek 8821CE Wireless LAN 802.11ac PCI-E NIC",
+      "Status": "Up",
+      "LinkSpeed": "390 Mbps"
+    }
+  ],
+  "RemoteServices": [
+    {
+      "Name": "bthserv",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "com.docker.service",
+      "Status": 1,
+      "StartType": 3
+    },
+    {
+      "Name": "RustDesk",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "ssh-agent",
+      "Status": 1,
+      "StartType": 4
+    },
+    {
+      "Name": "sshd",
+      "Status": 4,
+      "StartType": 2
+    },
+    {
+      "Name": "TermService",
+      "Status": 4,
+      "StartType": 3
+    },
+    {
+      "Name": "WinRM",
+      "Status": 1,
+      "StartType": 3
+    }
+  ],
+  "SelectionNote": "Extrait structuré par liste de champs autorisés ; chemins, comptes, SID/ACL, PIDs, ports, inventaire de projets et périphériques personnels exclus. Statut service 4=Running, 1=Stopped ; StartType 2=Automatic, 3=Manual, 4=Disabled. Valeurs historiques, aucun nouveau diagnostic."
+}
