@@ -1,51 +1,29 @@
 # Planning opérationnel
 
-Progression sans échéances fixes : **À faire → En cours → En revue → Validé**.
-Un état validé exige une preuve adaptée ; une capacité déclarée par Windows ne
-valide pas à elle seule le fonctionnement HID.
+**Statuts :** À faire / En cours / En revue / Validé / Bloqué. Le mandat global en cours de cadrage est **MC-HID-EXEC-001** ; ne pas confondre spécification et fonctionnalité réalisée.
 
-## Situation consolidée
+## État de référence
 
-- MC-INIT-001 à 003 : travaux préservés dans les PR Draft #1 à #3 et réunis
-  sans fusion dans la branche MC-REPRISE-001.
-- Environnement local : inventorié ; clone officiel dans `source/` ; artefacts
-  d'exécution préexistants préservés.
-- Tests : 72 PASS sur mini-pc-backend.
-- Bluetooth : rôles BLE et API GATT favorables ; aucune émission exécutée.
+- PR #4 fusionnée dans main ; PR #1–#3 clôturées sans fusion directe.
+- PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
+- Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
+- Aucun appairage HOGP, mouvement souris depuis mini-PC ni retour LAN intégré démontré.
 
-## Tâches
+## Travaux structurants
 
-| ID | Jalon | Travail | Livrable / preuve | État |
+| ID | Jalon | Travail | Preuve attendue | État |
 |---|---|---|---|---|
-| MC-001 | J0 | Documentation de référence | documents du dépôt | Validé |
-| MC-002 | J1 | Inventorier mini-pc-backend sans modification | `MC-REPRISE-001/evidence/environment.json` | Validé |
-| MC-003 | J1 | Consolider Git et rendre les tests reproductibles | branche unique, 72 PASS | En revue |
-| MC-003A | J4 | Artefact par SHA, staging et release locale | code/tests MC-INIT-003 consolidés | En cours |
-| MC-003B | J4 | Activation, santé, arrêt et rollback locaux réels | preuve sur une application témoin | À faire |
-| MC-003C | J4 | Maintenance SSH/SFTP optionnelle | requalification seulement si nécessaire | Secondaire |
-| MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
-| MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | En attente d'autorisation d'essai |
-| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | En attente d'autorisation |
-| MC-006 | J3 | Contrat API et moteur de commandes | contrat + adaptateur simulé + tests | À faire après décision J2 |
-| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | À faire |
-| MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
-| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
+| MC-BASE | J0/J1 | Référentiel et environnement local, consolidation PR #4 | Fusion et rapports | Validé |
+| MC-AUDIT | J2 | Audits HOGP et radio, diagnostic cible | PR #5, création GATT sans publicité | En revue |
+| MC-HID | J2 | Installer MSVC/SDK, développer HOGP, appairer et qualifier la souris native | Mouvement réel, pilote chargé, arrêt | À faire |
+| MC-TARGET | J3 | Accès sécurisé à MonOrdinateur, agent visible C# et retour HTTPS/HMAC | Coordonnées réelles, session/topologie, sécurité et latence | À faire |
+| MC-TRAJ | J3 | Zones rectangle/cercle/polygone ; point aléatoire interne ; trajectoires courbes, vitesse variable et micro-variations en mouvement | Tests géométriques, séquences et trajectoires | À faire |
+| MC-SEQUENCE | J3 | A→B→C, attente temporisée ou commande, pause/reprise/étape suivante/arrêt | Tests d'état et séquences réelles | À faire |
+| MC-CORRECTION | J3 | Mesure réelle, mouvement relatif borné, correction et confirmation d'arrivée | Matrice de précision et délais mesurés | À faire |
+| MC-ROBUST | J4/J5 | Reconnexion, boutons, TTL, sécurité, rollback et qualification intégrée | Tests réels et rapport | À faire |
 
-## Prochaine décision
+**Mandat :** Codex sur mini-pc-backend, autorisé à coordonner les deux machines dans les limites du mandat exécutoire ; les modifications sensibles, l'accès distant et l'appairage restent supervisables. Une seule PR Draft cohérente, sans fusion automatique. Ne pas enregistrer le texte du mandat dans GitHub.
 
-Autoriser ou refuser le protocole
-[`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md) :
-création du service GATT/HID, publicité visible, appairage avec MonOrdinateur et
-mouvement relatif minimal. La commande d'arrêt et les effets sont décrits avant
-toute exécution.
+## Critères proposés (non mesurés)
 
-Sans cette autorisation, J2 reste en cours et le développement applicatif
-complexe ne démarre pas.
-
-## Règles de livraison
-
-Codex travaille sur mini-pc-backend, publie une PR Draft cohérente avec rapport
-et preuves expurgées, puis s'arrête avant fusion. Les mandats restent dans le
-chat (D-021), une livraison ne déclenche pas automatiquement une revue exhaustive
-(D-022) et l'autonomie technique reste bornée par les opérations sensibles
-(D-023).
+Erreur finale ≤ 2 px sur trois mesures, P95 ≤ 4 px, ≥ 99 % des cibles sous 2 s, refus d'une mesure > 150 ms, arrêt cible ≤ 250 ms. Les seuils sont à valider par essais réels et peuvent nécessiter arbitrage motivé.
