@@ -67,3 +67,7 @@ elles ne décrivent pas l'état courant de la PR #6.
 [Reprise](docs/REPRISE.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Planning](docs/PLANNING.md) · [Tests](docs/TESTS.md) · [Décisions](docs/DECISIONS.md) · [Consignes Codex](AGENTS.md).
 
 Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
+
+## Évolution planifiée : MC-MOUSE-ACTIONS-001
+
+Après le MVP fusionné, ajouter toutes les actions d'une souris standard (clics multiples, maintien, glisser-déposer, roulette et boutons compatibles), intégrées aux séquences, avec résultats et états d'action diffusés automatiquement par WebSocket. Capture d'écran **facultative avant/après action configurée uniquement**, de l'écran entier contenant le curseur au moment de la capture ; transmission LAN sécurisée et rétention configurable par action/séquence. Préparer l'analyse locale future sans développer de moteur visuel dans cette étape. Pas de clavier ni de capture continue. **Fonctions planifiées, non encore livrées.** Voir roadmap et planning.
