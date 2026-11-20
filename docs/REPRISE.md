@@ -190,20 +190,18 @@ Souris uniquement, sans clavier : clics multiples, maintien, glisser-déposer, b
 
 Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et captures. Agent cible visible limité aux mesures/captures, sans exécution de commandes souris. Codex sur mini-pc-backend développe dans une seule PR Draft, sans fusion automatique. Voir roadmap/planning ; mandat intégral dans le chat.
 
-### État d'exécution du chantier
+### État final du chantier — qualification du 20 novembre 2026
 
-Branche `feat/mc-mouse-actions-001`, base exacte
-`4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`. Premier commit applicatif
-`597f7401d8bc743aebf9fa018422188460dd0767` : moteur d'actions, registre/journal,
-séquences mixtes, WebSocket authentifié, broker de captures et agent cible
-étendu. Suite complète : 175/175 PASS en 47,857 s ; builds agent et témoin avec
-warnings-as-errors.
+**Verdict : PASS_WITH_RESERVATIONS, PR #8 Draft non fusionnée.** Branche `feat/mc-mouse-actions-001`, SHA technique qualifié initialement `92817a7d802c0d2c0d22b4502071a3dc4a994c19`; base `main` `4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`. Les modifications documentaires de consolidation ultérieures ne constituent pas une nouvelle qualification exécutable.
 
-Le mini-PC exécute ce contenu : GATT `Started`, abonné, boutons à zéro, position
-fraîche, API commande et WebSocket sur loopback. Un test runtime sans HID a
-observé `ACCEPTED → RUNNING → EXECUTED`. Le paquet cible réversible est vérifié
-dans un staging temporaire de MonOrdinateur. Le compte SSH isolé ne possède pas
-la tâche interactive `MousseControler-PositionAgent`; l'installation et la
-fenêtre témoin doivent donc être lancées dans la session visible avant les
-preuves réelles de capture et d'actions étendues. Ne pas présenter ces tests
-encore ouverts comme réussis.
+- Logiciel : **177/177 tests PASS en 44,286 s**, compilation Python et builds Roslyn C# avec warnings-as-errors.
+- Matériel réel : **17 actions souris réussies** dans la surface témoin sûre ; cinq boutons, clics multiples, combinaison, maintien, glisser confirmé, mouvements, roulette verticale et séquence. Témoin : **37 événements** dans la surface sûre.
+- Suivi : événements WebSocket corrélés et identifiants uniques. `CONFIRMED` réservé aux positions observées, `EXECUTED` aux clics/boutons/roulette.
+- Captures ponctuelles avant/après : deux PNG réels **1920×1080**, seuls des recadrages de preuve **884×611** conservés dans `qualification/MC-MOUSE-ACTIONS-001/evidence/`. Captures sources plein écran supprimées. Aucun flux continu ni analyse visuelle.
+- Sécurité : arrêt d'urgence annule l'action en attente (`CANCELLED`), **zéro événement post-arrêt** ; après reconnexion, HOGP `Started`, `subscribed=True`, boutons 0, aucun rejeu et aucune action en cours.
+- SSH : connexion via l'alias **exact `MonOrdinateur`** et le fichier dédié `~/.ssh/monordinateur-pv-mig.conf`, refus réseau en sandbox et réussite hors sandbox avec une approbation persistante strictement limitée. SSH session 0 ; console/agent/témoin session 1. Tâche temporaire interactive contrôlée, sans changements d'ACL, compte, pare-feu ou protection.
+- Nettoyage : témoin/tâche/staging interactif supprimés, production `Running` en session 1, souris libérée. Dossier de staging de maintenance **vide** encore présent sous Windows Temp (suppression refusée, aucune élévation réalisée).
+- **Réserves** : roulette horizontale indisponible car `AC Pan` absent du descripteur HID déjà appairé ; dossier vide résiduel ; toute nouvelle prise de souris pour qualification exige annonce préalable et accord explicite. Réserves historiques du MVP : mesure LAN aller simple absolue et reprise GATT transitoire.
+- Preuves : [rapport J6](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md), `evidence/hardware-summary.json` et `evidence/ssh-summary.json`. Pas de CI GitHub configurée ; tests exécutés sur les machines, pas dans un workflow distant.
+
+**Prochaine porte :** suivi documentaire et décision explicite de revue/fusion de la [PR #8](https://github.com/Rivounet/mousse-controler/pull/8). Ne pas annoncer le code J6 comme intégré à `main` avant fusion. Codex reste responsable de l'exécution ; ChatGPT maintient la documentation et pilote l'arbitrage GitHub. Les mandats complets restent dans le chat.
