@@ -132,3 +132,14 @@ La branche documentaire post-fusion a ensuite exécuté la même suite :
 **136/136 tests en 38,938 s : PASS**.
 
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.
+
+## Critères de qualification futurs — MC-MOUSE-ACTIONS-001
+
+- Clics simple/double/triple, maintien, glisser-déposer, boutons et roulette verticale/horizontale selon HID ; relâchement sur arrêt.
+- Composition en séquences, attente, pause/reprise, erreur configurable, absence de rejeu après reconnexion.
+- Identifiants et notifications WebSocket authentifiées, états cohérents et distinction entre émission HID et effet observé.
+- Capture uniquement avant/après une action configurée ; aucun déclenchement permanent ou indépendant ; sélection du moniteur sous curseur au moment de la capture, y compris multi-écrans.
+- Transfert LAN protégé, intégrité, quotas, stockage et rétention par action/séquence, absence de fuite de captures dans les logs ou GitHub.
+- Arrêt d'urgence prioritaire ; échec de capture sans répétition de l'action souris ; tests logiciels et matériels sur surface sûre.
+
+Ces critères sont planifiés, pas encore qualifiés. Référence MVP avant J6 : 136 tests réussis, 100/100 mouvements réels.
