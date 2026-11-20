@@ -73,3 +73,14 @@ calculable sans synchronisation d'horloges et une reprise GATT transitoire peut
 précéder le retour automatique à `subscribed=True`. L'acceptation HOGP, le
 bonding/chiffrement, le pilote souris natif, la reconnexion, AtLogOn, l'arrêt et
 les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.
+
+## Décisions validées — MC-MOUSE-ACTIONS-001 (20 novembre 2026)
+
+| ID | Statut | Décision |
+|---|---|---|
+| D-045 | Validé | Souris uniquement : clics multiples, maintien, glisser-déposer, roulette, boutons compatibles ; actions composables en séquences. Aucun clavier. |
+| D-046 | Validé — 1B | Capture facultative automatiquement avant/après une action configurée, jamais continue ni périodique ; écran entier contenant le curseur au moment de la capture. Pas de commande indépendante de capture. |
+| D-047 | Validé — 2C/3C | Préparer analyse visuelle locale future sans développer de moteur ; rétention des images configurable par action/séquence. |
+| D-048 | Validé — 4B | Retour automatique des résultats et états d'actions par WebSocket, identifiant stable ; distinguer émission HID et résultat réellement observé. |
+| D-049 | Validé — 5C | Politique d'échec configurable arrêt/retry/poursuite, arrêt par défaut ; aucun rejeu automatique des actions non idempotentes à issue incertaine. |
+| D-050 | Validé | Conserver Bluetooth HID pour la souris et LAN sécurisé pour retour et captures ; agent cible visible, autorisé uniquement à mesurer et capturer, jamais à commander la souris. |
