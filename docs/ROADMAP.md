@@ -48,19 +48,17 @@ Toute modification de périmètre, de jalon ou de critère de sortie est documen
 
 **Responsabilités :** Codex réalise, documente les tests et propose les changements ; ChatGPT tient cette roadmap à jour, suit Git/GitHub, et réalise les revues de code ou de preuves sur demande explicite ou au jalon convenu ; l'utilisateur arbitre les décisions engageantes.
 
-## J6 — MC-MOUSE-ACTIONS-001 : extension fonctionnelle en qualification
+## J6 — MC-MOUSE-ACTIONS-001 : qualifié avec réserves, fusion en attente
 
-**Statut : logiciel réalisé, qualification réelle partielle.** Succède au MVP
-J5 fusionné et consolidé. Une seule PR Draft de développement, sans fusion
-automatique. Le runtime mini-PC et le WebSocket réel sont actifs ; les essais
-visibles de l'agent/capture et les actions matérielles étendues restent la porte
-de sortie.
+**Statut : PASS_WITH_RESERVATIONS sur la PR #8 Draft non fusionnée**, qualification matérielle du 20 novembre 2026, SHA applicatif qualifié `92817a7d802c0d2c0d22b4502071a3dc4a994c19`. Les résultats ne sont pas encore ceux du code intégré à `main`.
 
-| Ordre | Lot | Critère de sortie |
+| Lot | Résultat | État |
 |---|---|---|
-| J6.1 | Actions souris standard complètes : clics multiples, maintien, drag/drop, boutons compatibles, roulette verticale ; horizontale explicitement indisponible sur le HID actuel | Réalisé logiciel ; essai matériel sûr en attente |
-| J6.2 | Actions composables en séquences ; identifiant, états et événements WebSocket authentifiés | Réalisé ; non-rejeu persistant et WebSocket réel qualifiés |
-| J6.3 | Capture ponctuelle optionnelle avant/après action configurée | Réalisé logiciel et build cible ; essai cible en attente |
-| J6.4 | Qualification et documentation | En cours ; suite complète PASS, rapport et paquet cible préparés |
+| J6.1 | 17 actions souris testées réellement, cinq boutons, clics multiples, maintien, drag/drop, roulette verticale ; horizontale non compatible AC Pan | Qualifié avec réserve HID |
+| J6.2 | Séquences mixtes, non-rejeu et WebSocket authentifié ; 37 événements témoins | Qualifié |
+| J6.3 | Capture avant/après, écran entier sous curseur ; deux PNG 1920×1080 traités, sources supprimées, versions de preuve recadrées | Qualifié avec conservation contrôlée |
+| J6.4 | Suite **177/177 PASS**, arrêt d'urgence et reconnexion réels, rapport et preuves expurgés | Qualifié avec réserves |
 
-Hors périmètre : clavier, capture continue/périodique, capture indépendante, moteur d'analyse d'images, garantie de réaction de l'application cible.
+SSH hors sandbox vers `MonOrdinateur` qualifié via fichier dédié, autorisation persistante restreinte et tâche interactive temporaire contrôlée. Aucune modification d'ACL, compte, pare-feu ou protection. Réserves : roulette horizontale HID indisponible, dossier de staging maintenance vide résiduel, accord préalable pour toute future prise de souris.
+
+**Prochaine porte :** vérification des preuves puis arbitrage explicite de fusion de la PR #8. Pas de fusion implicite. Hors périmètre : clavier, capture continue ou autonome, moteur d'analyse visuelle.
