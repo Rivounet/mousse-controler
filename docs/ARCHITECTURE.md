@@ -213,3 +213,28 @@ active, transforme chaque action encore en file en `CANCELLED`, puis termine le
 worker dans une borne. Une action bouton déjà émise et dont le relâchement n'est
 pas physiquement confirmé reste `UNKNOWN`. Ces transitions utilisent le journal
 et le registre `.ids` existants ; le contrat anti-rejeu est inchangé.
+
+## Durcissement R2 — transport HOGP et récepteur LAN
+
+`NativeHogpTransport` supervise chaque processus actif avec trois workers
+bornés : lecture `stdout`, drainage `stderr` et écriture `stdin`. Le thread
+appelant n'effectue plus d'accès bloquant direct aux pipes. Une deadline unique
+couvre l'acquisition du verrou, l'écriture et la réponse d'une commande. Un
+timeout, une réponse partielle/invalide, un pipe rompu ou une mort du moteur
+invalide le canal et lance une terminaison hors protocole par le handle du
+processus. Aucune commande HID n'est rejouée.
+
+Les valeurs par défaut sont : démarrage 15 s, commande 3 s, arrêt protocolaire
+3 s et terminaison processus 2 s. Les opérations WinRT du moteur PowerShell ont
+une limite propre de 5 s avec annulation best-effort. Si `terminate` puis `kill`
+échouent, le handle est conservé, `recovery_required` devient vrai et aucun
+nouveau moteur ne peut être lancé. La fin du processus ou une tentative de
+relâchement ne confirme jamais l'état physique des boutons.
+
+Le récepteur HTTPS utilise `BoundedThreadingHTTPServer`. L'admission précède
+le handler métier et borne à 8 les connexions actives ainsi que le backlog. Les
+deadlines par phase sont : handshake TLS 3 s, en-têtes 2 s, inactivité de
+lecture du corps 5 s et écriture 2 s. Le corps doit correspondre exactement à
+`Content-Length` avant HMAC. Les slots sont libérés en `finally`, y compris sur
+timeout ou déconnexion. TLS 1.2 minimum, HMAC, anti-rejeu, tailles maximales,
+interfaces d'écoute et protocoles publics restent inchangés.

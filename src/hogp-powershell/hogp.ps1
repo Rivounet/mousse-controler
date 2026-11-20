@@ -11,7 +11,8 @@ if (-not $Stdio) {
 function Wait-WinRtOperation {
     param(
         [Parameter(Mandatory)]$Operation,
-        [Parameter(Mandatory)][Type]$ResultType
+        [Parameter(Mandatory)][Type]$ResultType,
+        [ValidateRange(1, 60000)][int]$TimeoutMilliseconds = 5000
     )
 
     $asTaskMethod = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
@@ -23,6 +24,10 @@ function Wait-WinRtOperation {
         throw 'Unable to locate the WinRT AsTask adapter.'
     }
     $task = $asTaskMethod.MakeGenericMethod($ResultType).Invoke($null, @($Operation))
+    if (-not $task.Wait($TimeoutMilliseconds)) {
+        try { $Operation.Cancel() } catch {}
+        throw [TimeoutException]::new("WinRT operation timed out after $TimeoutMilliseconds ms")
+    }
     $task.GetAwaiter().GetResult()
 }
 

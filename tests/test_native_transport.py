@@ -38,11 +38,30 @@ class NativeHogpTransportCommandTests(unittest.TestCase):
 
         self.assertEqual(transport._engine_command(), [str(executable), "--stdio"])
 
+    def test_deadlines_reject_unbounded_configuration(self) -> None:
+        for kwargs in (
+            {"startup_timeout": float("inf")},
+            {"command_timeout": 11},
+            {"stop_timeout": 0},
+            {"termination_timeout": -1},
+        ):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                NativeHogpTransport(Path("engine.exe"), **kwargs)
+
     def test_powershell_engine_waits_for_advertising_to_stop(self) -> None:
         root = Path(__file__).resolve().parents[1]
         source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(encoding="utf-8")
         self.assertIn("function Stop-AdvertisingAndWait", source)
         self.assertIn("advertising did not stop", source)
+
+    def test_powershell_winrt_operations_have_explicit_deadline(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(
+            encoding="utf-8")
+        self.assertIn("[int]$TimeoutMilliseconds = 5000", source)
+        self.assertIn("$task.Wait($TimeoutMilliseconds)", source)
+        self.assertIn("WinRT operation timed out", source)
+        self.assertIn("$Operation.Cancel()", source)
 
     def test_pairability_is_an_explicit_command_mode(self) -> None:
         root = Path(__file__).resolve().parents[1]

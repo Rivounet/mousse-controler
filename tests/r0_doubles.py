@@ -17,11 +17,18 @@ class BlockingLineStream:
         self.entered = threading.Event()
         self.release = threading.Event()
         self.line = line
+        self._returned = False
 
     def readline(self) -> str:
+        if self._returned:
+            return ""
         self.entered.set()
         self.release.wait(2)
+        self._returned = True
         return self.line
+
+    def close(self) -> None:
+        self.release.set()
 
 
 class SaturatingStderr:
@@ -43,6 +50,8 @@ class SaturatingStderr:
 
     def readline(self) -> str:
         self.read_calls += 1
+        if self.read_calls > 2:
+            return ""
         return self.buffer.get(timeout=1)
 
     def unblock(self) -> None:
@@ -51,6 +60,9 @@ class SaturatingStderr:
         except queue.Empty:
             pass
         self._thread.join(1)
+
+    def close(self) -> None:
+        self.unblock()
 
 
 class ProcessDouble:
@@ -62,8 +74,34 @@ class ProcessDouble:
         self.stdout = stdout
         self.stderr = stderr if stderr is not None else io.StringIO()
         self.return_code = return_code
+        self.terminate_calls = 0
+        self.kill_calls = 0
 
     def poll(self) -> int | None:
+        return self.return_code
+
+    def _release_streams(self) -> None:
+        for stream in (self.stdout, self.stderr):
+            release = getattr(stream, "release", None)
+            if release is not None:
+                release.set()
+            unblock = getattr(stream, "unblock", None)
+            if unblock is not None:
+                unblock()
+
+    def terminate(self) -> None:
+        self.terminate_calls += 1
+        self.return_code = 0
+        self._release_streams()
+
+    def kill(self) -> None:
+        self.kill_calls += 1
+        self.return_code = -9
+        self._release_streams()
+
+    def wait(self, timeout: float | None = None) -> int:
+        if self.return_code is None:
+            raise TimeoutError("simulated process is still running")
         return self.return_code
 
 
