@@ -5,6 +5,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import socket
 import ssl
 import threading
 import time
@@ -72,6 +73,7 @@ class PositionReceiver:
 def handler_factory(receiver: PositionReceiver):
     class Handler(BaseHTTPRequestHandler):
         server_version = "MoussePosition/1"
+        protocol_version = "HTTP/1.1"
 
         def do_POST(self) -> None:  # noqa: N802
             if self.path != "/v1/position":
@@ -88,9 +90,15 @@ def handler_factory(receiver: PositionReceiver):
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(response)))
                 self.end_headers()
-                self.wfile.write(response)
+                try:
+                    self.wfile.write(response)
+                except (BrokenPipeError, ConnectionResetError, ssl.SSLEOFError, socket.timeout):
+                    self.close_connection = True
             except (AuthenticationError, ValueError, json.JSONDecodeError):
-                self.send_error(HTTPStatus.UNAUTHORIZED)
+                try:
+                    self.send_error(HTTPStatus.UNAUTHORIZED)
+                except (BrokenPipeError, ConnectionResetError, ssl.SSLEOFError, socket.timeout):
+                    self.close_connection = True
 
         def log_message(self, format: str, *args: object) -> None:
             return

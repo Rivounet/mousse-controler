@@ -79,6 +79,14 @@ class SimulatedHidTransport(HidTransport):
         self.buttons_mask = 0
         self.events.append(("release",))
 
+    def status(self) -> dict[str, str]:
+        return {
+            "prepared": str(self.started),
+            "advertising": str(self.started),
+            "subscribed": str(self.started),
+            "buttons": str(self.buttons_mask),
+        }
+
 
 class NativeHogpTransport(HidTransport):
     """Serialized line protocol for the foreground packaged WinRT engine."""
@@ -93,6 +101,9 @@ class NativeHogpTransport(HidTransport):
         if self._executable.name.lower() != "mousse-hogp-packaged.exe":
             return [str(self._executable), "--stdio"]
         package_script = (
+            "$utf8=[System.Text.UTF8Encoding]::new($false);"
+            "[Console]::InputEncoding=$utf8;[Console]::OutputEncoding=$utf8;"
+            "$OutputEncoding=$utf8;"
             "$p=[Windows.ApplicationModel.Package,Windows,ContentType=WindowsRuntime]::"
             "Current.InstalledLocation.Path; & (Join-Path $p 'hogp.ps1') -Stdio"
         )
@@ -148,6 +159,15 @@ class NativeHogpTransport(HidTransport):
 
     def advertise(self) -> None:
         self._command("advertise start", {"advertise-start", "advertisement"})
+
+    def status(self) -> dict[str, str]:
+        result = self._command("status", {"status"})
+        fields: dict[str, str] = {}
+        for item in str(result.get("detail", "")).split(","):
+            name, separator, value = item.partition("=")
+            if separator:
+                fields[name.strip()] = value.strip()
+        return fields
 
     def stop(self) -> None:
         process = self._process

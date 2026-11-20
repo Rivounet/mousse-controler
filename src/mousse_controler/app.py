@@ -41,6 +41,29 @@ def serve(config_path: Path) -> int:
         thread.start()
     stopped = threading.Event()
 
+    def maintain_hogp() -> None:
+        disconnected_since: float | None = None
+        refresh_seconds = float(config.get("hogp_reconnect_refresh_seconds", 30.0))
+        while not stopped.wait(5.0):
+            if controller.is_stopped():
+                return
+            try:
+                status = transport.status()
+                if status.get("subscribed", "").lower() == "true":
+                    disconnected_since = None
+                    continue
+                now = time.monotonic()
+                if disconnected_since is None:
+                    disconnected_since = now
+                elif now - disconnected_since >= refresh_seconds:
+                    controller.restart_transport()
+                    disconnected_since = time.monotonic()
+            except Exception as exc:
+                print(f"HOGP reconnect maintenance pending: {exc}", file=sys.stderr, flush=True)
+
+    maintenance = threading.Thread(target=maintain_hogp, name="hogp-maintenance", daemon=True)
+    maintenance.start()
+
     def stop_handler(signum, frame):
         stopped.set()
 
@@ -52,6 +75,8 @@ def serve(config_path: Path) -> int:
     try:
         stopped.wait()
     finally:
+        stopped.set()
+        maintenance.join(timeout=6)
         position_server.shutdown()
         command_server.shutdown()
         controller.emergency_stop()

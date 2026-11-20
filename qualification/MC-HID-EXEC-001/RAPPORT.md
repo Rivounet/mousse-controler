@@ -2,7 +2,8 @@
 
 **Date :** 20 novembre 2026  
 **Branche :** `feat/mc-hid-exec-001`  
-**Verdict :** `INCOMPLETE` — noyau HOGP `PASS_WITH_RESERVATIONS`
+**Verdict :** `INCOMPLETE` — fonctions matérielles `PASS_WITH_RESERVATIONS`,
+redémarrage du mini-PC autorisé et en attente de preuve finale
 
 ## Résultat matériel
 
@@ -39,14 +40,16 @@ cache et conserve la connexion. Il réessaie après une perte de lien. Il ne
 reçoit et n'exécute aucune commande souris ; les rapports restent exclusivement
 transportés par le pilote HID Bluetooth natif.
 
-La tâche de l'agent possède un déclencheur `AtLogOn` pour redémarrer dans la
-session interactive après redémarrage de MonOrdinateur. Elle sera retirée lors
-du nettoyage final de qualification.
+La tâche persistante `MousseControler-PositionAgent` possède un déclencheur
+`AtLogOn` et redémarre dans la session interactive après ouverture manuelle de
+session. Aucune connexion automatique n'a été activée.
 
-Le runtime du mini-PC démarre désormais la publicité juste après la préparation
-GATT. Un gestionnaire de tâche `AtLogOn` est livré pour relancer le runtime avec
-sa configuration après ouverture de session ; son installation permanente
-reste une étape de déploiement explicitement contrôlée.
+Le runtime du mini-PC démarre la publicité juste après la préparation GATT. La
+tâche persistante `MousseControler-HOGP`, déclenchée `AtLogOn`, a été installée
+avec la configuration DPAPI/TLS de production. Un moniteur interne observe
+l'état du fournisseur et le recrée après 30 s sans abonnement. Le canal stdio
+du moteur empaqueté force UTF-8 pour éviter qu'un message localisé interrompe
+la commande de reprise.
 
 Deux recréations complètes du fournisseur ont été qualifiées : retour de
 l'abonnement en 15,409 s sur le prototype puis en 14,276 s avec le MSIX final
@@ -54,9 +57,40 @@ l'abonnement en 15,409 s sur le prototype puis en 14,276 s avec le MSIX final
 également été restauré sans nouvel appairage. Aucun rapport ancien n'a été
 rejoué.
 
-Les redémarrages matériels complets des deux PC n'ont pas été exécutés : ils
-restent soumis à une autorisation explicite distincte. Les pertes équivalentes
-des deux couches Bluetooth ont été testées séparément.
+Le premier redémarrage complet de MonOrdinateur a conservé l'appairage et a
+reproduit un défaut de reconnexion : l'endpoint restait appairé mais non présent
+et non connectable pour le client. Ce test a conduit aux corrections de
+réannonce, d'encodage et d'observabilité. Un second redémarrage de validation a
+retrouvé le réseau et OpenSSH. Après l'ouverture manuelle de session requise
+par `AtLogOn`, l'agent a démarré, les deux endpoints Bluetooth et la souris HID
+sont revenus `OK`, et le transport a atteint `Started/subscribed=True` sans
+nouvel appairage. La preuve donne une borne supérieure de 197,731 s depuis le
+démarrage de l'agent ; Windows ne journalise pas l'instant exact de souscription.
+
+Le redémarrage du mini-PC a d'abord été différé pendant qu'un processus de tests
+`poker-vision`, étranger au projet, rendait la condition « absence d'opération
+critique » fausse. Il n'a été ni interrompu ni modifié et s'est terminé avant le
+précontrôle final.
+
+## Qualification fonctionnelle sur surface sûre
+
+Une fenêtre temporaire dédiée, sans donnée ni commande applicative, a borné les
+essais. Elle a été arrêtée et supprimée après collecte des événements.
+
+- clic gauche : appui matériel observé 207 ms après le lancement de la commande,
+  relâchement 62 ms plus tard ;
+- défilement : événement Windows `delta=120` observé après 112 ms ;
+- zones rectangle, cercle et polygone : trois arrivées `COMPLETED`, erreurs
+  mesurées 2, 2 et 1 px ;
+- cinq trajectoires supplémentaires : erreur moyenne 1,8 px, maximum 2 px ;
+- latence de positionnement : médiane 3 220,356 ms, P95 9 475,176 ms ;
+- pause : position inchangée pendant 1 s ;
+- arrêt d'urgence : état `STOPPED`, boutons libérés et aucune position nouvelle
+  après le retour de commande pendant 1 s ; runtime ensuite relancé.
+
+La latence de positionnement reste une réserve importante. La limite de huit
+unités HID par rapport évite les dépassements provoqués par l'accélération
+Windows sans modifier les réglages système, au prix d'un déplacement lent.
 
 ## Paquet qualifié
 
@@ -75,7 +109,7 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 ## Tests et jalons
 
 `python -m unittest discover -v`, avec le répertoire temporaire court prévu :
-**115/115 PASS en 78,087 s**. Les builds réels de `PairingTool.exe`,
+**123/123 PASS en 39,541 s**. Les builds réels de `PairingTool.exe`,
 `PositionAgent.exe` et du MSIX signé ont également réussi.
 
 | Jalon | Résultat |
@@ -87,17 +121,23 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 | Mouvement relatif minimal mesuré | PASS |
 | Reconnexion après recréation HOGP | PASS — 14,276 s avec l'agent |
 | Cycle radio cible | PASS |
-| Redémarrage matériel des deux PC | Non exécuté — autorisation requise |
-| Clic, scroll, précision, P95 et trajectoires complètes | Non qualifiés matériellement |
+| Redémarrage MonOrdinateur | PASS — deux cycles, OpenSSH, AtLogOn, reconnexion sans nouvel appairage |
+| Redémarrage mini-pc-backend | Autorisé et en attente du précontrôle final |
+| Clic et défilement | PASS sur surface dédiée |
+| Zones et trajectoires | PASS — rectangle, cercle, polygone et 5 trajets mesurés |
+| Précision | PASS — moyenne 1,8 px, maximum 2 px |
+| Latence | MESURÉE AVEC RÉSERVE — médiane 3,220 s, P95 9,475 s |
+| Pause et arrêt d'urgence | PASS matériel |
 | Livraison | PR #6 Draft, aucune fusion |
 
 ## État courant et réserves
 
-La paire est conservée pour le test de redémarrage demandé. Le MSIX, le
-certificat temporaire et la radio cible restent actifs tant que cette
-qualification n'est pas close. Le nettoyage final restaurera l'état initial.
+La paire, les deux tâches `AtLogOn`, le MSIX, le certificat de qualification et
+les radios restent actifs car ils sont nécessaires à la qualification de
+redémarrage encore ouverte. Les tâches de sonde et la surface temporaire ont été
+retirées ; le secret d'agent temporaire en clair a été écrasé puis supprimé.
 
-Le verdict global reste `INCOMPLETE` car les redémarrages matériels, les
-clics/scrolls sur surface sûre, la précision, la latence P95 et les séquences
-complètes n'ont pas encore de preuve matérielle. Le noyau appairage → HID natif
-→ mouvement → reconnexion est démontré.
+Le verdict global reste `INCOMPLETE` uniquement tant que le redémarrage du
+mini-PC n'a pas sa preuve finale. La reconnexion cible, les fonctions clic,
+scroll, zones, trajectoires, précision et arrêt disposent de preuves
+matérielles expurgées.

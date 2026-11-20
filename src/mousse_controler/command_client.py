@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 import time
+import urllib.error
 import urllib.request
 import uuid
 
@@ -32,8 +33,12 @@ def invoke(config_path: Path, command: str, arguments: dict | None = None) -> di
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return json.loads(response.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"command rejected ({exc.code}): {detail}") from exc
     finally:
         token = b"\0" * len(token)
 

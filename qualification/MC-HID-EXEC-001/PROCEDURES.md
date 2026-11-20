@@ -19,29 +19,47 @@ développeur, ni protection Windows.
 
 ## Cible
 
-Compiler puis copier `PositionAgent.exe` et un `agent.json` contenant seulement
-un secret DPAPI cible. Lancer avec
-`Manage-InteractivePositionAgent.ps1 -Action Start`. Vérifier
-`agent_is_interactive=true`. Aucun service ou déclencheur de connexion n'est
-créé ; la tâche est démarrée explicitement et temporairement.
+Installer `PositionAgent.exe`, `Manage-InteractivePositionAgent.ps1` et un
+`agent.json` contenant uniquement le secret DPAPI cible sous le répertoire
+applicatif de l'utilisateur. Enregistrer la tâche
+`MousseControler-PositionAgent` en mode interactif limité avec déclencheur
+`AtLogOn`. Vérifier `agent_is_interactive=true`. Ne jamais activer l'auto-logon :
+après un redémarrage, l'utilisateur ouvre sa session puis la tâche démarre.
 
 ## Mini-PC
 
-Le runtime non versionné contient certificat/clé TLS, blobs DPAPI et chemins.
-Lancer au premier plan :
+Le runtime non versionné sous `C:\ProgramData\MousseControler` contient la paire
+certificat/clé TLS, les blobs DPAPI et les chemins. Le jeton de commande doit
+être généré comme texte ASCII aléatoire avant protection DPAPI ; ne jamais
+placer des octets arbitraires directement dans l'en-tête Bearer.
+
+Installer la tâche persistante :
+
+```powershell
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
+  -File .\scripts\runtime\Manage-MousseControllerTask.ps1 `
+  -Action Start -ConfigPath C:\ProgramData\MousseControler\controller.json `
+  -PythonPath <PYTHON_EXACT> -TaskName MousseControler-HOGP
+```
+
+Le runtime peut aussi être lancé au premier plan pour diagnostic :
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 python -m mousse_controler.app serve --config <runtime-config>
 ```
 
-La création GATT ne diffuse rien. `advertise_start` est une commande loopback
-authentifiée séparée.
+Le mode `serve` prépare GATT puis démarre l'annonce connectable. Les commandes
+loopback authentifiées `transport_status` et `position_status` fournissent une
+preuve sans mouvement. Après 30 s sans abonnement, le runtime recrée le
+transport et recommence l'annonce ; aucun nouvel appairage n'est demandé.
 
 ## Arrêter
 
-Utiliser `Ctrl+C` ou la commande `stop`. Vérifier libération des boutons, arrêt
-de publicité et fermeture des ports. Sur la cible :
+Utiliser `Ctrl+C` ou la commande `stop` pour l'arrêt d'urgence. La commande
+libère les boutons et arrête le transport ; redémarrer la tâche pour reprendre
+le service. Pour retirer les tâches persistantes, utiliser l'action `Stop` de
+leurs gestionnaires. Sur la cible :
 
 ```powershell
 .\Manage-InteractivePositionAgent.ps1 -Action Stop
@@ -50,7 +68,8 @@ de publicité et fermeture des ports. Sur la cible :
 
 ## Restaurer
 
-1. Arrêter contrôleur et tâches temporaires.
+1. Arrêter le contrôleur et retirer les tâches temporaires uniquement ; conserver
+   les tâches persistantes tant que la qualification de redémarrage est ouverte.
 2. Restaurer les radios à leur état initial documenté.
 3. Supprimer la règle pare-feu dédiée.
 4. Désinstaller `Rivounet.MousseControler.Hogp` si installé.

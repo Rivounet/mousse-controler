@@ -75,6 +75,25 @@ class MouseController:
             self._stopped.clear()
             self._transport.start()
 
+    def is_stopped(self) -> bool:
+        return self._stopped.is_set()
+
+    def restart_transport(self) -> None:
+        if self._stopped.is_set():
+            return
+        with self._lock:
+            if self._stopped.is_set():
+                return
+            try:
+                self._transport.release_all()
+            finally:
+                self._buttons = 0
+                self._transport.stop()
+            self._transport.start()
+            advertise = getattr(self._transport, "advertise", None)
+            if advertise is not None:
+                advertise()
+
     def position_snapshot(self, max_age_ms: int = 150) -> PositionSnapshot:
         return self._positions.latest(max_age_ms)
 
@@ -124,12 +143,13 @@ class MouseController:
         *,
         tolerance_px: int = 2,
         timeout: float = 2.0,
-        max_step: int = 2048,
+        max_step: int = 8,
+        proportional_gain: float = 0.35,
         feedback_timeout: float = 0.25,
         pause_gate: threading.Event | None = None,
         cancel_event: threading.Event | None = None,
     ) -> PositionSnapshot:
-        if tolerance_px < 0 or timeout <= 0 or max_step <= 0:
+        if tolerance_px < 0 or timeout <= 0 or max_step <= 0 or not 0 < proportional_gain <= 1:
             raise ValueError("invalid positioning limits")
         deadline = time.monotonic() + timeout
         snapshot = self._positions.latest()
@@ -154,8 +174,14 @@ class MouseController:
                 return snapshot
             if time.monotonic() >= deadline:
                 raise PositionError("positioning deadline exceeded")
-            dx = max(-max_step, min(max_step, error_x))
-            dy = max(-max_step, min(max_step, error_y))
+            def correction(error: int) -> int:
+                if error == 0:
+                    return 0
+                scaled = max(1, round(abs(error) * proportional_gain))
+                return max(-max_step, min(max_step, scaled if error > 0 else -scaled))
+
+            dx = correction(error_x)
+            dy = correction(error_y)
             self.move(dx, dy)
             wait = min(feedback_timeout, max(0.001, deadline - time.monotonic()))
             snapshot = self._positions.wait_newer(snapshot.sequence, wait)

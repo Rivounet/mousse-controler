@@ -1,5 +1,5 @@
 {
-  "schema": 2,
+  "schema": 3,
   "date": "2026-11-20",
   "redacted": true,
   "remote_access": {
@@ -41,14 +41,32 @@
     "target_radio_cycle_restored": true,
     "new_pairing_required": false,
     "stale_reports_replayed": false,
-    "physical_reboots_executed": false
+    "target_physical_reboots_executed": 2,
+    "target_pairing_persisted": true,
+    "target_final_reconnect_state": "PASS after manual logon; automatic reconnect without pairing",
+    "target_final_reconnect_upper_bound_ms": 197731,
+    "mini_physical_reboot_executed": false,
+    "mini_reboot_blocker": null
+  },
+  "hardware_qualification": {
+    "safe_surface": true,
+    "left_click_confirmed": true,
+    "scroll_confirmed": true,
+    "rectangle_circle_polygon_confirmed": true,
+    "trajectory_sample_count": 5,
+    "position_error_mean_px": 1.8,
+    "position_error_max_px": 2.0,
+    "position_latency_median_ms": 3220.356,
+    "position_latency_p95_ms": 9475.176,
+    "pause_confirmed": true,
+    "emergency_stop_confirmed": true
   },
   "tests": {
-    "total": 115,
-    "passed": 115,
+    "total": 123,
+    "passed": 123,
     "failed": 0,
-    "duration_seconds": 78.087
+    "duration_seconds": 39.541
   },
-  "verdict": "INCOMPLETE",
+  "verdict": "INCOMPLETE_REBOOT_QUALIFICATION",
   "hogp_core_verdict": "PASS_WITH_RESERVATIONS"
 }

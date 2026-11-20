@@ -5,6 +5,7 @@ import unittest
 
 from mousse_controler.command_server import CommandError, CommandGateway
 from mousse_controler.controller import MouseController, PositionStore
+from mousse_controler.controller import PositionSnapshot
 from mousse_controler.transport import SimulatedHidTransport
 
 
@@ -50,3 +51,19 @@ class CommandGatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "stopped"):
             self.gateway.execute(self.envelope("move", "after", dx=1, dy=1))
         self.assertEqual(len(self.transport.events), count)
+
+    def test_transport_status_is_observable_without_hid_action(self):
+        result = self.gateway.execute(self.envelope("transport_status", "status"))
+
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["status"]["buttons"], "0")
+
+    def test_position_status_reports_fresh_sample_without_hid_action(self):
+        self.controller._positions.update(PositionSnapshot(
+            12, 34, 5, 1, "topology", int(time.time() * 1000), time.monotonic()
+        ))
+
+        result = self.gateway.execute(self.envelope("position_status", "position"))
+
+        self.assertEqual((result["position"]["x"], result["position"]["y"]), (12, 34))
+        self.assertLess(result["position"]["age_ms"], 100)

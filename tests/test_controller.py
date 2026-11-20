@@ -23,12 +23,59 @@ class ControllerTests(unittest.TestCase):
             self.controller.move(40000, 0)
         self.assertNotIn(("move", 40000, 0, 0), self.transport.events)
 
+    def test_position_loop_uses_bounded_proportional_correction(self):
+        self.store.update(self.sample(x=0, y=0))
+
+        def feedback():
+            while not any(event[0] == "move" for event in self.transport.events):
+                time.sleep(0.001)
+            self.store.update(self.sample(x=100, y=0, sequence=2))
+
+        thread = threading.Thread(target=feedback)
+        thread.start()
+        self.controller.move_to(100, 0, max_step=2048)
+        thread.join()
+
+        self.assertIn(("move", 35, 0, 0), self.transport.events)
+
+    def test_position_loop_caps_hardware_correction_to_safe_default(self):
+        self.store.update(self.sample(x=0, y=0))
+
+        def feedback():
+            while not any(event[0] == "move" for event in self.transport.events):
+                time.sleep(0.001)
+            self.store.update(self.sample(x=100, y=0, sequence=2))
+
+        thread = threading.Thread(target=feedback)
+        thread.start()
+        self.controller.move_to(100, 0)
+        thread.join()
+
+        self.assertIn(("move", 8, 0, 0), self.transport.events)
+
     def test_emergency_stop_releases_buttons(self):
         self.controller.set_buttons(1)
         self.controller.emergency_stop()
         self.assertEqual(self.transport.buttons_mask, 0)
         self.assertIn(("release",), self.transport.events)
         self.assertFalse(self.transport.started)
+
+    def test_restart_transport_releases_buttons_and_starts_again(self):
+        self.controller.set_buttons(1)
+
+        self.controller.restart_transport()
+
+        self.assertTrue(self.transport.started)
+        self.assertEqual(self.transport.buttons_mask, 0)
+        self.assertIn(("stop",), self.transport.events)
+
+    def test_restart_transport_is_disabled_after_emergency_stop(self):
+        self.controller.emergency_stop()
+        count = len(self.transport.events)
+
+        self.controller.restart_transport()
+
+        self.assertEqual(len(self.transport.events), count)
 
     def test_position_loop_uses_new_feedback(self):
         self.store.update(self.sample())

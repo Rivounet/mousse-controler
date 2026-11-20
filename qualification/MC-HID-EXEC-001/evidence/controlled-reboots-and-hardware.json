@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "redacted": true,
+  "remote_access": {
+    "transport": "existing OpenSSH with strict host-key checking",
+    "rustdesk_used": false,
+    "windows_logon_configuration_changed": false,
+    "automatic_logon_enabled": false
+  },
+  "startup": {
+    "mini_task": "MousseControler-HOGP",
+    "mini_trigger": "AtLogOn",
+    "target_task": "MousseControler-PositionAgent",
+    "target_trigger": "AtLogOn",
+    "target_agent_interactive_after_manual_logon": true,
+    "plaintext_agent_secret_remaining": false
+  },
+  "first_target_reboot": {
+    "command_utc_ms": 1795141978053,
+    "network_down_observed_utc_ms": 1795141992032,
+    "network_up_observed_utc_ms": 1795142027205,
+    "ssh_up_observed_utc_ms": 1795142035540,
+    "windows_boot_time": "2026-11-20T03:33:19.5000000+01:00",
+    "manual_logon_agent_started": "2026-11-20T03:36:24.4203330+01:00",
+    "pairing_persisted": true,
+    "new_pairing_required": false,
+    "initial_result": "reconnect defect reproduced: paired endpoint retained but HID notifications not subscribed",
+    "diagnostic": "advertisement visibility and engine stdout encoding prevented deterministic recovery"
+  },
+  "corrections": {
+    "engine_stdio_forced_to_utf8": true,
+    "transport_status_observable": true,
+    "position_status_observable": true,
+    "automatic_hogp_maintenance_seconds": 30,
+    "position_http_11_keep_alive": true,
+    "expected_tls_disconnect_trace_suppressed": true,
+    "position_correction_gain": 0.35,
+    "maximum_hid_step": 8
+  },
+  "hardware": {
+    "safe_surface_bounds": {
+      "absolute_coordinates_redacted_from_report": true,
+      "all_tests_confined_to_surface": true
+    },
+    "native_hid_mouse_status": "OK",
+    "click": {
+      "command_utc_ms": 1795143169987,
+      "down_event_utc_ms": 1795143170194,
+      "up_event_utc_ms": 1795143170256,
+      "button": "Left",
+      "command_to_down_ms": 207,
+      "down_to_up_ms": 62
+    },
+    "scroll": {
+      "command_utc_ms": 1795143170753,
+      "event_utc_ms": 1795143170865,
+      "windows_delta": 120,
+      "command_to_event_ms": 112
+    },
+    "zone_sequence": {
+      "state": "COMPLETED",
+      "zone_types": ["rectangle", "circle", "polygon"],
+      "elapsed_ms": 22558.874,
+      "step_latencies_ms": [6823.988, 6863.573, 8635.022],
+      "position_errors_px": [2.0, 2.0, 1.0]
+    },
+    "latency_sequence": {
+      "state": "COMPLETED",
+      "sample_count": 5,
+      "step_latencies_ms": [9475.176, 3101.460, 3145.334, 3274.892, 3220.356],
+      "latency_mean_ms": 4443.443,
+      "latency_median_ms": 3220.356,
+      "latency_p95_ms": 9475.176,
+      "position_error_mean_px": 1.8,
+      "position_error_max_px": 2.0
+    },
+    "pause": {
+      "state": "PAUSED",
+      "position_unchanged_for_ms": 1000
+    },
+    "emergency_stop": {
+      "state": "STOPPED",
+      "position_unchanged_after_return_for_ms": 1000,
+      "buttons_released": true,
+      "runtime_restarted_after_test": true
+    },
+    "final_transport_before_second_reboot": {
+      "advertisement_status": "Started",
+      "subscribed": true,
+      "buttons": 0
+    }
+  },
+  "second_target_reboot": {
+    "purpose": "qualification of automatic reconnect correction",
+    "command_utc_ms": 1795143384407,
+    "network_down_observed_utc_ms": 1795143397172,
+    "network_up_observed_utc_ms": 1795143438241,
+    "ssh_up_observed_utc_ms": 1795143449615,
+    "windows_boot_time": "2026-11-20T03:56:39.5000000+01:00",
+    "manual_logon_required": true,
+    "manual_logon_agent_started": "2026-11-20T08:32:23.1622550+01:00",
+    "agent_started_utc_ms": 1795159943162,
+    "subscribed_observed_utc_ms": 1795160140893,
+    "reconnect_upper_bound_from_agent_start_ms": 197731,
+    "exact_subscription_time_logged": false,
+    "pairing_persisted": true,
+    "new_pairing_required": false,
+    "native_hid_mouse_status": "OK",
+    "paired_endpoint_status": "OK",
+    "neutral_hid_report_accepted": true,
+    "position_sample_age_ms": 15,
+    "qualification_state": "PASS"
+  },
+  "mini_reboot": {
+    "executed": false,
+    "initial_blocker": "unrelated poker-vision test process active",
+    "blocker_cleared_at": "2026-11-20T08:36:20.9360359+01:00",
+    "qualification_state": "authorized and pending"
+  }
+}

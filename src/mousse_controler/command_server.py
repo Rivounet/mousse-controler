@@ -49,6 +49,26 @@ class CommandGateway:
             arguments = payload.get("arguments") or {}
             if command == "advertise_start":
                 self._transport.advertise()
+            elif command == "transport_status":
+                status = getattr(self._transport, "status", None)
+                if status is None:
+                    raise CommandError("transport status is unavailable")
+                return {"accepted": True, "command": command, "status": status()}
+            elif command == "position_status":
+                snapshot = self._controller.position_snapshot(max_age_ms=5_000)
+                return {
+                    "accepted": True,
+                    "command": command,
+                    "position": {
+                        "x": snapshot.x,
+                        "y": snapshot.y,
+                        "sequence": snapshot.sequence,
+                        "session_id": snapshot.session_id,
+                        "topology_generation": snapshot.topology_generation,
+                        "observed_at_unix_ms": snapshot.observed_at_unix_ms,
+                        "age_ms": round((time.monotonic() - snapshot.received_monotonic) * 1000, 3),
+                    },
+                }
             elif command == "move":
                 self._controller.move(int(arguments["dx"]), int(arguments["dy"]))
             elif command == "click":

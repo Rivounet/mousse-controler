@@ -128,17 +128,18 @@ class SequenceTests(unittest.TestCase):
 
     def test_advance_before_commanded_wait_and_replay_are_rejected(self):
         steps = [
-            SequenceStep(RectangleZone(1000, 800, 5, 5), WaitMode.COMMANDED),
-            SequenceStep(RectangleZone(1100, 800, 5, 5)),
+            SequenceStep(RectangleZone(300, 300, 5, 5), WaitMode.COMMANDED),
+            SequenceStep(RectangleZone(400, 300, 5, 5)),
         ]
         runner, _ = self.make_runner(steps, delay=0.002)
         runner.start()
         with self.assertRaisesRegex(RuntimeError, "not awaiting"):
             runner.next_target()
-        deadline = time.time() + 2
+        deadline = time.time() + 3
         while runner.status().state != SequenceState.WAITING and time.time() < deadline:
             time.sleep(0.01)
-        runner.next_target(); runner.join(2)
+        self.assertEqual(runner.status().state, SequenceState.WAITING)
+        runner.next_target(); runner.join(3)
         self.assertEqual(runner.status().state, SequenceState.COMPLETED)
         with self.assertRaisesRegex(RuntimeError, "cannot be replayed"):
             runner.start()

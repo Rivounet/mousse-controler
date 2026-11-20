@@ -17,6 +17,14 @@ class StartupContractTests(unittest.TestCase):
         self.assertIn("New-ScheduledTaskTrigger -AtLogOn", target)
         self.assertIn("-RunLevel Limited", mini)
 
+    def test_mini_task_stop_releases_hid_and_removes_only_managed_child(self) -> None:
+        mini = (ROOT / "scripts" / "runtime" / "Manage-MousseControllerTask.ps1").read_text(encoding="utf-8")
+        self.assertIn("mousse_controler.command_client", mini)
+        self.assertIn("Refusing to stop unrelated task", mini)
+        self.assertIn("Get-CimInstance Win32_Process", mini)
+        self.assertIn("mousse_controler.app serve --config", mini)
+        self.assertIn("Stop-Process -Id $process.ProcessId", mini)
+
 
 if __name__ == "__main__":
     unittest.main()

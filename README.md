@@ -2,7 +2,7 @@
 
 Contrôle de la souris de **MonOrdinateur** depuis **mini-pc-backend**. Transport prioritaire : **Bluetooth LE HID (HOGP)**, reconnu par les pilotes Windows natifs ; retour de position réelle par **agent Windows visible et canal LAN privé sécurisé**.
 
-> **État : noyau HOGP qualifié avec réserves.** Appairage chiffré, souris HID native, mouvement minimal et reconnexion assistée par l'agent sont démontrés. Redémarrages matériels, clic/scroll, précision et trajectoires complètes restent à qualifier.
+> **État : qualification matérielle avec réserves.** Appairage chiffré persistant, souris HID native, clic, défilement, zones, trajectoires, précision et arrêt d'urgence sont démontrés. La reconnexion cible corrigée et le redémarrage du mini-PC restent les derniers jalons ouverts.
 
 ## Rôles et architecture
 
@@ -18,7 +18,7 @@ mini-pc-backend : séquences/zones → trajectoires → contrôle de position �
 mini-pc-backend : mesures réelles ← HTTPS/HMAC LAN privé ← agent GetCursorPos
 ```
 
-## Fonctionnalités demandées (non encore démontrées)
+## Fonctionnalités demandées
 
 - Séquence de zones **A → B → C → …** ; rectangles, cercles et polygones ; sélection d'un point aléatoire **à l'intérieur** de chaque zone, avec graine déterministe pour les tests.
 - Trajectoires courbes, vitesse configurable avec accélération/décélération et micro-variations bornées **uniquement en mouvement**.
@@ -38,11 +38,14 @@ Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse
 
 ## État MC-HID-EXEC-001 vérifié le 20 novembre 2026
 
-- 115/115 tests réussis en 78,087 s avec le chemin temporaire court prévu.
+- 123/123 tests réussis en 39,541 s avec le chemin temporaire court prévu.
 - MSIX 1.0.0.2 signé et vérifié ; appairage `ConfirmOnly` chiffré persistant.
 - Pilotes HID et souris natifs chargés ; mouvement minimal mesuré +3 px horizontal, 0 px vertical.
 - Reconnexion après recréation HOGP en 14,276 s grâce au moniteur GATT de l'agent.
 - Verdict global `INCOMPLETE` jusqu'aux redémarrages matériels et à la qualification fonctionnelle complète.
+- Clic et défilement confirmés sur surface sûre ; rectangle, cercle, polygone et cinq trajectoires mesurés avec erreur maximale 2 px.
+- Latence de positionnement mesurée : médiane 3,220 s, P95 9,475 s ; réserve de performance conservée.
+- Deux redémarrages cible qualifiés ; reconnexion automatique après ouverture manuelle de session, sans nouvel appairage. Le redémarrage mini-PC est le dernier jalon.
 
 ## Documentation
 

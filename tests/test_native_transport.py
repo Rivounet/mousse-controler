@@ -1,5 +1,6 @@
 from pathlib import Path
 import unittest
+from unittest.mock import Mock
 
 from mousse_controler.transport import NativeHogpTransport
 
@@ -16,6 +17,20 @@ class NativeHogpTransportCommandTests(unittest.TestCase):
         self.assertIn("InstalledLocation.Path", command[-1])
         self.assertIn("hogp.ps1", command[-1])
         self.assertIn("-Stdio", command[-1])
+        self.assertIn("[Console]::OutputEncoding=$utf8", command[-1])
+
+    def test_status_parses_engine_detail(self) -> None:
+        transport = NativeHogpTransport(Path("mousse-hogp-packaged.exe"))
+        transport._command = Mock(return_value={
+            "detail": "prepared=True,advertising=True,subscribed=False,buttons=0"
+        })
+
+        self.assertEqual(transport.status(), {
+            "prepared": "True",
+            "advertising": "True",
+            "subscribed": "False",
+            "buttons": "0",
+        })
 
     def test_legacy_executable_keeps_direct_stdio_contract(self) -> None:
         executable = Path(r"C:\tools\mousse-hogp.exe")
