@@ -1,9 +1,13 @@
 # MC-MOUSE-ACTIONS-001 — Rapport de qualification
 
-**Date :** 20 novembre 2026  
-**Branche :** `feat/mc-mouse-actions-001`  
-**Base :** `4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`  
-**Commit applicatif initial :** `597f7401d8bc743aebf9fa018422188460dd0767`  
+**Date :** 20 novembre 2026
+
+**Branche :** `feat/mc-mouse-actions-001`
+
+**Base :** `4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`
+
+**Commit applicatif initial :** `597f7401d8bc743aebf9fa018422188460dd0767`
+
 **Verdict courant :** `INCOMPLETE` — logiciel et mini-PC qualifiés ; session
 interactive cible et matrice matérielle étendue ouvertes
 
