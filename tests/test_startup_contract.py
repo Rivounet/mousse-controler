@@ -36,9 +36,12 @@ class StartupContractTests(unittest.TestCase):
 
     def test_runtime_cleans_transport_when_initialization_fails(self) -> None:
         source = (ROOT / "src" / "mousse_controler" / "app.py").read_text(encoding="utf-8")
-        startup = source[source.index("controller = MouseController"):source.index("threads = [")]
-        self.assertIn("except Exception:", startup)
-        self.assertIn("controller.emergency_stop()", startup)
+        startup = source[source.index("controller = MouseController"):
+                         source.index("def serve_position_only")]
+        self.assertIn("lifecycle = _RuntimeLifecycle", startup)
+        self.assertIn("except BaseException as exc:", startup)
+        self.assertIn("cleanup_errors = lifecycle.close()", startup)
+        self.assertIn("controller.emergency_stop", source)
 
 
 if __name__ == "__main__":

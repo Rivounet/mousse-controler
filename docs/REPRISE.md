@@ -258,3 +258,21 @@ joindre le rapport expurgé, ne pas fusionner et ne pas modifier la production.
 - **Plan :** R0 baseline/tests sûrs ; R1 sûreté actions et arrêt ; R2 transport/LAN ; R3 quotas/ressources/rollback ; R4 tests/builds ; R5 refactoring minimal ; R6 documentation. Consulter [PLANNING.md](PLANNING.md) et [ROADMAP.md](ROADMAP.md).
 - **Production :** ne pas supposer que les processus du mini-PC exécutent le dernier `main`. Aucun déploiement ni test HID/capture réelle autorisé implicitement. Les deux audits et la consolidation sont documentaires, sans correctif produit.
 - **Prochaine porte :** revue/validation de la PR documentaire de consolidation, puis préparation d'un mandat correctif R0/R1. Fusion uniquement sur accord explicite.
+
+### État de reprise actuel — 21 novembre 2026 : R3 qualifié en logiciel
+
+- **Base :** `main` `a938b7455638c71846a20f7c4dc6c6c1f887e6e6`, fusion de la PR #15 R2.
+- **Branche active :** `fix/mc-robustness-r3-001`, PR Draft à publier, sans fusion.
+- **C-03 :** quota capture vérifié avant écriture en comptant le pic complet,
+  l'espace libre, les temporaires, index et orphelins ; réconciliation prudente
+  des index absents/invalides.
+- **C-07 :** pile de ressources idempotente, fermeture inverse et best-effort,
+  erreurs agrégées sans masquer l'échec initial.
+- **C-08 :** mise à jour PositionAgent transactionnelle, sauvegarde et empreintes
+  vérifiées, restauration bornée à deux essais, `RECOVERY_REQUIRED` persistant
+  si la récupération ne peut pas être confirmée.
+- **Qualification :** tests uniquement sur doubles, loopback et répertoires
+  temporaires. Aucun accès à `MonOrdinateur`, tâche réelle, HID, capture réelle,
+  radio, déploiement ou modification de production.
+- **Prochaine porte :** publier et faire revoir la PR Draft R3. Ne pas commencer
+  R4/R5, déployer ou fusionner sans mandat distinct.
