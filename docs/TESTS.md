@@ -100,4 +100,10 @@ Après correction de la pairabilité et de la reconnexion, la suite complète a
 exécuté **115/115 tests en 78,087 s**. Le chemin court `MC_TEST_TMP` est requis
 pour les tests de déploiement sous la limite de chemins Windows.
 
+La finalisation de performance a porté la suite à **127/127 PASS en 41,984 s**.
+Les nouveaux tests couvrent l'amplitude adaptative et son plafond explicite, le
+plafond configurable des trajectoires, les métriques de position et la
+télémétrie récepteur. Sur matériel réel, la matrice stable comporte 100/100
+arrivées, médiane 670,483 ms, P95 983,052 ms et erreur maximale 2 px.
+
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.

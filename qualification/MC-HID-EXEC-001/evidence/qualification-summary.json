@@ -56,21 +56,24 @@
   "hardware_qualification": {
     "safe_surface": true,
     "left_click_confirmed": true,
+    "right_click_confirmed": true,
     "scroll_confirmed": true,
     "rectangle_circle_polygon_confirmed": true,
-    "trajectory_sample_count": 5,
-    "position_error_mean_px": 1.8,
+    "trajectory_sample_count": 100,
+    "position_success_rate_percent": 100.0,
+    "position_error_mean_px": 0.796,
     "position_error_max_px": 2.0,
-    "position_latency_median_ms": 3220.356,
-    "position_latency_p95_ms": 9475.176,
+    "position_latency_median_ms": 670.483,
+    "position_latency_p95_ms": 983.052,
+    "position_latency_max_ms": 1245.531,
     "pause_confirmed": true,
     "emergency_stop_confirmed": true
   },
   "tests": {
-    "total": 125,
-    "passed": 125,
+    "total": 127,
+    "passed": 127,
     "failed": 0,
-    "duration_seconds": 56.441
+    "duration_seconds": 41.984
   },
   "verdict": "PASS_WITH_RESERVATIONS",
   "hogp_core_verdict": "PASS_WITH_RESERVATIONS"

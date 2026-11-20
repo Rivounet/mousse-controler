@@ -33,12 +33,12 @@ class ControllerTests(unittest.TestCase):
 
         thread = threading.Thread(target=feedback)
         thread.start()
-        self.controller.move_to(100, 0, max_step=2048)
+        self.controller.move_to(100, 0, max_step=2048, adaptive_acceleration=False)
         thread.join()
 
         self.assertIn(("move", 35, 0, 0), self.transport.events)
 
-    def test_position_loop_caps_hardware_correction_to_safe_default(self):
+    def test_position_loop_uses_acceleration_aware_default(self):
         self.store.update(self.sample(x=0, y=0))
 
         def feedback():
@@ -49,6 +49,21 @@ class ControllerTests(unittest.TestCase):
         thread = threading.Thread(target=feedback)
         thread.start()
         self.controller.move_to(100, 0)
+        thread.join()
+
+        self.assertIn(("move", 44, 0, 0), self.transport.events)
+
+    def test_adaptive_position_loop_honors_explicit_step_cap(self):
+        self.store.update(self.sample(x=0, y=0))
+
+        def feedback():
+            while not any(event[0] == "move" for event in self.transport.events):
+                time.sleep(0.001)
+            self.store.update(self.sample(x=100, y=0, sequence=2))
+
+        thread = threading.Thread(target=feedback)
+        thread.start()
+        self.controller.move_to(100, 0, max_step=8)
         thread.join()
 
         self.assertIn(("move", 8, 0, 0), self.transport.events)
@@ -90,6 +105,10 @@ class ControllerTests(unittest.TestCase):
         result = self.controller.move_to(100, 200)
         thread.join()
         self.assertEqual((result.x, result.y), (100, 200))
+        metrics = self.controller.positioning_metrics()
+        self.assertGreater(metrics["corrections"], 0)
+        self.assertGreaterEqual(metrics["transport_ms"], 0)
+        self.assertGreaterEqual(metrics["feedback_wait_ms"], 0)
 
     def test_position_loop_stops_on_session_change(self):
         self.store.update(self.sample())

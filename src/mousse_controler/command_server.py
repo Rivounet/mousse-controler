@@ -69,6 +69,11 @@ class CommandGateway:
                         "age_ms": round((time.monotonic() - snapshot.received_monotonic) * 1000, 3),
                     },
                 }
+            elif command == "position_metrics":
+                metrics = getattr(self._receiver, "metrics", None)
+                if metrics is None:
+                    raise CommandError("position metrics are unavailable")
+                return {"accepted": True, "command": command, "metrics": metrics()}
             elif command == "move":
                 self._controller.move(int(arguments["dx"]), int(arguments["dy"]))
             elif command == "click":

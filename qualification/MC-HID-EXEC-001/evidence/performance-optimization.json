@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "redacted": true,
+  "reference_sha": "87b741be823280998017445579884db46fc83b6d",
+  "safe_surface": {
+    "used": true,
+    "bounds": {
+      "width_px": 616,
+      "height_px": 339
+    },
+    "absolute_origin_redacted": true
+  },
+  "diagnosis": {
+    "dominant_cause": "fixed HID amplitude of 8 caused many corrections; waiting for fresh real position feedback dominated elapsed time",
+    "baseline_instrumented_moves": 5,
+    "baseline_corrections_total": 254,
+    "baseline_transport_total_ms": 1750.118,
+    "baseline_feedback_wait_total_ms": 15952.262,
+    "trajectory_generation_ms": "below 0.2 per five-point sequence",
+    "hid_pulse_response_px": {
+      "2": 0,
+      "4": 2,
+      "8": "6-7",
+      "16": "19-21",
+      "24": 42,
+      "32": 64,
+      "48": 107
+    }
+  },
+  "optimization": {
+    "adaptive_acceleration_aware_hid_amplitude": true,
+    "default_maximum_hid_step": 48,
+    "minimum_effective_hid_step": 4,
+    "coarse_gain": 0.35,
+    "fine_gain": 0.75,
+    "overshoot_fine_step_cap": 8,
+    "trajectory_maximum_points": 10,
+    "exact_final_zone_correction": true,
+    "pause_acknowledgement": true,
+    "windows_mouse_settings_changed": false
+  },
+  "comparison": {
+    "matrix": "same five safe-surface points",
+    "baseline_historical": {
+      "moves": 5,
+      "latency_median_ms": 3220.356,
+      "latency_p95_ms": 9475.176,
+      "error_mean_px": 1.8,
+      "error_max_px": 2.0
+    },
+    "baseline_reproduced": {
+      "moves": 5,
+      "latency_mean_ms": 3600.218,
+      "latency_median_ms": 2533.165,
+      "latency_p95_ms": 7876.779,
+      "error_mean_px": 1.883,
+      "error_max_px": 2.0
+    },
+    "optimized_comparable": {
+      "moves": 5,
+      "latency_mean_ms": 975.807,
+      "latency_median_ms": 803.582,
+      "latency_p95_ms": 1966.363,
+      "latency_max_ms": 1966.363,
+      "error_mean_px": 0.4,
+      "error_max_px": 1.0
+    },
+    "optimized_stability": {
+      "moves": 100,
+      "completed": 100,
+      "success_rate_percent": 100.0,
+      "elapsed_ms": 69818.469,
+      "latency_mean_ms": 689.068,
+      "latency_median_ms": 670.483,
+      "latency_p95_ms": 983.052,
+      "latency_max_ms": 1245.531,
+      "error_mean_px": 0.796,
+      "error_max_px": 2.0,
+      "corrections_mean": 9.79,
+      "corrections_max": 17,
+      "transport_total_ms": 6650.919,
+      "feedback_wait_total_ms": 62227.298,
+      "excluded_measurements": 0
+    },
+    "post_telemetry_deployment": {
+      "moves": 10,
+      "completed": 10,
+      "success_rate_percent": 100.0,
+      "latency_mean_ms": 593.074,
+      "latency_median_ms": 611.73,
+      "latency_p95_ms": 863.088,
+      "latency_max_ms": 863.088,
+      "error_mean_px": 1.083,
+      "error_max_px": 2.0,
+      "corrections_mean": 8.5,
+      "corrections_max": 12,
+      "transport_total_ms": 679.464,
+      "feedback_wait_total_ms": 5248.707
+    }
+  },
+  "telemetry": {
+    "sample_window": 2048,
+    "sample_interval_ms": {
+      "median": 63.0,
+      "p95": 94.0,
+      "max_including_reconnect_gap": 21109.0
+    },
+    "hmac_verify_ms": {
+      "median": 0.053,
+      "p95": 0.07,
+      "max": 0.664
+    },
+    "receiver_processing_ms": {
+      "median": 0.145,
+      "p95": 0.195,
+      "max": 2.071
+    },
+    "get_physical_cursor_pos_us": {
+      "median": 20.0,
+      "p95": 22.0,
+      "max": 544.0
+    },
+    "observed_to_receiver_absolute_latency": "not valid because target clock was approximately 166 ms ahead; no clock correction was applied"
+  },
+  "functional_hardware": {
+    "rectangle_circle_polygon": "PASS",
+    "curved_trajectories_and_variable_speed": "PASS",
+    "timed_and_commanded_wait": "PASS",
+    "pause_resume": "PASS; measured position unchanged for 500 ms after acknowledged pause",
+    "left_click": "PASS",
+    "right_click": "PASS",
+    "scroll_delta_120": "PASS",
+    "emergency_stop": "PASS; STOPPED and position unchanged for 1000 ms after return",
+    "buttons_final": 0
+  },
+  "reconnection_after_telemetry_deployment": {
+    "existing_pair_detected": true,
+    "new_pairing_performed": false,
+    "temporary_unsubscribed_state_observed": true,
+    "automatic_maintenance_recovered": true,
+    "final_advertisement_status": "Started",
+    "final_subscribed": true,
+    "position_sample_age_ms": 31.0
+  },
+  "position_agent": {
+    "sha256": "C19B14127CBE1504C74DC53C653494471D2E6827E79D2557A68541D866DC1071",
+    "deployment": "atomic replacement with rollback backup",
+    "rollback_used": false,
+    "final_task_state": "Running",
+    "final_position_sample_age_ms": 16.0
+  },
+  "cleanup": {
+    "temporary_target_tasks_remaining": 0,
+    "temporary_target_directory_removed": true,
+    "validated_rollback_backup_removed": true,
+    "production_tasks_preserved": true,
+    "pairing_preserved": true
+  },
+  "software_tests": {
+    "total": 127,
+    "passed": 127,
+    "failed": 0,
+    "duration_seconds": 41.984,
+    "note": "first sandbox run produced 23 path-budget errors because its temporary path exceeded 240 characters; unchanged suite passed outside that artificial path"
+  },
+  "goals": {
+    "median_below_1000_ms": true,
+    "p95_below_2000_ms": true,
+    "success_at_least_99_percent": true,
+    "maximum_error_at_most_2_px": true
+  },
+  "verdict": "PASS_WITH_RESERVATIONS",
+  "reservations": [
+    "absolute one-way LAN latency was not derivable without synchronized clocks",
+    "a transient unsubscribed interval followed provider restart; automatic maintenance recovered without pairing",
+    "the maximum sample interval includes the deliberate reconnect diagnostic interruption"
+  ]
+}

@@ -50,6 +50,7 @@ class StepResult:
     finished_at: float | None = None
     measured_position: Point | None = None
     error: str | None = None
+    metrics: dict[str, float | int] = field(default_factory=dict)
 
 
 @dataclass
@@ -92,6 +93,7 @@ class SequenceRunner:
         self._advance = threading.Event()
         self._run_gate = threading.Event()
         self._run_gate.set()
+        self._paused_ack = threading.Event()
         self._paused_from: SequenceState | None = None
         self._thread: threading.Thread | None = None
 
@@ -117,6 +119,7 @@ class SequenceRunner:
             self._run_gate.clear()
             self._status.state = SequenceState.PAUSED
             self._status.updated_at = time.time()
+        self._paused_ack.wait(1.0)
 
     def resume(self) -> None:
         with self._lock:
@@ -125,6 +128,7 @@ class SequenceRunner:
             self._status.state = self._paused_from or SequenceState.MOVING
             self._paused_from = None
             self._status.updated_at = time.time()
+            self._paused_ack.clear()
             self._run_gate.set()
 
     def next_target(self) -> None:
@@ -176,8 +180,10 @@ class SequenceRunner:
 
     def _wait_gate(self) -> None:
         while not self._run_gate.wait(0.05):
+            self._paused_ack.set()
             if self._stop.is_set():
                 raise PositionError("sequence stopped")
+        self._paused_ack.clear()
 
     def _wait_automatic(self, duration: float) -> None:
         remaining = duration
@@ -205,7 +211,17 @@ class SequenceRunner:
                     self._status.wait_mode = step.wait_mode
                     self._status.results.append(result)
                 current = self._controller.position_snapshot()
+                generation_started = time.perf_counter()
                 points = self._trajectory.generate((current.x, current.y), target, self._topology, self._rng)
+                result.metrics = {
+                    "trajectory_generation_ms": round((time.perf_counter() - generation_started) * 1000.0, 3),
+                    "trajectory_point_count": len(points),
+                    "positioning_calls": 0,
+                    "corrections": 0,
+                    "transport_ms": 0.0,
+                    "feedback_wait_ms": 0.0,
+                    "positioning_ms": 0.0,
+                }
                 measured: PositionSnapshot = current
                 for point in points:
                     self._wait_gate()
@@ -219,8 +235,15 @@ class SequenceRunner:
                     try:
                         measured = self._controller.move_to(
                             point[0], point[1], timeout=2.0,
-                            pause_gate=self._run_gate, cancel_event=self._skip,
+                            pause_gate=self._run_gate, pause_ack=self._paused_ack,
+                            cancel_event=self._skip,
                         )
+                        call_metrics = self._controller.positioning_metrics()
+                        result.metrics["positioning_calls"] += 1
+                        result.metrics["corrections"] += int(call_metrics.get("corrections", 0))
+                        result.metrics["transport_ms"] += float(call_metrics.get("transport_ms", 0.0))
+                        result.metrics["feedback_wait_ms"] += float(call_metrics.get("feedback_wait_ms", 0.0))
+                        result.metrics["positioning_ms"] += float(call_metrics.get("elapsed_ms", 0.0))
                     except PositionError:
                         if not self._skip.is_set():
                             raise
@@ -229,6 +252,18 @@ class SequenceRunner:
                         break
                     self._set_state(SequenceState.MOVING, measured_position=(measured.x, measured.y))
                 else:
+                    if not step.zone.contains((measured.x, measured.y)):
+                        measured = self._controller.move_to(
+                            target[0], target[1], tolerance_px=0, timeout=2.0,
+                            pause_gate=self._run_gate, pause_ack=self._paused_ack,
+                            cancel_event=self._skip,
+                        )
+                        call_metrics = self._controller.positioning_metrics()
+                        result.metrics["positioning_calls"] += 1
+                        result.metrics["corrections"] += int(call_metrics.get("corrections", 0))
+                        result.metrics["transport_ms"] += float(call_metrics.get("transport_ms", 0.0))
+                        result.metrics["feedback_wait_ms"] += float(call_metrics.get("feedback_wait_ms", 0.0))
+                        result.metrics["positioning_ms"] += float(call_metrics.get("elapsed_ms", 0.0))
                     if not step.zone.contains((measured.x, measured.y)):
                         raise PositionError("measured arrival is outside target zone")
                     result.state = "ARRIVED"

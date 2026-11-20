@@ -51,12 +51,30 @@ python -m mousse_controler.app serve --config <runtime-config>
 ```
 
 Le mode `serve` prépare GATT puis démarre l'annonce connectable. Les commandes
-loopback authentifiées `transport_status` et `position_status` fournissent une
+loopback authentifiées `transport_status`, `position_status` et
+`position_metrics` fournissent une
 preuve sans mouvement. Après 30 s sans abonnement, le runtime recrée le
 transport et recommence l'annonce ; aucun nouvel appairage n'est demandé.
 Le lanceur du mini-PC nettoie le transport si l'initialisation échoue et retente
 jusqu'à cinq fois, toutes les 30 s. Ce second niveau couvre les indisponibilités
 Bluetooth transitoires observées juste après une ouverture de session.
+
+## Mesurer les performances
+
+Ouvrir d'abord une surface de test dédiée ne contenant aucune application
+sensible, puis exécuter une série bornée :
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+python .\scripts\qualification\measure_position_performance.py --cycles 20
+```
+
+La commande produit un JSON avec taille d'échantillon, réussite, médiane, P95,
+maximum, erreur, corrections et temps cumulés transport/feedback. Ne comparer
+que des matrices identiques. `position_metrics` expose séparément cadence de
+retour, HMAC, traitement récepteur et lecture native du curseur. La différence
+entre horodatages de deux machines n'est une latence réseau valable que si leurs
+horloges sont synchronisées et l'incertitude documentée.
 
 ## Arrêter
 

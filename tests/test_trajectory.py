@@ -63,6 +63,12 @@ class TrajectoryTests(unittest.TestCase):
         engine = TrajectoryEngine(TrajectoryConfig(micro_variation_px=3))
         self.assertEqual(engine.generate((100, 100), (100, 100), TOPOLOGY, random.Random(1)), [(100, 100)])
 
+    def test_long_trajectory_respects_configurable_point_cap(self):
+        engine = TrajectoryEngine(TrajectoryConfig(spacing_px=10, minimum_points=3, maximum_points=7))
+        points = engine.generate((100, 100), (900, 100), TOPOLOGY, random.Random(1))
+        self.assertLessEqual(len(points), 7)
+        self.assertEqual(points[-1], (900, 100))
+
 
 class FeedbackTransport(SimulatedHidTransport):
     def __init__(self, store: PositionStore, start=(10, 10), delay=0.0):

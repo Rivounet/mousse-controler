@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from collections import deque
 import json
+import math
 import socket
 import ssl
 import threading
@@ -25,6 +27,34 @@ class PositionReceiver:
         self.verifier = verifier
         self._topology: DesktopTopology | None = None
         self._lock = threading.Lock()
+        self._last_received_monotonic: float | None = None
+        self._interarrival_ms: deque[float] = deque(maxlen=2048)
+        self._transit_ms: deque[float] = deque(maxlen=2048)
+        self._hmac_ms: deque[float] = deque(maxlen=2048)
+        self._processing_ms: deque[float] = deque(maxlen=2048)
+        self._cursor_read_us: deque[float] = deque(maxlen=2048)
+
+    @staticmethod
+    def _summary(values: deque[float]) -> dict[str, float | int | None]:
+        if not values:
+            return {"count": 0, "median": None, "p95": None, "max": None}
+        ordered = sorted(values)
+        return {
+            "count": len(ordered),
+            "median": round(ordered[len(ordered) // 2], 3),
+            "p95": round(ordered[max(0, math.ceil(0.95 * len(ordered)) - 1)], 3),
+            "max": round(ordered[-1], 3),
+        }
+
+    def metrics(self) -> dict[str, dict[str, float | int | None]]:
+        with self._lock:
+            return {
+                "sample_interval_ms": self._summary(self._interarrival_ms),
+                "observed_to_receiver_ms": self._summary(self._transit_ms),
+                "hmac_verify_ms": self._summary(self._hmac_ms),
+                "receiver_processing_ms": self._summary(self._processing_ms),
+                "cursor_read_us": self._summary(self._cursor_read_us),
+            }
 
     def topology(self) -> DesktopTopology:
         with self._lock:
@@ -33,13 +63,18 @@ class PositionReceiver:
             return self._topology
 
     def accept(self, headers: Any, body: bytes, path: str = "/v1/position") -> int:
+        processing_started = time.perf_counter()
+        received_wall_ms = int(time.time() * 1000)
+        received_monotonic = time.monotonic()
         if len(body) > MAX_BODY_BYTES:
             raise ValueError("body too large")
         key_id = headers.get("X-Agent-Key", "")
         signature = headers.get("X-Signature", "")
         timestamp_ms = int(headers.get("X-Timestamp", "-1"))
         sequence = int(headers.get("X-Sequence", "-1"))
+        hmac_started = time.perf_counter()
         self.verifier.verify(key_id, signature, "POST", path, timestamp_ms, sequence, body)
+        hmac_ms = (time.perf_counter() - hmac_started) * 1000.0
         payload = json.loads(body.decode("utf-8"))
         required = {"x", "y", "session_id", "topology_generation", "observed_at_unix_ms"}
         if not required.issubset(payload):
@@ -63,10 +98,18 @@ class PositionReceiver:
             session_id=int(payload["session_id"]),
             topology_generation=str(payload["topology_generation"]),
             observed_at_unix_ms=observed,
-            received_monotonic=time.monotonic(),
+            received_monotonic=received_monotonic,
         ))
         with self._lock:
             self._topology = topology
+            if self._last_received_monotonic is not None:
+                self._interarrival_ms.append((received_monotonic - self._last_received_monotonic) * 1000.0)
+            self._last_received_monotonic = received_monotonic
+            self._transit_ms.append(float(received_wall_ms - observed))
+            self._hmac_ms.append(hmac_ms)
+            self._processing_ms.append((time.perf_counter() - processing_started) * 1000.0)
+            if "cursor_read_us" in payload:
+                self._cursor_read_us.append(float(payload["cursor_read_us"]))
         return sequence
 
 

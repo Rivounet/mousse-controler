@@ -81,3 +81,6 @@ class SecurityTests(unittest.TestCase):
         receiver = PositionReceiver(store, HmacVerifier({"agent": self.secret}))
         self.assertEqual(receiver.accept(headers, body), 1)
         self.assertEqual(store.latest().x, -10)
+        metrics = receiver.metrics()
+        self.assertEqual(metrics["hmac_verify_ms"]["count"], 1)
+        self.assertEqual(metrics["receiver_processing_ms"]["count"], 1)

@@ -24,7 +24,11 @@ Codex travaille **directement sur mini-pc-backend** et pilote les interventions 
 - **Zones** : rectangle (x,y,largeur,hauteur), cercle (centre,rayon), polygone (sommets). Validation géométrique, écrans virtuels et coordonnées signées. Point cible tiré aléatoirement dans la zone, graine configurable en test.
 - **Séquences** : A→B→C… ; modes après arrivée : temporisation configurable ou commande explicite ; les deux peuvent coexister. États `IDLE`, `MOVING`, `ARRIVED`, `WAITING`, `PAUSED`, `COMPLETED`, `STOPPED`, `ERROR`.
 - **Trajectoires** : courbes et points intermédiaires, profils d'accélération/décélération et vitesse variable, micro-variations bornées pendant le mouvement seulement. Paramètres configurables, pas d'usurpation Logitech ni de dissimulation d'automatisation.
-- **PositionController** : une commande relative HID bornée puis une mesure **réelle plus récente** ; correction vers un point intérieur à la zone, arrêt si donnée obsolète, session/topologie modifiée, écart concurrent anormal ou timeout. Ne jamais présenter une estimation comme une mesure.
+- **PositionController** : une commande relative HID adaptative puis une mesure
+  **réelle plus récente** ; amplitude rapide calibrée loin de la cible, correction
+  fine plafonnée après dépassement, arrêt si donnée obsolète, session/topologie
+  modifiée, écart concurrent anormal ou timeout. Ne jamais présenter une
+  estimation comme une mesure.
 - **IHogpTransport** : start/stop/state/send_relative/release_all ; HOGP conforme, pairing volontaire, chiffrement, notifications, relâchement boutons, aucun rejeu après reconnexion. Doubles simulés pour tests.
 - **Agent cible** : lit seulement curseur, topologie, DPI et état de session ; publie les mesures, sans entrée de commandes souris, sans capture d'écran, sans service caché.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu, séquence, horodatage, secrets protégés, aucun port entrant sur MonOrdinateur.
@@ -79,9 +83,11 @@ La réalisation sépare quatre responsabilités :
   `0x180F`, rapports relatifs de six octets, chiffrement obligatoire et aucune
   émission sans abonnement du Host ;
 - `PositionController` : sérialisation des commandes, mesures fraîches de moins
-  de 150 ms, corrections bornées, changement de session/topologie fail-closed ;
+  de 150 ms, correction adaptative tenant compte de l'accélération, plafonnée à
+  48 puis mode fin plafonné à 8, changement de session/topologie fail-closed ;
 - `TrajectoryEngine` : calcul pur de courbes quadratiques, profil progressif,
-  variations de vitesse et micro-variations bornées uniquement en mouvement ;
+  variations de vitesse, micro-variations bornées uniquement en mouvement et
+  plafond configurable de points (10 par défaut) ;
 - `SequenceRunner` : zones rectangle/cercle/polygone, graine reproductible,
   modes automatique/commandé et états `IDLE` à `ERROR`.
 

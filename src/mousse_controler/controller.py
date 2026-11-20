@@ -69,6 +69,11 @@ class MouseController:
         self._lock = threading.Lock()
         self._stopped = threading.Event()
         self._buttons = 0
+        self._last_positioning_metrics: dict[str, float | int] = {}
+
+    def positioning_metrics(self) -> dict[str, float | int]:
+        with self._lock:
+            return dict(self._last_positioning_metrics)
 
     def start(self) -> None:
         with self._lock:
@@ -143,16 +148,27 @@ class MouseController:
         *,
         tolerance_px: int = 2,
         timeout: float = 2.0,
-        max_step: int = 8,
+        max_step: int = 48,
         proportional_gain: float = 0.35,
+        adaptive_acceleration: bool = True,
+        minimum_effective_step: int = 4,
         feedback_timeout: float = 0.25,
         pause_gate: threading.Event | None = None,
+        pause_ack: threading.Event | None = None,
         cancel_event: threading.Event | None = None,
     ) -> PositionSnapshot:
-        if tolerance_px < 0 or timeout <= 0 or max_step <= 0 or not 0 < proportional_gain <= 1:
+        if (tolerance_px < 0 or timeout <= 0 or max_step <= 0 or
+                not 0 < proportional_gain <= 1 or minimum_effective_step <= 0):
             raise ValueError("invalid positioning limits")
+        started = time.perf_counter()
         deadline = time.monotonic() + timeout
         snapshot = self._positions.latest()
+        initial_x, initial_y = snapshot.x, snapshot.y
+        corrections = 0
+        transport_seconds = 0.0
+        feedback_seconds = 0.0
+        previous_error: tuple[int, int] | None = None
+        fine_mode = False
         expected_session = snapshot.session_id
         expected_topology = snapshot.topology_generation
         while True:
@@ -162,29 +178,70 @@ class MouseController:
                 raise PositionError("positioning cancelled")
             if pause_gate is not None and not pause_gate.is_set():
                 paused_at = time.monotonic()
+                if pause_ack is not None:
+                    pause_ack.set()
                 while not pause_gate.wait(0.05):
                     if self._stopped.is_set():
                         raise PositionError("positioning stopped")
                     if cancel_event is not None and cancel_event.is_set():
                         raise PositionError("positioning cancelled")
                 deadline += time.monotonic() - paused_at
+                if pause_ack is not None:
+                    pause_ack.clear()
             error_x = target_x - snapshot.x
             error_y = target_y - snapshot.y
             if math.hypot(error_x, error_y) <= tolerance_px:
+                metrics: dict[str, float | int] = {
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
+                    "corrections": corrections,
+                    "transport_ms": round(transport_seconds * 1000.0, 3),
+                    "feedback_wait_ms": round(feedback_seconds * 1000.0, 3),
+                    "initial_distance_px": round(math.hypot(target_x - initial_x, target_y - initial_y), 3),
+                    "final_error_px": round(math.hypot(error_x, error_y), 3),
+                }
+                with self._lock:
+                    self._last_positioning_metrics = metrics
                 return snapshot
             if time.monotonic() >= deadline:
                 raise PositionError("positioning deadline exceeded")
-            def correction(error: int) -> int:
-                if error == 0:
-                    return 0
-                scaled = max(1, round(abs(error) * proportional_gain))
-                return max(-max_step, min(max_step, scaled if error > 0 else -scaled))
+            if (adaptive_acceleration and previous_error is not None and
+                    error_x * previous_error[0] + error_y * previous_error[1] <= 0):
+                fine_mode = True
+            if adaptive_acceleration and not fine_mode:
+                distance = math.hypot(error_x, error_y)
+                if distance <= minimum_effective_step * 2:
+                    command_length = max(minimum_effective_step, round(distance))
+                else:
+                    command_length = round(
+                        distance * proportional_gain + minimum_effective_step * 2 + 1
+                    )
+                command_length = min(max_step, command_length)
+                dx = round(command_length * error_x / distance)
+                dy = round(command_length * error_y / distance)
+                if dx == 0 and error_x:
+                    dx = 1 if error_x > 0 else -1
+                if dy == 0 and error_y:
+                    dy = 1 if error_y > 0 else -1
+            else:
+                def correction(error: int) -> int:
+                    if error == 0:
+                        return 0
+                    gain = 0.75 if fine_mode else proportional_gain
+                    limit = min(max_step, 8) if fine_mode else max_step
+                    scaled = max(1, round(abs(error) * gain))
+                    return max(-limit, min(limit, scaled if error > 0 else -scaled))
 
-            dx = correction(error_x)
-            dy = correction(error_y)
+                dx = correction(error_x)
+                dy = correction(error_y)
+            previous_error = (error_x, error_y)
+            transport_started = time.perf_counter()
             self.move(dx, dy)
+            transport_seconds += time.perf_counter() - transport_started
+            corrections += 1
             wait = min(feedback_timeout, max(0.001, deadline - time.monotonic()))
+            feedback_started = time.perf_counter()
             snapshot = self._positions.wait_newer(snapshot.sequence, wait)
+            feedback_seconds += time.perf_counter() - feedback_started
             if snapshot.session_id != expected_session:
                 raise PositionError("interactive session changed")
             if snapshot.topology_generation != expected_topology:

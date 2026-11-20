@@ -2,8 +2,9 @@
 
 **Date :** 20 novembre 2026  
 **Branche :** `feat/mc-hid-exec-001`  
-**Verdict :** `PASS_WITH_RESERVATIONS` — fonctions matérielles et redémarrages
-qualifiés ; réserve de performance sur la latence de positionnement
+**Verdict :** `PASS_WITH_RESERVATIONS` — fonctions matérielles, performances et
+redémarrages qualifiés ; réserve limitée à l'observabilité absolue du délai LAN
+et à une reprise GATT transitoire
 
 ## Résultat matériel
 
@@ -98,20 +99,40 @@ sont `On`; les périphériques HID et GATT cible sont `OK`.
 Une fenêtre temporaire dédiée, sans donnée ni commande applicative, a borné les
 essais. Elle a été arrêtée et supprimée après collecte des événements.
 
-- clic gauche : appui matériel observé 207 ms après le lancement de la commande,
-  relâchement 62 ms plus tard ;
+- clics gauche et droit : appuis et relâchements matériels observés ;
 - défilement : événement Windows `delta=120` observé après 112 ms ;
 - zones rectangle, cercle et polygone : trois arrivées `COMPLETED`, erreurs
   mesurées 2, 2 et 1 px ;
-- cinq trajectoires supplémentaires : erreur moyenne 1,8 px, maximum 2 px ;
-- latence de positionnement : médiane 3 220,356 ms, P95 9 475,176 ms ;
-- pause : position inchangée pendant 1 s ;
+- cinq trajectoires comparables après optimisation : médiane 803,582 ms,
+  P95 1 966,363 ms, erreur moyenne 0,4 px et maximum 1 px ;
+- stabilité : 100/100 déplacements réussis, médiane 670,483 ms, P95
+  983,052 ms, maximum 1 245,531 ms, erreur moyenne 0,796 px et maximum 2 px ;
+- pause : accusé d'arrêt effectif, position inchangée pendant 500 ms ;
 - arrêt d'urgence : état `STOPPED`, boutons libérés et aucune position nouvelle
   après le retour de commande pendant 1 s ; runtime ensuite relancé.
 
-La latence de positionnement reste une réserve importante. La limite de huit
-unités HID par rapport évite les dépassements provoqués par l'accélération
-Windows sans modifier les réglages système, au prix d'un déplacement lent.
+Le diagnostic instrumenté a isolé la cause dominante : l'amplitude HID fixe de
+huit unités imposait 254 corrections sur cinq déplacements et l'attente des
+mesures réelles représentait 15 952,262 ms, contre 1 750,118 ms de transport.
+La génération de trajectoire restait inférieure à 0,2 ms. La boucle utilise
+désormais une amplitude adaptative tenant compte de l'accélération observée,
+jusqu'à 48 unités loin de la cible, puis une correction fine plafonnée à huit
+après dépassement. Les trajectoires conservent leur profil configurable mais
+sont plafonnées à dix points par défaut. Aucun réglage souris Windows n'a été
+modifié.
+
+La série stable de 100 déplacements totalise 6 650,919 ms de transport et
+62 227,298 ms d'attente de feedback : le retour réel demeure le poste dominant,
+mais les objectifs médiane < 1 s, P95 < 2 s, réussite >= 99 % et erreur maximale
+2 px sont tous atteints. Un contrôle post-déploiement de télémétrie a confirmé
+10/10 déplacements, médiane 611,730 ms, P95 863,088 ms et erreur maximale 2 px.
+
+Sur 2 048 échantillons, la cadence réelle médiane est 63 ms (P95 94 ms), la
+vérification HMAC 0,053 ms (P95 0,070 ms), le traitement récepteur 0,145 ms
+(P95 0,195 ms) et `GetPhysicalCursorPos` 20 us (P95 22 us). L'horloge de la cible
+étant environ 166 ms en avance, la latence LAN absolue aller simple ne peut pas
+être déduite sans synchronisation d'horloges ; ce point reste explicitement non
+qualifié plutôt que présenté comme une mesure négative.
 
 ## Paquet qualifié
 
@@ -129,8 +150,8 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 
 ## Tests et jalons
 
-`python -m unittest discover -v`, avec le répertoire temporaire court prévu :
-**125/125 PASS en 56,441 s**. Les builds réels de `PairingTool.exe`,
+`python -m unittest discover -v`, hors du chemin temporaire artificiellement
+long du bac à sable : **127/127 PASS en 41,984 s**. Les builds réels de `PairingTool.exe`,
 `PositionAgent.exe` et du MSIX signé ont également réussi.
 
 | Jalon | Résultat |
@@ -146,8 +167,8 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 | Redémarrage mini-pc-backend | PASS avec réserve — appairage conservé ; panne transitoire initiale corrigée et reprise injectée qualifiée |
 | Clic et défilement | PASS sur surface dédiée |
 | Zones et trajectoires | PASS — rectangle, cercle, polygone et 5 trajets mesurés |
-| Précision | PASS — moyenne 1,8 px, maximum 2 px |
-| Latence | MESURÉE AVEC RÉSERVE — médiane 3,220 s, P95 9,475 s |
+| Précision | PASS — 100 mouvements, moyenne 0,796 px, maximum 2 px |
+| Latence | PASS — 100 mouvements, médiane 0,670 s, P95 0,983 s |
 | Pause et arrêt d'urgence | PASS matériel |
 | Livraison | PR #6 Draft, aucune fusion |
 
@@ -158,8 +179,9 @@ restent actifs car ils constituent la configuration fonctionnelle qualifiée.
 Les tâches de sonde et la surface temporaire ont été retirées ; le secret
 d'agent temporaire en clair a été écrasé puis supprimé.
 
-Le verdict global est `PASS_WITH_RESERVATIONS`. La réserve principale est la
-latence de positionnement mesurée. L'instant exact de souscription Bluetooth
-n'étant pas journalisé, les délais de redémarrage restent des bornes supérieures.
-La reprise après panne transitoire a été injectée et qualifiée, mais aucun second
-redémarrage physique du mini-PC n'a été ajouté après ce durcissement.
+Le verdict global est `PASS_WITH_RESERVATIONS`. Les objectifs de performance
+sont atteints. Les réserves restantes sont l'absence de mesure LAN aller simple
+absolue faute d'horloges synchronisées, l'instant exact de souscription Bluetooth
+non journalisé et un intervalle transitoire `subscribed=False` après déploiement
+de l'agent. La maintenance automatique a rétabli `Started/subscribed=True` sans
+nouvel appairage. Aucun redémarrage physique supplémentaire n'a été nécessaire.

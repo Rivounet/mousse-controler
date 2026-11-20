@@ -16,9 +16,11 @@ class TrajectoryConfig:
     speed_variation: float = 0.04
     micro_variation_px: int = 1
     minimum_points: int = 3
+    maximum_points: int = 10
 
     def __post_init__(self) -> None:
-        if self.spacing_px <= 0 or self.minimum_points < 2:
+        if (self.spacing_px <= 0 or self.minimum_points < 2 or
+                self.maximum_points < self.minimum_points):
             raise ValueError("invalid trajectory sampling")
         if not -0.5 <= self.curvature <= 0.5:
             raise ValueError("curvature outside safe range")
@@ -45,7 +47,10 @@ class TrajectoryEngine:
         distance = math.hypot(dx, dy)
         if distance == 0:
             return [target]
-        count = max(self.config.minimum_points, math.ceil(distance / self.config.spacing_px))
+        count = min(
+            self.config.maximum_points,
+            max(self.config.minimum_points, math.ceil(distance / self.config.spacing_px)),
+        )
         midpoint = ((start[0] + target[0]) / 2, (start[1] + target[1]) / 2)
         perpendicular = (-dy / distance, dx / distance)
         bend = distance * self.config.curvature * rng.uniform(-1.0, 1.0)

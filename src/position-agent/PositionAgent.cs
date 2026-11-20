@@ -258,8 +258,11 @@ namespace MousseControler.PositionAgent
                 try
                 {
                     NativeMethods.Point point;
+                    long cursorStarted = Stopwatch.GetTimestamp();
                     if (!NativeMethods.GetPhysicalCursorPos(out point))
                         throw new InvalidOperationException("GetPhysicalCursorPos failed: " + Marshal.GetLastWin32Error());
+                    long cursorReadMicroseconds = (Stopwatch.GetTimestamp() - cursorStarted) * 1000000L /
+                        Stopwatch.Frequency;
                     uint session;
                     if (!NativeMethods.ProcessIdToSessionId((uint)Process.GetCurrentProcess().Id, out session))
                         throw new InvalidOperationException("ProcessIdToSessionId failed");
@@ -276,7 +279,7 @@ namespace MousseControler.PositionAgent
                     if (!inputDesktop) throw new InvalidOperationException("interactive input desktop is unavailable");
                     long seq = Interlocked.Increment(ref sequence);
                     long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                    string body = BuildBody(point, session, topology, displays, timestamp);
+                    string body = BuildBody(point, session, topology, displays, timestamp, cursorReadMicroseconds);
                     Post(seq, timestamp, Encoding.UTF8.GetBytes(body));
                 }
                 catch (Exception ex)
@@ -333,12 +336,12 @@ namespace MousseControler.PositionAgent
         }
 
         private static string BuildBody(NativeMethods.Point point, uint session, string topology,
-            List<DisplayInfo> displays, long observedAt)
+            List<DisplayInfo> displays, long observedAt, long cursorReadMicroseconds)
         {
             StringBuilder json = new StringBuilder();
             json.AppendFormat(CultureInfo.InvariantCulture,
-                "{{\"x\":{0},\"y\":{1},\"session_id\":{2},\"session_active\":true,\"topology_generation\":\"{3}\",\"observed_at_unix_ms\":{4},\"displays\":[",
-                point.X, point.Y, session, topology, observedAt);
+                "{{\"x\":{0},\"y\":{1},\"session_id\":{2},\"session_active\":true,\"topology_generation\":\"{3}\",\"observed_at_unix_ms\":{4},\"cursor_read_us\":{5},\"displays\":[",
+                point.X, point.Y, session, topology, observedAt, cursorReadMicroseconds);
             for (int i = 0; i < displays.Count; i++)
             {
                 if (i != 0) json.Append(',');
