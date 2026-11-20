@@ -15,6 +15,7 @@ import time
 import uuid
 from typing import Any, Callable
 
+from .api_catalog import validate_action_contract
 from .controller import MouseController, PositionError
 
 
@@ -885,12 +886,7 @@ class ActionExecutor:
             raise ValueError("action must be an object")
         value = copy.deepcopy(spec)
         kind = str(value.get("kind", ""))
-        supported = {
-            "move_relative", "move_to", "click", "press", "release", "hold", "drag",
-            "move_with_buttons", "scroll", "wait", "wait_command", "sequence",
-        }
-        if kind not in supported:
-            raise ValueError("unknown action kind")
+        validate_action_contract(value)
         value["kind"] = kind
         policy = str(value.get("error_policy", inherited_policy or ErrorPolicy.STOP.value))
         ErrorPolicy(policy)

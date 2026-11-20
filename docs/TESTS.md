@@ -202,3 +202,19 @@ identifiant, GATT abonné, boutons zéro, position fraîche et persistance
 conjointe du journal et de `.ids`. Aucun mouvement, clic, défilement, rapport
 HID ou capture réelle n'a été exécuté. Voir
 [MC-POST-MERGE-002](../qualification/MC-POST-MERGE-002/RAPPORT.md).
+
+## Qualification MC-API-CATALOG-001 — 20 novembre 2026
+
+La suite contient désormais **195 tests**. Avec le chemin court historique
+`MC_TEST_TMP=C:\Projets\Mousse-controler\t`, les **195/195 tests ont réussi en
+67,411 s**. Une première exécution sans ce réglage a correctement refusé 23 cas
+de déploiement par `WINDOWS_PATH_BUDGET_EXCEEDED`; il ne s'agissait pas d'une
+régression applicative.
+
+Les 10 tests du catalogue vérifient l'ensemble exact des 28 commandes et des 12
+types d'actions, la bijection registre/gestionnaires, la structure et les
+exemples, les filtres, les erreurs, l'authentification HTTP, la compatibilité des
+arguments historiques tolérés et la fraîcheur de la référence générée. Un
+transport simulé et un courtier de captures espion prouvent qu'une consultation
+ne produit ni HID ni capture. Aucun essai matériel, mouvement réel ou capture
+réelle n'a été exécuté pour ce mandat.

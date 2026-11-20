@@ -1,0 +1,24 @@
+{
+  "mandate": "MC-API-CATALOG-001",
+  "date": "2026-11-20",
+  "base_sha": "97d81346304b1234b77ae5a8dfe35cb63e787ad6",
+  "branch": "feat/mc-api-catalog-001",
+  "catalog": {
+    "commands": 28,
+    "action_types": 12,
+    "websocket_events": 6
+  },
+  "tests": {
+    "targeted_passed": 10,
+    "complete_passed": 195,
+    "complete_failed": 0,
+    "duration_seconds": 67.411,
+    "short_temp_path_required": true
+  },
+  "hardware_effects": {
+    "hid_reports": 0,
+    "real_captures": 0,
+    "real_mouse_control": false
+  },
+  "verdict": "PASS"
+}

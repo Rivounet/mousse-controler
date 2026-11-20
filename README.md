@@ -64,7 +64,7 @@ elles ne décrivent pas l'état courant de la PR #6.
 
 ## Documentation
 
-[Reprise](docs/REPRISE.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Planning](docs/PLANNING.md) · [Tests](docs/TESTS.md) · [Décisions](docs/DECISIONS.md) · [Consignes Codex](AGENTS.md).
+[Référence API](docs/API-REFERENCE.md) · [Reprise](docs/REPRISE.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Planning](docs/PLANNING.md) · [Tests](docs/TESTS.md) · [Décisions](docs/DECISIONS.md) · [Consignes Codex](AGENTS.md).
 
 Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
 
@@ -75,3 +75,13 @@ La [PR #8](https://github.com/Rivounet/mousse-controler/pull/8) livre les action
 **Verdict de la branche : PASS_WITH_RESERVATIONS** — 177/177 tests PASS en 44,286 s ; 17 actions sur surface sûre, 37 événements observés, deux captures réelles avant/après puis suppression des sources ; arrêt d'urgence et non-rejeu matériel qualifiés. SSH hors sandbox qualifié avec configuration dédiée et autorisation strictement bornée. Réserves : roulette horizontale indisponible sur le descripteur HOGP actuel, dossier de staging maintenance vide et autorisation explicite préalable à toute nouvelle prise de souris. **Ces fonctions J6 ne sont pas encore fusionnées dans `main`**.
 
 **État GitHub J6 :** la PR #8 a été **fusionnée dans `main`** le 20 novembre 2026 au commit `e0658142a65d8b494f109efa3318c6ea21feac3d`. Les mentions historiques « non fusionnée » ci-dessus décrivent l'état antérieur à cette fusion. Verdict J6 : `PASS_WITH_RESERVATIONS`, 185/185 tests logiciels publiés. La concordance des processus installés avec le commit fusionné doit être vérifiée séparément, sans prise de souris non autorisée.
+
+## Registre automatique de l'API — MC-API-CATALOG-001
+
+La commande authentifiée `api_catalog` interroge, sur le port loopback existant,
+le registre qui pilote aussi le routage et la validation statique. Elle permet
+un catalogue complet, une recherche par nom, un filtre par catégorie et la
+sélection des commandes, types d'actions ou événements WebSocket. La
+[référence API](docs/API-REFERENCE.md) est générée depuis ce même registre avec
+`python scripts/generate_api_reference.py`; `--check` détecte toute référence
+obsolète. La consultation n'émet aucun rapport HID et ne demande aucune capture.

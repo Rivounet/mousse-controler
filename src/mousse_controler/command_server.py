@@ -12,6 +12,7 @@ import time
 from typing import Any
 
 from .actions import ActionState
+from .api_catalog import build_catalog, command_contract, validate_parameters
 from .controller import MouseController
 from .geometry import CircleZone, PolygonZone, RectangleZone
 from .sequence import SequenceRunner, SequenceStep, WaitMode
@@ -52,122 +53,149 @@ class CommandGateway:
             self._validate_envelope(payload)
             command = str(payload.get("command", ""))
             arguments = payload.get("arguments") or {}
-            if command == "advertise_start":
-                self._transport.advertise()
-            elif command == "transport_status":
-                status = getattr(self._transport, "status", None)
-                if status is None:
-                    raise CommandError("transport status is unavailable")
-                return {"accepted": True, "command": command, "status": status()}
-            elif command == "position_status":
-                snapshot = self._controller.position_snapshot(max_age_ms=5_000)
-                return {
-                    "accepted": True,
-                    "command": command,
-                    "position": {
-                        "x": snapshot.x,
-                        "y": snapshot.y,
-                        "sequence": snapshot.sequence,
-                        "session_id": snapshot.session_id,
-                        "topology_generation": snapshot.topology_generation,
-                        "observed_at_unix_ms": snapshot.observed_at_unix_ms,
-                        "age_ms": round((time.monotonic() - snapshot.received_monotonic) * 1000, 3),
-                    },
-                }
-            elif command == "position_metrics":
-                metrics = getattr(self._receiver, "metrics", None)
-                if metrics is None:
-                    raise CommandError("position metrics are unavailable")
-                return {"accepted": True, "command": command, "metrics": metrics()}
-            elif command == "move":
-                tracked = self._tracked_legacy(
-                    str(payload["command_id"]), command,
-                    lambda: self._controller.move(int(arguments["dx"]), int(arguments["dy"])))
-                if tracked is not None:
-                    return {"accepted": True, "command": command, "action": tracked}
-            elif command == "click":
-                tracked = self._tracked_legacy(
-                    str(payload["command_id"]), command,
-                    lambda: self._controller.click(int(arguments["button_bit"])))
-                if tracked is not None:
-                    return {"accepted": True, "command": command, "action": tracked}
-            elif command == "buttons":
-                tracked = self._tracked_legacy(
-                    str(payload["command_id"]), command,
-                    lambda: self._controller.set_buttons(int(arguments["mask"])))
-                if tracked is not None:
-                    return {"accepted": True, "command": command, "action": tracked}
-            elif command == "scroll":
-                tracked = self._tracked_legacy(
-                    str(payload["command_id"]), command,
-                    lambda: self._controller.scroll(int(arguments["delta"])))
-                if tracked is not None:
-                    return {"accepted": True, "command": command, "action": tracked}
-            elif command == "stop":
-                if self._actions is not None:
-                    self._actions.emergency_stop()
-                else:
-                    self._controller.emergency_stop()
-            elif command == "capabilities":
-                if self._actions is None:
-                    return {
-                        "accepted": True, "command": command,
-                        "capabilities": {
-                            "buttons": {"left": 1, "right": 2, "middle": 4, "back": 8, "forward": 16},
-                            "vertical_wheel": True, "horizontal_wheel": False,
-                        },
-                    }
-                return {"accepted": True, "command": command,
-                        "capabilities": self._actions.capabilities()}
-            elif command == "action_submit":
-                actions = self._require_actions()
-                record = actions.submit(arguments["action"], action_id=arguments.get("action_id"))
-                return {"accepted": True, "command": command, "action": record}
-            elif command == "action_status":
-                record = self._require_actions().registry.get(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "action": record}
-            elif command == "action_list":
-                records = self._require_actions().registry.list(int(arguments.get("limit", 100)))
-                return {"accepted": True, "command": command, "actions": records}
-            elif command == "action_cancel":
-                record = self._require_actions().cancel(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "action": record}
-            elif command == "action_pause":
-                event = self._require_actions().pause(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "event": event}
-            elif command == "action_resume":
-                event = self._require_actions().resume(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "event": event}
-            elif command == "action_continue":
-                event = self._require_actions().advance(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "event": event}
-            elif command == "action_events":
-                events = self._require_actions().registry.history(
-                    arguments.get("after_event_id"), int(arguments.get("limit", 100)))
-                return {"accepted": True, "command": command, "events": events}
-            elif command == "capture_status":
-                captures = self._require_captures().list_for_action(str(arguments["action_id"]))
-                return {"accepted": True, "command": command, "captures": captures}
-            elif command == "capture_delete":
-                capture = self._require_captures().delete(str(arguments["capture_id"]))
-                return {"accepted": True, "command": command, "capture": capture}
-            elif command == "sequence_start":
-                self._start_sequence(arguments)
-            elif command == "sequence_pause":
-                self._require_sequence().pause()
-            elif command == "sequence_resume":
-                self._require_sequence().resume()
-            elif command == "sequence_next":
-                self._require_sequence().next_target()
-            elif command == "sequence_skip":
-                self._require_sequence().skip_target()
-            elif command == "sequence_stop":
-                self._require_sequence().stop()
-            elif command == "sequence_status":
-                return self._sequence_status()
-            else:
+            contract = command_contract(command)
+            if contract is None:
                 raise CommandError("unknown command")
-            return {"accepted": True, "command": command}
+            validate_parameters(arguments, contract)
+            result = getattr(self, contract["_handler"])(payload, arguments)
+            return result or {"accepted": True, "command": command}
+
+    def _command_api_catalog(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        catalog = build_catalog(
+            name=arguments.get("name"), category=arguments.get("category"),
+            include=arguments.get("include"),
+            availability={"actions": self._actions is not None, "captures": self._captures is not None},
+        )
+        return {"accepted": True, "command": "api_catalog", **catalog}
+
+    def _command_advertise_start(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._transport.advertise()
+
+    def _command_transport_status(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        status = getattr(self._transport, "status", None)
+        if status is None:
+            raise CommandError("transport status is unavailable")
+        return {"accepted": True, "command": "transport_status", "status": status()}
+
+    def _command_position_status(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        snapshot = self._controller.position_snapshot(max_age_ms=5_000)
+        return {
+            "accepted": True, "command": "position_status",
+            "position": {
+                "x": snapshot.x, "y": snapshot.y, "sequence": snapshot.sequence,
+                "session_id": snapshot.session_id,
+                "topology_generation": snapshot.topology_generation,
+                "observed_at_unix_ms": snapshot.observed_at_unix_ms,
+                "age_ms": round((time.monotonic() - snapshot.received_monotonic) * 1000, 3),
+            },
+        }
+
+    def _command_position_metrics(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        metrics = getattr(self._receiver, "metrics", None)
+        if metrics is None:
+            raise CommandError("position metrics are unavailable")
+        return {"accepted": True, "command": "position_metrics", "metrics": metrics()}
+
+    def _legacy(self, payload: dict[str, Any], command: str, callback) -> dict[str, Any] | None:
+        tracked = self._tracked_legacy(str(payload["command_id"]), command, callback)
+        if tracked is not None:
+            return {"accepted": True, "command": command, "action": tracked}
+        return None
+
+    def _command_move(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any] | None:
+        return self._legacy(payload, "move", lambda: self._controller.move(
+            int(arguments["dx"]), int(arguments["dy"])))
+
+    def _command_click(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any] | None:
+        return self._legacy(payload, "click", lambda: self._controller.click(
+            int(arguments["button_bit"])))
+
+    def _command_buttons(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any] | None:
+        return self._legacy(payload, "buttons", lambda: self._controller.set_buttons(
+            int(arguments["mask"])))
+
+    def _command_scroll(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any] | None:
+        return self._legacy(payload, "scroll", lambda: self._controller.scroll(
+            int(arguments["delta"])))
+
+    def _command_stop(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        if self._actions is not None:
+            self._actions.emergency_stop()
+        else:
+            self._controller.emergency_stop()
+
+    def _command_capabilities(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        if self._actions is None:
+            capabilities = {
+                "buttons": {"left": 1, "right": 2, "middle": 4, "back": 8, "forward": 16},
+                "vertical_wheel": True, "horizontal_wheel": False,
+            }
+        else:
+            capabilities = self._actions.capabilities()
+        return {"accepted": True, "command": "capabilities", "capabilities": capabilities}
+
+    def _command_action_submit(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        record = self._require_actions().submit(
+            arguments["action"], action_id=arguments.get("action_id"))
+        return {"accepted": True, "command": "action_submit", "action": record}
+
+    def _command_action_status(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        record = self._require_actions().registry.get(str(arguments["action_id"]))
+        return {"accepted": True, "command": "action_status", "action": record}
+
+    def _command_action_list(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        records = self._require_actions().registry.list(int(arguments.get("limit", 100)))
+        return {"accepted": True, "command": "action_list", "actions": records}
+
+    def _command_action_cancel(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        record = self._require_actions().cancel(str(arguments["action_id"]))
+        return {"accepted": True, "command": "action_cancel", "action": record}
+
+    def _command_action_pause(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        event = self._require_actions().pause(str(arguments["action_id"]))
+        return {"accepted": True, "command": "action_pause", "event": event}
+
+    def _command_action_resume(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        event = self._require_actions().resume(str(arguments["action_id"]))
+        return {"accepted": True, "command": "action_resume", "event": event}
+
+    def _command_action_continue(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        event = self._require_actions().advance(str(arguments["action_id"]))
+        return {"accepted": True, "command": "action_continue", "event": event}
+
+    def _command_action_events(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        events = self._require_actions().registry.history(
+            arguments.get("after_event_id"), int(arguments.get("limit", 100)))
+        return {"accepted": True, "command": "action_events", "events": events}
+
+    def _command_capture_status(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        captures = self._require_captures().list_for_action(str(arguments["action_id"]))
+        return {"accepted": True, "command": "capture_status", "captures": captures}
+
+    def _command_capture_delete(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        capture = self._require_captures().delete(str(arguments["capture_id"]))
+        return {"accepted": True, "command": "capture_delete", "capture": capture}
+
+    def _command_sequence_start(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._start_sequence(arguments)
+
+    def _command_sequence_pause(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._require_sequence().pause()
+
+    def _command_sequence_resume(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._require_sequence().resume()
+
+    def _command_sequence_next(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._require_sequence().next_target()
+
+    def _command_sequence_skip(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._require_sequence().skip_target()
+
+    def _command_sequence_stop(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        self._require_sequence().stop()
+
+    def _command_sequence_status(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+        return self._sequence_status()
 
     def _require_actions(self):
         if self._actions is None:

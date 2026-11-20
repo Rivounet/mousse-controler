@@ -169,3 +169,25 @@ compté dans le quota et peut être retenté. Les fichiers orphelins d'un arrêt
 inopiné sont récupérés dans cet état. Les images et journaux restent hors Git et
 ne sont jamais servis par HTTP. Le champ `analysis_ready` prépare une future
 analyse locale sans moteur visuel dans ce mandat.
+
+## Registre de contrats — MC-API-CATALOG-001
+
+`api_catalog.py` est la source structurée des commandes, des types d'actions et
+des événements WebSocket. Chaque commande associe son contrat public à un nom
+de gestionnaire privé. `CommandGateway` résout ce contrat, valide les paramètres
+statiques puis appelle le gestionnaire déclaré : il n'existe donc plus de liste
+de routage indépendante susceptible de diverger du catalogue.
+
+Les contraintes de type, présence, valeurs autorisées, bornes et valeurs par
+défaut sont déclarées comme contraintes statiques. Les préconditions liées à
+l'état — fraîcheur de position, moteur optionnel, action ou séquence active,
+topologie physique, abonnement HID — sont publiées séparément comme contraintes
+dynamiques et restent vérifiées par les composants métier existants. Le moteur
+d'actions utilise le même registre pour reconnaître ses 12 discriminants ; les
+contrôles conditionnels de sûreté restent dans `ActionExecutor`.
+
+La découverte emprunte exclusivement `POST /v1/command` sur `127.0.0.1` et
+conserve bearer, enveloppe, TTL, idempotence, débit et taille maximale. Elle ne
+crée ni port ni effet matériel. La disponibilité runtime indique explicitement
+si les sous-systèmes actions ou captures ont été injectés. La référence
+`docs/API-REFERENCE.md` est rendue de façon déterministe à partir du registre.
