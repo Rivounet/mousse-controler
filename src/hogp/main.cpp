@@ -210,8 +210,11 @@ public:
         parameters.IsDiscoverable(true);
         hid_provider_.StartAdvertising(parameters);
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        // Windows can transiently report Aborted before a packaged full-trust
+        // process settles on StartedWithoutAllAdvertisementData. Treat only the
+        // deadline as terminal so this observable transition is not reported as
+        // a false start failure.
         while (!advertisement_active(hid_provider_.AdvertisementStatus()) &&
-               hid_provider_.AdvertisementStatus() != GattServiceProviderAdvertisementStatus::Aborted &&
                std::chrono::steady_clock::now() < deadline) {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }

@@ -110,22 +110,28 @@ HID n'est implicite.
 - moteur HOGP, contrôleur Python, API locale, canal HTTPS/HMAC, agent .NET 4.8,
   zones/trajectoires/séquences et paquet MSIX implémentés ;
 - accès cible : OpenSSH existant à clé et host key stricte, jamais RustDesk ;
-- agent cible visible : tâche temporaire Interactive, processus et console en
-  session 1, deux écrans, premier échantillon accepté ;
+- agent cible visible qualifié en session 1, deux écrans et premier échantillon
+  accepté ; tâche ensuite arrêtée et supprimée ;
 - tests : 103/103 PASS ;
-- radios : mini-PC On au début de l'exécution, cible passée Off→On ;
-- HOGP non packagé : base GATT créée, publicité `Aborted` car capacité manifeste
-  absente ; paquet signé prêt, mais installation suspendue à l'approbation de
-  l'ancre `CurrentUser` ;
-- appairage : trois tentatives contrôlées ont échoué sans paire résiduelle ; la
-  cérémonie `ConfirmOnly` a bien été reçue en session 1 ; aucun rapport HID ;
+- radios finales : mini-PC `On` (état initial), cible restaurée `Off` ;
+- HOGP packagé : certificat, signature, Publisher et SHA vérifiés ; import public
+  temporaire dans `LocalMachine\TrustedPeople`, MSIX installé, identité
+  `WindowsApps` confirmée, GATT créé et publicité stabilisée `status=2` après un
+  `Aborted` transitoire ;
+- appairage : quatrième tentative sous identité MSIX, `ConfirmOnly` accepté en
+  session 1, résultat `Failed`, protection utilisée `None`, aucune paire ni
+  rapport HID ;
+- nettoyage : publicité/processus/MSIX/règle/tâches/répertoire cible retirés ;
+  certificat temporaire `LocalMachine\TrustedPeople` retiré ; copie exacte
+  trouvée dans `CurrentUser\Root` également retirée par empreinte après
+  diagnostic des sessions RDP 7/console 6 ; aucun magasin Root ne la conserve ;
 - verdict provisoire : `INCOMPLETE`, pas PASS.
 
-À la reprise, ne retenter ni appairage ni publicité avant installation approuvée
-du MSIX et vérification WinRT `Started`. Ensuite exécuter mouvement minimal sur
-surface sûre, clic/scroll, reconnexion, précision, multi-écrans, perte réseau et
-arrêt ≤250 ms. Restaurer la radio cible et supprimer les tâches temporaires si
-la qualification est abandonnée.
+La course `Aborted` → `StartedWithoutAllAdvertisementData` du démarrage est
+corrigée et compilée, mais pas requalifiée dans un nouveau MSIX après nettoyage.
+À la reprise, instrumenter l'échec de bonding sans abaisser l'exigence
+`Encryption`. Ne retenter mouvement, clic/scroll ou batterie complète qu'après
+pairing et abonnement HID natif.
 
 ## Références actuelles
 

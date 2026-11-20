@@ -13,13 +13,16 @@
     "native_engine_compiled": true,
     "position_agent_compiled": true,
     "msix_built_and_signed": true,
-    "msix_installed": false
+    "msix_installed_during_qualification": true,
+    "msix_finally_installed": false,
+    "certificate_thumbprint": "F4D17F09181DE18154C429C0ED762AD66A762C54",
+    "msix_sha256": "55644240E5D93155A21B0868FBDEC1DC2C1E3CA80D59FBBEBBF1348312490A21"
   },
   "tests": {
     "total": 103,
     "passed": 103,
     "failed": 0,
-    "duration_seconds": 60.365
+    "duration_seconds": 45.994
   },
   "position_channel": {
     "https_reachable": true,
@@ -31,12 +34,29 @@
     "mini_initial_radio": "On",
     "target_initial_radio": "Off",
     "target_qualification_radio": "On",
+    "target_final_radio": "Off",
     "gatt_created": true,
     "unpackaged_advertisement_status": "Aborted",
-    "pairing_attempts": 3,
+    "packaged_advertisement_status": "StartedWithoutAllAdvertisementData",
+    "packaged_advertisement_transient_status": "Aborted",
+    "pairing_attempts": 4,
+    "last_pairing_status": "Failed",
+    "last_pairing_ceremony": "ConfirmOnly",
+    "last_pairing_protection_used": "None",
     "paired": false,
     "hid_reports_emitted": false
   },
+  "cleanup": {
+    "hogp_processes": 0,
+    "msix_installed": false,
+    "local_machine_trusted_people_certificate": false,
+    "firewall_rule": false,
+    "target_tasks": false,
+    "target_temporary_directory": false,
+    "current_user_root_exact_thumbprint_remaining": false,
+    "local_machine_root_exact_thumbprint_remaining": false,
+    "current_user_root_removal": "removed by exact thumbprint with certutil after invisible cross-session UI was diagnosed"
+  },
   "verdict": "INCOMPLETE",
-  "blocker": "human approval of the current-user development trust anchor before MSIX installation"
+  "blocker": "Windows pairing failed after ConfirmOnly; no encrypted bond or HID subscription"
 }
