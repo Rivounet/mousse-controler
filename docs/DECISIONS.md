@@ -96,3 +96,11 @@ les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.
 
 | D-060 | 2026-11-20 | Validé | Fusion explicite de la PR #8 MC-MOUSE-ACTIONS-001 dans `main` au commit `e0658142a65d8b494f109efa3318c6ea21feac3d` après revue des correctifs | J6 intégré avec verdict `PASS_WITH_RESERVATIONS` ; tests 185/185 publiés ; vérification de la synchronisation des installations restant distincte de la fusion Git |
 | D-061 | 2026-11-20 | Validé avec réserves | Synchroniser le clone par fast-forward et relancer uniquement le contrôleur mini-PC pour charger le code fusionné et migrer le registre `.ids`; conserver l'agent cible déjà conforme. | Les deux machines utilisent les composants attendus, journal et `.ids` sont présents ensemble, production saine sans nouvelle émission HID ni capture ; verdict post-fusion `PASS_WITH_RESERVATIONS`. |
+
+## D-062 — Contre-expertise indépendante et plan de correction global (20 novembre 2026)
+
+**Décision de pilotage :** conserver les deux rapports d'audit originaux distincts, archiver leur comparaison contradictoire dans [MC-AUDIT-CONSOLIDATION-001](../audits/2026-11-20-consolidation/REPORT.md), retenir le verdict `MAINTENABLE_WITH_MAJOR_RESERVATIONS` et prioriser la sûreté/robustesse avant le refactoring structurel et toute extension fonctionnelle majeure.
+
+**Références :** audit ChatGPT sur `audit/independent-review-chatgpt-20261120` (commit `81e840668a07f135f925b7f9e0b92c083c3cdcf0`), audit Codex [PR #11](https://github.com/Rivounet/mousse-controler/pull/11) (Draft, non fusionnée), base commune `d19db664bc1e7d83ab1d289f89373f9e327a482b`. Les quatre P1 prioritaires sont HOGP non borné, bouton incertain, quota captures non strict et absence de bornes explicites sur les connexions/lectures LAN. Les autres risques sont conservés dans la matrice du rapport.
+
+**Exécution :** lots R0 à R6 définis au planning ; aucune correction, déploiement, essai HID réel, capture réelle ou fusion de PR n'est autorisé implicitement. Conserver la séparation entre code GitHub, clone local et processus en service. Une revue et une autorisation de fusion restent requises pour chaque PR.
