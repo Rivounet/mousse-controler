@@ -25,6 +25,7 @@ applicatif de l'utilisateur. Enregistrer la tâche
 `MousseControler-PositionAgent` en mode interactif limité avec déclencheur
 `AtLogOn`. Vérifier `agent_is_interactive=true`. Ne jamais activer l'auto-logon :
 après un redémarrage, l'utilisateur ouvre sa session puis la tâche démarre.
+Les deux tâches persistantes ont cinq reprises sur échec espacées d'une minute.
 
 ## Mini-PC
 
@@ -53,6 +54,9 @@ Le mode `serve` prépare GATT puis démarre l'annonce connectable. Les commandes
 loopback authentifiées `transport_status` et `position_status` fournissent une
 preuve sans mouvement. Après 30 s sans abonnement, le runtime recrée le
 transport et recommence l'annonce ; aucun nouvel appairage n'est demandé.
+Le lanceur du mini-PC nettoie le transport si l'initialisation échoue et retente
+jusqu'à cinq fois, toutes les 30 s. Ce second niveau couvre les indisponibilités
+Bluetooth transitoires observées juste après une ouverture de session.
 
 ## Arrêter
 

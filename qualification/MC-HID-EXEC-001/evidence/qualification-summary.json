@@ -45,7 +45,12 @@
     "target_pairing_persisted": true,
     "target_final_reconnect_state": "PASS after manual logon; automatic reconnect without pairing",
     "target_final_reconnect_upper_bound_ms": 197731,
-    "mini_physical_reboot_executed": false,
+    "mini_physical_reboot_executed": true,
+    "mini_pairing_persisted": true,
+    "mini_new_pairing_required": false,
+    "mini_final_reconnect_state": "PASS after startup recovery; automatic reconnect without pairing",
+    "mini_final_reconnect_upper_bound_ms": 51248,
+    "mini_controlled_failure_recovery": true,
     "mini_reboot_blocker": null
   },
   "hardware_qualification": {
@@ -62,11 +67,11 @@
     "emergency_stop_confirmed": true
   },
   "tests": {
-    "total": 123,
-    "passed": 123,
+    "total": 125,
+    "passed": 125,
     "failed": 0,
-    "duration_seconds": 39.541
+    "duration_seconds": 56.441
   },
-  "verdict": "INCOMPLETE_REBOOT_QUALIFICATION",
+  "verdict": "PASS_WITH_RESERVATIONS",
   "hogp_core_verdict": "PASS_WITH_RESERVATIONS"
 }

@@ -2,8 +2,8 @@
 
 **Date :** 20 novembre 2026  
 **Branche :** `feat/mc-hid-exec-001`  
-**Verdict :** `INCOMPLETE` — fonctions matérielles `PASS_WITH_RESERVATIONS`,
-redémarrage du mini-PC autorisé et en attente de preuve finale
+**Verdict :** `PASS_WITH_RESERVATIONS` — fonctions matérielles et redémarrages
+qualifiés ; réserve de performance sur la latence de positionnement
 
 ## Résultat matériel
 
@@ -43,6 +43,8 @@ transportés par le pilote HID Bluetooth natif.
 La tâche persistante `MousseControler-PositionAgent` possède un déclencheur
 `AtLogOn` et redémarre dans la session interactive après ouverture manuelle de
 session. Aucune connexion automatique n'a été activée.
+Les tâches des deux hôtes possèdent également cinq reprises sur échec espacées
+d'une minute.
 
 Le runtime du mini-PC démarre la publicité juste après la préparation GATT. La
 tâche persistante `MousseControler-HOGP`, déclenchée `AtLogOn`, a été installée
@@ -71,6 +73,25 @@ Le redémarrage du mini-PC a d'abord été différé pendant qu'un processus de 
 `poker-vision`, étranger au projet, rendait la condition « absence d'opération
 critique » fausse. Il n'a été ni interrompu ni modifié et s'est terminé avant le
 précontrôle final.
+
+Le mini-PC a ensuite redémarré à 08:43:06 après la commande contrôlée. OpenSSH
+est revenu en mode `Running/Automatic`, le port 22 écoute en IPv4 et IPv6, le
+Git était resté propre et l'auto-logon était toujours désactivé. Après
+l'ouverture manuelle de session, le premier lancement AtLogOn a retourné `1`
+et laissé un runtime partiel : condition Bluetooth transitoire non journalisée
+par Task Scheduler. Une reproduction en premier plan a réussi sans changement
+d'appairage, puis la tâche de production a retrouvé les deux API, l'annonce
+`Started`, `subscribed=True`, les boutons à zéro et une position fraîche. La
+borne supérieure observée entre ce lancement et la preuve d'abonnement est
+51,248 s.
+
+Cette panne réelle a conduit à deux protections supplémentaires : nettoyage du
+transport si l'initialisation échoue, puis cinq tentatives internes espacées de
+30 s dans le lanceur. Une injection de panne contrôlée, précédée de l'arrêt
+d'urgence authentifié, a qualifié cette reprise : le nouveau processus et les
+deux ports sont revenus seuls, puis l'abonnement HID existant et la position
+fraîche (47 ms), sans appairage. Les radios Bluetooth finales des deux machines
+sont `On`; les périphériques HID et GATT cible sont `OK`.
 
 ## Qualification fonctionnelle sur surface sûre
 
@@ -109,7 +130,7 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 ## Tests et jalons
 
 `python -m unittest discover -v`, avec le répertoire temporaire court prévu :
-**123/123 PASS en 39,541 s**. Les builds réels de `PairingTool.exe`,
+**125/125 PASS en 56,441 s**. Les builds réels de `PairingTool.exe`,
 `PositionAgent.exe` et du MSIX signé ont également réussi.
 
 | Jalon | Résultat |
@@ -122,7 +143,7 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 | Reconnexion après recréation HOGP | PASS — 14,276 s avec l'agent |
 | Cycle radio cible | PASS |
 | Redémarrage MonOrdinateur | PASS — deux cycles, OpenSSH, AtLogOn, reconnexion sans nouvel appairage |
-| Redémarrage mini-pc-backend | Autorisé et en attente du précontrôle final |
+| Redémarrage mini-pc-backend | PASS avec réserve — appairage conservé ; panne transitoire initiale corrigée et reprise injectée qualifiée |
 | Clic et défilement | PASS sur surface dédiée |
 | Zones et trajectoires | PASS — rectangle, cercle, polygone et 5 trajets mesurés |
 | Précision | PASS — moyenne 1,8 px, maximum 2 px |
@@ -132,12 +153,13 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 
 ## État courant et réserves
 
-La paire, les deux tâches `AtLogOn`, le MSIX, le certificat de qualification et
-les radios restent actifs car ils sont nécessaires à la qualification de
-redémarrage encore ouverte. Les tâches de sonde et la surface temporaire ont été
-retirées ; le secret d'agent temporaire en clair a été écrasé puis supprimé.
+La paire, les deux tâches `AtLogOn`, le MSIX et le certificat de qualification
+restent actifs car ils constituent la configuration fonctionnelle qualifiée.
+Les tâches de sonde et la surface temporaire ont été retirées ; le secret
+d'agent temporaire en clair a été écrasé puis supprimé.
 
-Le verdict global reste `INCOMPLETE` uniquement tant que le redémarrage du
-mini-PC n'a pas sa preuve finale. La reconnexion cible, les fonctions clic,
-scroll, zones, trajectoires, précision et arrêt disposent de preuves
-matérielles expurgées.
+Le verdict global est `PASS_WITH_RESERVATIONS`. La réserve principale est la
+latence de positionnement mesurée. L'instant exact de souscription Bluetooth
+n'étant pas journalisé, les délais de redémarrage restent des bornes supérieures.
+La reprise après panne transitoire a été injectée et qualifiée, mais aucun second
+redémarrage physique du mini-PC n'a été ajouté après ce durcissement.

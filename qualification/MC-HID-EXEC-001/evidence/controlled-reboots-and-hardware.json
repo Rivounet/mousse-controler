@@ -13,6 +13,8 @@
     "mini_trigger": "AtLogOn",
     "target_task": "MousseControler-PositionAgent",
     "target_trigger": "AtLogOn",
+    "restart_on_failure_count": 5,
+    "restart_on_failure_interval": "PT1M",
     "target_agent_interactive_after_manual_logon": true,
     "plaintext_agent_secret_remaining": false
   },
@@ -33,6 +35,9 @@
     "transport_status_observable": true,
     "position_status_observable": true,
     "automatic_hogp_maintenance_seconds": 30,
+    "mini_launcher_retry_attempts": 5,
+    "mini_launcher_retry_delay_seconds": 30,
+    "failed_startup_transport_cleanup": true,
     "position_http_11_keep_alive": true,
     "expected_tls_disconnect_trace_suppressed": true,
     "position_correction_gain": 0.35,
@@ -113,9 +118,39 @@
     "qualification_state": "PASS"
   },
   "mini_reboot": {
-    "executed": false,
+    "executed": true,
+    "command_utc_ms": 1795160345736,
+    "windows_boot_time": "2026-11-20T08:43:06.5000000+01:00",
+    "manual_logon_required": true,
+    "first_task_start": "2026-11-20T09:26:32.0000000+01:00",
+    "first_task_result": 1,
+    "first_task_result_detail": "transient startup failure left a partial runtime; exact exception was not captured by Task Scheduler",
+    "foreground_reproduction_result": "startup succeeded; advertising Started; no new pairing",
+    "production_task_restart": "2026-11-20T09:37:32.0000000+01:00",
+    "subscribed_observed_utc_ms": 1795163903248,
+    "reconnect_upper_bound_from_production_task_start_ms": 51248,
+    "pairing_persisted": true,
+    "new_pairing_required": false,
+    "neutral_hid_report_accepted": true,
+    "position_sample_age_ms": 32,
+    "sshd_status": "Running/Automatic",
+    "port_22_listening_ipv4_and_ipv6": true,
+    "automatic_logon_enabled": false,
+    "mini_bluetooth_final_state": "On",
+    "target_bluetooth_final_state": "On",
+    "target_native_hid_and_gatt_status": "OK",
     "initial_blocker": "unrelated poker-vision test process active",
     "blocker_cleared_at": "2026-11-20T08:36:20.9360359+01:00",
-    "qualification_state": "authorized and pending"
+    "recovery_hardening": {
+      "task_restart_policy": "5 attempts at PT1M on both hosts",
+      "mini_internal_retry": "5 attempts at 30 seconds",
+      "transport_cleanup_on_failed_initialization": true,
+      "controlled_failure_injection": "PASS",
+      "recovered_process_observed": "2026-11-20T09:46:27.8533150+01:00",
+      "subscribed_observed": "2026-11-20T09:46:37.5805798+01:00",
+      "position_sample_age_ms": 47,
+      "buttons": 0
+    },
+    "qualification_state": "PASS_WITH_RESERVATIONS"
   }
 }

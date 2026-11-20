@@ -25,14 +25,18 @@ def serve(config_path: Path) -> int:
     receiver = PositionReceiver(store, HmacVerifier(keys))
     transport = NativeHogpTransport(Path(config["hogp_executable"]))
     controller = MouseController(transport, store)
-    controller.start()
-    transport.advertise()
-    gateway = CommandGateway(unprotect(config["command_token_dpapi"]), controller, transport, receiver)
-    position_server = make_https_server(
-        config["position_bind"], int(config["position_port"]), receiver,
-        config["tls_certificate"], config["tls_private_key"],
-    )
-    command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
+    try:
+        controller.start()
+        transport.advertise()
+        gateway = CommandGateway(unprotect(config["command_token_dpapi"]), controller, transport, receiver)
+        position_server = make_https_server(
+            config["position_bind"], int(config["position_port"]), receiver,
+            config["tls_certificate"], config["tls_private_key"],
+        )
+        command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
+    except Exception:
+        controller.emergency_stop()
+        raise
     threads = [
         threading.Thread(target=position_server.serve_forever, name="position-https", daemon=True),
         threading.Thread(target=command_server.serve_forever, name="command-loopback", daemon=True),
