@@ -1,0 +1,523 @@
+"""R0 characterization: records current robustness behaviour without fixing it.
+
+Every double in this module is process-local.  The suite never opens Bluetooth,
+never sends a native HID report, never captures a screen, and never contacts the
+target Windows host.  Tests named ``current_defect`` deliberately pass when the
+known baseline defect is reproduced; the qualification matrix gives the future
+contract and owning correction lot.
+"""
+
+from __future__ import annotations
+
+import base64
+import http.client
+import io
+import json
+from pathlib import Path
+import socket
+from http.server import ThreadingHTTPServer
+import tempfile
+import threading
+import time
+import types
+import unittest
+from unittest import mock
+
+from mousse_controler import app
+from mousse_controler.actions import ActionExecutor, ActionRegistry
+from mousse_controler.capture import CaptureBroker
+from mousse_controler.command_server import CommandGateway
+from mousse_controler.controller import MouseController, PositionStore
+from mousse_controler.position_server import handler_factory
+from mousse_controler.transport import NativeHogpTransport, SimulatedHidTransport, TransportError
+
+from tests.r0_doubles import (
+    ActionsDouble,
+    BlockingLineStream,
+    FailingAfterEffectTransport,
+    ProcessDouble,
+    SaturatingStderr,
+    SequenceDouble,
+    UpdateOrderModel,
+)
+
+
+TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
+PNG = b"\x89PNG\r\n\x1a\n" + b"r0-characterization"
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def wait_for_record(registry: ActionRegistry, action_id: str, timeout: float = 1.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        record = registry.get(action_id)
+        if record["state"] in TERMINAL:
+            return record
+        time.sleep(0.005)
+    raise AssertionError(f"action {action_id} did not become terminal")
+
+
+class TransportCharacterizationTests(unittest.TestCase):
+    def test_T01_current_defect_alive_silent_engine_ignores_startup_timeout(self):
+        stream = BlockingLineStream()
+        process = ProcessDouble(stream)
+        transport = NativeHogpTransport(Path("engine.exe"), startup_timeout=0.01)
+        outcome: dict[str, object] = {}
+
+        def start() -> None:
+            try:
+                transport.start()
+            except Exception as exc:  # pragma: no cover - diagnostic capture
+                outcome["error"] = exc
+
+        with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
+            thread = threading.Thread(target=start)
+            thread.start()
+            self.assertTrue(stream.entered.wait(0.5))
+            time.sleep(0.05)
+            self.assertTrue(thread.is_alive(), "the configured startup deadline is currently unused")
+            stream.release.set()
+            thread.join(1)
+        self.assertFalse(thread.is_alive())
+        self.assertNotIn("error", outcome)
+
+    def test_T02_incomplete_engine_response_fails_closed(self):
+        transport = NativeHogpTransport(Path("engine.exe"))
+        transport._process = ProcessDouble(io.StringIO('{"ok":'))
+        with self.assertRaisesRegex(TransportError, "invalid HOGP engine response"):
+            transport._command("status")
+
+    def test_T03_interrupted_engine_reports_exit_code(self):
+        transport = NativeHogpTransport(Path("engine.exe"))
+        transport._process = ProcessDouble(io.StringIO(""), return_code=23)
+        with self.assertRaisesRegex(TransportError, "exit=23"):
+            transport._read_result()
+
+    def test_T04_current_defect_saturated_stderr_is_never_drained(self):
+        stdout = BlockingLineStream()
+        stderr = SaturatingStderr()
+        process = ProcessDouble(stdout, stderr=stderr)
+        transport = NativeHogpTransport(Path("engine.exe"), startup_timeout=0.01)
+        with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
+            thread = threading.Thread(target=transport.start)
+            thread.start()
+            self.assertTrue(stderr.blocked.wait(0.5))
+            self.assertTrue(stdout.entered.wait(0.5))
+            self.assertEqual(stderr.read_calls, 0)
+            self.assertTrue(thread.is_alive())
+            stderr.unblock()
+            stdout.release.set()
+            thread.join(1)
+        self.assertFalse(thread.is_alive())
+
+
+class ActionCharacterizationTests(unittest.TestCase):
+    def make_executor(self, transport=None):
+        transport = transport or SimulatedHidTransport()
+        controller = MouseController(transport, PositionStore())
+        controller.start()
+        registry = ActionRegistry()
+        return transport, controller, registry, ActionExecutor(controller, registry)
+
+    def test_A01_current_defect_ambiguous_press_continue_leaves_pressed_state(self):
+        transport, controller, registry, executor = self.make_executor(
+            FailingAfterEffectTransport("buttons"))
+        try:
+            accepted = executor.submit({
+                "kind": "press", "button": "left", "error_policy": "continue",
+            })
+            result = wait_for_record(registry, accepted["action_id"])
+            self.assertEqual(result["state"], "UNKNOWN")
+            self.assertFalse(controller.is_stopped())
+            self.assertEqual(controller.buttons_mask(), 1)
+            self.assertEqual(transport.buttons_mask, 1)
+        finally:
+            executor.close()
+
+    def test_A02_uncertain_non_idempotent_move_is_not_replayed(self):
+        transport, _controller, registry, executor = self.make_executor(
+            FailingAfterEffectTransport("move"))
+        try:
+            accepted = executor.submit({
+                "kind": "move_relative", "dx": 2, "dy": 3,
+                "error_policy": "retry", "max_attempts": 3,
+            })
+            result = wait_for_record(registry, accepted["action_id"])
+            self.assertEqual(result["state"], "UNKNOWN")
+            self.assertEqual(len([event for event in transport.events if event[0] == "move"]), 1)
+        finally:
+            executor.close()
+
+    def test_A03_emergency_stop_releases_suspended_wait(self):
+        transport, controller, registry, executor = self.make_executor()
+        try:
+            accepted = executor.submit({"kind": "wait", "duration_seconds": 5})
+            deadline = time.monotonic() + 1
+            while registry.get(accepted["action_id"])["state"] != "RUNNING":
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.005)
+            executor.pause(accepted["action_id"])
+            executor.emergency_stop()
+            self.assertEqual(wait_for_record(registry, accepted["action_id"])["state"], "CANCELLED")
+            self.assertTrue(controller.is_stopped())
+            stop_index = transport.events.index(("stop",))
+            self.assertFalse(any(event[0] in {"move", "buttons", "scroll"}
+                                 for event in transport.events[stop_index + 1:]))
+        finally:
+            executor.close()
+
+    def test_A04_current_defect_close_leaves_queued_action_accepted(self):
+        _transport, _controller, registry, executor = self.make_executor()
+        first = executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
+        deadline = time.monotonic() + 1
+        while registry.get(first["action_id"])["state"] != "RUNNING":
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.005)
+        executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
+        executor.close()
+        self.assertEqual(registry.get("running")["state"], "CANCELLED")
+        self.assertEqual(registry.get("queued")["state"], "ACCEPTED")
+
+    def test_A05_current_defect_global_stop_omits_historical_sequence(self):
+        actions = ActionsDouble()
+        gateway = CommandGateway(b"token", object(), object(), object(), actions)
+        sequence = SequenceDouble()
+        gateway._sequence = sequence
+        gateway.execute({
+            "command_id": "stop-r0", "issued_at_ms": int(time.time() * 1000),
+            "ttl_ms": 1000, "command": "stop", "arguments": {},
+        })
+        self.assertEqual(actions.emergency_stop_calls, 1)
+        self.assertEqual(sequence.stop_calls, 0)
+
+
+class ReceiverDouble:
+    def __init__(self, *, block: bool = False) -> None:
+        self.bodies: list[bytes] = []
+        self.active = 0
+        self.max_active = 0
+        self.lock = threading.Lock()
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.block = block
+
+    def accept(self, headers, body: bytes, path: str) -> int:
+        with self.lock:
+            self.bodies.append(body)
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+            self.entered.set()
+        if self.block:
+            self.release.wait(2)
+        with self.lock:
+            self.active -= 1
+        return 1
+
+    def next_capture_request(self):
+        return None
+
+
+class NetworkCharacterizationTests(unittest.TestCase):
+    def start_server(self, receiver: ReceiverDouble):
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_factory(receiver))
+        server.daemon_threads = True
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return server
+
+    def test_N01_current_defect_slow_client_has_no_read_deadline(self):
+        receiver = ReceiverDouble()
+        server = self.start_server(receiver)
+        client = socket.create_connection(server.server_address, timeout=1)
+        self.addCleanup(client.close)
+        client.sendall(
+            b"POST /v1/position HTTP/1.1\r\nHost: localhost\r\n"
+            b"Content-Length: 10\r\nConnection: close\r\n\r\nx"
+        )
+        client.settimeout(0.08)
+        with self.assertRaises(socket.timeout):
+            client.recv(1)
+        self.assertEqual(receiver.bodies, [])
+        client.sendall(b"123456789")
+        while client.recv(4096):
+            pass
+
+    def test_N02_current_defect_incomplete_body_is_accepted_by_handler(self):
+        receiver = ReceiverDouble()
+        server = self.start_server(receiver)
+        client = socket.create_connection(server.server_address, timeout=1)
+        client.sendall(
+            b"POST /v1/position HTTP/1.1\r\nHost: localhost\r\n"
+            b"Content-Length: 10\r\nConnection: close\r\n\r\nabc"
+        )
+        client.shutdown(socket.SHUT_WR)
+        response = b""
+        while True:
+            part = client.recv(4096)
+            if not part:
+                break
+            response += part
+        client.close()
+        self.assertIn(b" 202 ", response.split(b"\r\n", 1)[0])
+        self.assertEqual(receiver.bodies, [b"abc"])
+
+    def test_N03_threaded_handler_accepts_simultaneous_connections(self):
+        receiver = ReceiverDouble(block=True)
+        server = self.start_server(receiver)
+        outcomes: list[int] = []
+
+        def post() -> None:
+            connection = http.client.HTTPConnection(*server.server_address, timeout=2)
+            try:
+                connection.request("POST", "/v1/position", body=b"x",
+                                   headers={"Content-Length": "1", "Connection": "close"})
+                outcomes.append(connection.getresponse().status)
+            finally:
+                connection.close()
+
+        clients = [threading.Thread(target=post) for _ in range(4)]
+        for client in clients:
+            client.start()
+        deadline = time.monotonic() + 1
+        while receiver.max_active < 3 and time.monotonic() < deadline:
+            time.sleep(0.005)
+        receiver.release.set()
+        for client in clients:
+            client.join(2)
+        self.assertGreaterEqual(receiver.max_active, 3)
+        self.assertEqual(outcomes, [202] * 4)
+
+
+class StorageCharacterizationTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+
+    def begin_request(self, broker: CaptureBroker, timeout: float = 1.0):
+        outcome: dict[str, object] = {}
+
+        def request() -> None:
+            try:
+                outcome["result"] = broker.request_capture("r0-action", "after", timeout=timeout)
+            except Exception as exc:
+                outcome["error"] = exc
+
+        thread = threading.Thread(target=request)
+        thread.start()
+        deadline = time.monotonic() + 1
+        queued = None
+        while queued is None and time.monotonic() < deadline:
+            queued = broker.next_request()
+            if queued is None:
+                time.sleep(0.005)
+        self.assertIsNotNone(queued)
+        return thread, outcome, queued
+
+    @staticmethod
+    def upload(request: dict) -> bytes:
+        return json.dumps({
+            "capture_id": request["capture_id"], "action_id": request["action_id"],
+            "moment": request["moment"], "state": "CAPTURED",
+            "captured_at_ms": int(time.time() * 1000), "cursor": {"x": 1, "y": 1},
+            "monitor": {"x": 0, "y": 0, "width": 10, "height": 10, "primary": True},
+            "image_base64": base64.b64encode(PNG).decode("ascii"),
+        }).encode()
+
+    def test_S01_quota_pressure_retains_undeletable_file_as_error(self):
+        broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                               max_total_bytes=len(PNG) - 1)
+        thread, _outcome, request = self.begin_request(broker)
+        with mock.patch.object(Path, "unlink", side_effect=PermissionError("denied")):
+            record = broker.accept_upload(self.upload(request))
+        thread.join(1)
+        self.assertEqual(record["state"], "DELETE_FAILED")
+        self.assertTrue(Path(record["storage_path"]).is_file())
+
+    def test_S02_delete_denied_survives_restart_and_can_be_retried(self):
+        broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024, max_total_bytes=4096)
+        thread, _outcome, request = self.begin_request(broker)
+        stored = broker.accept_upload(self.upload(request))
+        thread.join(1)
+        with mock.patch.object(Path, "unlink", side_effect=PermissionError("denied")):
+            failed = broker.delete(request["capture_id"])
+        restarted = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                  max_total_bytes=4096)
+        retained = restarted.get(request["capture_id"])
+        self.assertEqual((failed["state"], retained["state"]),
+                         ("DELETE_FAILED", "DELETE_FAILED"))
+        self.assertTrue(Path(stored["storage_path"]).is_file())
+        self.assertEqual(restarted.delete(request["capture_id"])["state"], "DELETED")
+
+    def test_S03_restart_marks_incomplete_capture_failed(self):
+        broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024, max_total_bytes=4096)
+        thread, _outcome, request = self.begin_request(broker, timeout=0.15)
+        restarted = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                  max_total_bytes=4096)
+        recovered = restarted.get(request["capture_id"])
+        thread.join(1)
+        self.assertEqual(recovered["state"], "FAILED")
+        self.assertIn("restart", recovered["error"])
+
+
+class FakeServer:
+    def __init__(self, *, shutdown_error: bool = False) -> None:
+        self.shutdown_calls = 0
+        self.shutdown_error = shutdown_error
+
+    def serve_forever(self) -> None:
+        return
+
+    def shutdown(self) -> None:
+        self.shutdown_calls += 1
+        if self.shutdown_error:
+            raise RuntimeError("simulated close failure")
+
+
+class ImmediateEvent:
+    def __init__(self) -> None:
+        self.value = False
+
+    def set(self) -> None:
+        self.value = True
+
+    def wait(self, timeout=None) -> bool:
+        return True
+
+    def is_set(self) -> bool:
+        return self.value
+
+
+class RuntimeTransport:
+    def __init__(self, path) -> None:
+        self.path = path
+
+    def advertise(self) -> None:
+        return
+
+    def status(self) -> dict[str, str]:
+        return {"subscribed": "true"}
+
+
+class RuntimeController:
+    instances: list["RuntimeController"] = []
+
+    def __init__(self, transport, store) -> None:
+        self.stop_calls = 0
+        self.__class__.instances.append(self)
+
+    def start(self) -> None:
+        return
+
+    def emergency_stop(self) -> None:
+        self.stop_calls += 1
+
+    def is_stopped(self) -> bool:
+        return False
+
+
+class RuntimeActions:
+    instances: list["RuntimeActions"] = []
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.close_calls = 0
+        self.__class__.instances.append(self)
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class LifecycleCharacterizationTests(unittest.TestCase):
+    def runtime(self, directory: str):
+        config = Path(directory) / "config.json"
+        config.write_text(json.dumps({
+            "agent_keys_dpapi": {"agent": "key"}, "command_token_dpapi": "token",
+            "hogp_executable": "engine.exe", "position_bind": "127.0.0.1",
+            "position_port": 0, "tls_certificate": "cert", "tls_private_key": "key",
+        }), encoding="utf-8")
+        RuntimeController.instances.clear()
+        RuntimeActions.instances.clear()
+        patches = [
+            mock.patch.object(app, "unprotect", side_effect=lambda value: b"secret"),
+            mock.patch.object(app, "CaptureBroker", side_effect=lambda *a, **k: object()),
+            mock.patch.object(app, "PositionStore", side_effect=lambda: object()),
+            mock.patch.object(app, "HmacVerifier", side_effect=lambda *a, **k: object()),
+            mock.patch.object(app, "PositionReceiver", side_effect=lambda *a, **k: object()),
+            mock.patch.object(app, "NativeHogpTransport", RuntimeTransport),
+            mock.patch.object(app, "MouseController", RuntimeController),
+            mock.patch.object(app, "ActionRegistry", side_effect=lambda *a, **k: object()),
+            mock.patch.object(app, "ActionExecutor", RuntimeActions),
+            mock.patch.object(app, "CommandGateway", side_effect=lambda *a, **k: object()),
+        ]
+        return config, patches
+
+    def test_L01_current_defect_partial_server_creation_is_not_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config, patches = self.runtime(directory)
+            position = FakeServer()
+            patches.extend([
+                mock.patch.object(app, "make_https_server", return_value=position),
+                mock.patch.object(app, "make_command_server",
+                                  side_effect=RuntimeError("simulated creation failure")),
+            ])
+            with self._stack(patches):
+                with self.assertRaisesRegex(RuntimeError, "creation failure"):
+                    app.serve(config)
+            self.assertEqual(position.shutdown_calls, 0)
+            self.assertEqual(RuntimeActions.instances[-1].close_calls, 1)
+            self.assertEqual(RuntimeController.instances[-1].stop_calls, 1)
+
+    def test_L02_current_defect_first_close_failure_skips_remaining_cleanup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config, patches = self.runtime(directory)
+            position = FakeServer(shutdown_error=True)
+            command = FakeServer()
+            events = FakeServer()
+            thread_facade = types.SimpleNamespace(Thread=threading.Thread, Event=ImmediateEvent)
+            patches.extend([
+                mock.patch.object(app, "make_https_server", return_value=position),
+                mock.patch.object(app, "make_command_server", return_value=command),
+                mock.patch.object(app, "make_event_server", return_value=events),
+                mock.patch.object(app, "threading", thread_facade),
+                mock.patch.object(app.signal, "signal", return_value=None),
+            ])
+            with self._stack(patches):
+                with self.assertRaisesRegex(RuntimeError, "close failure"):
+                    app.serve(config)
+            self.assertEqual(command.shutdown_calls, 0)
+            self.assertEqual(events.shutdown_calls, 0)
+            self.assertEqual(RuntimeActions.instances[-1].close_calls, 0)
+            self.assertEqual(RuntimeController.instances[-1].stop_calls, 0)
+
+    def test_L03_model_only_update_and_rollback_start_failures_are_explicit(self):
+        source = (ROOT / "scripts" / "target" /
+                  "Update-InteractivePositionAgent.ps1").read_text(encoding="utf-8")
+        self.assertLess(source.index("Move-Item -LiteralPath $temporary"),
+                        source.index("Start-ScheduledTask -TaskName $TaskName",
+                                     source.index("Move-Item -LiteralPath $temporary")))
+        model = UpdateOrderModel()
+        with self.assertRaisesRegex(RuntimeError, "start failure"):
+            model.install(fail_start=True)
+        self.assertEqual(model.installed, "new")
+        with self.assertRaisesRegex(RuntimeError, "rollback start failure"):
+            model.rollback(fail_start=True)
+        self.assertEqual(model.installed, "old")
+
+    @staticmethod
+    def _stack(patches):
+        class Stack:
+            def __enter__(self):
+                for patch in patches:
+                    patch.start()
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                for patch in reversed(patches):
+                    patch.stop()
+                return False
+        return Stack()
+
+
+if __name__ == "__main__":
+    unittest.main()
