@@ -189,3 +189,21 @@ D-021 : mandats dans le chat. D-022 : pas de revue exhaustive systématique. D-0
 Souris uniquement, sans clavier : clics multiples, maintien, glisser-déposer, boutons compatibles, roulette, actions composables. Résultats d'action corrélés par identifiant et transmis automatiquement par WebSocket (4B). Capture optionnelle avant/après action si activée (1B), jamais continue : écran entier contenant le curseur au moment de la capture. Conservation configurable par action/séquence (3C). Analyse locale future préparée, non implémentée (2C). Erreurs configurables arrêt/retry/poursuite, arrêt par défaut (5C), sans rejeu automatique d'action incertaine.
 
 Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et captures. Agent cible visible limité aux mesures/captures, sans exécution de commandes souris. Codex sur mini-pc-backend développe dans une seule PR Draft, sans fusion automatique. Voir roadmap/planning ; mandat intégral dans le chat.
+
+### État d'exécution du chantier
+
+Branche `feat/mc-mouse-actions-001`, base exacte
+`4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`. Premier commit applicatif
+`597f7401d8bc743aebf9fa018422188460dd0767` : moteur d'actions, registre/journal,
+séquences mixtes, WebSocket authentifié, broker de captures et agent cible
+étendu. Suite complète : 175/175 PASS en 47,857 s ; builds agent et témoin avec
+warnings-as-errors.
+
+Le mini-PC exécute ce contenu : GATT `Started`, abonné, boutons à zéro, position
+fraîche, API commande et WebSocket sur loopback. Un test runtime sans HID a
+observé `ACCEPTED → RUNNING → EXECUTED`. Le paquet cible réversible est vérifié
+dans un staging temporaire de MonOrdinateur. Le compte SSH isolé ne possède pas
+la tâche interactive `MousseControler-PositionAgent`; l'installation et la
+fenêtre témoin doivent donc être lancées dans la session visible avant les
+preuves réelles de capture et d'actions étendues. Ne pas présenter ces tests
+encore ouverts comme réussis.

@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-20",
+  "runtime_scope": "mini-pc-backend",
+  "transport": {
+    "advertisement_status": "Started",
+    "subscribed": true,
+    "buttons": 0,
+    "position_fresh_ms": 47
+  },
+  "websocket": {
+    "bind": "loopback",
+    "authenticated": true,
+    "protocol": "mousse.actions.v1",
+    "states": ["ACCEPTED", "RUNNING", "EXECUTED"],
+    "event_ids_unique": true,
+    "final_state_correlated": true
+  },
+  "test_action": "wait 200 ms",
+  "hid_reports_requested": 0,
+  "verdict": "PASS"
+}

@@ -68,6 +68,19 @@ elles ne décrivent pas l'état courant de la PR #6.
 
 Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
 
-## Évolution planifiée : MC-MOUSE-ACTIONS-001
+## Évolution en qualification : MC-MOUSE-ACTIONS-001
 
-Après le MVP fusionné, ajouter toutes les actions d'une souris standard (clics multiples, maintien, glisser-déposer, roulette et boutons compatibles), intégrées aux séquences, avec résultats et états d'action diffusés automatiquement par WebSocket. Capture d'écran **facultative avant/après action configurée uniquement**, de l'écran entier contenant le curseur au moment de la capture ; transmission LAN sécurisée et rétention configurable par action/séquence. Préparer l'analyse locale future sans développer de moteur visuel dans cette étape. Pas de clavier ni de capture continue. **Fonctions planifiées, non encore livrées.** Voir roadmap et planning.
+La branche dédiée ajoute clics multiples, maintien, glisser-déposer, cinq
+boutons et combinaisons, roulette verticale bornée/continue et séquences mixtes.
+Chaque action est corrélée et journalisée ; ses états sont poussés par WebSocket
+loopback authentifié. `EXECUTED` atteste l'émission HID, tandis que `CONFIRMED`
+est réservé à la position réellement observée. L'absence d'`AC Pan` dans le
+descripteur appairé rend la roulette horizontale explicitement indisponible.
+
+La capture reste **facultative avant/après une action souris configurée
+uniquement** : l'agent visible choisit au dernier moment le moniteur entier sous
+le curseur, indique la capture, transmet un PNG signé et n'accepte aucune
+commande souris. Quotas, TTL et suppression sont configurables ; aucune image
+réelle n'entre dans Git. Pas de clavier, capture continue/indépendante ou moteur
+d'analyse visuelle. Suite logicielle et WebSocket runtime qualifiés ; essais
+interactifs cible en cours. Voir roadmap, planning et rapport J6.

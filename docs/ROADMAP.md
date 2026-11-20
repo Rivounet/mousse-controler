@@ -48,15 +48,19 @@ Toute modification de périmètre, de jalon ou de critère de sortie est documen
 
 **Responsabilités :** Codex réalise, documente les tests et propose les changements ; ChatGPT tient cette roadmap à jour, suit Git/GitHub, et réalise les revues de code ou de preuves sur demande explicite ou au jalon convenu ; l'utilisateur arbitre les décisions engageantes.
 
-## J6 — MC-MOUSE-ACTIONS-001 : extension fonctionnelle planifiée
+## J6 — MC-MOUSE-ACTIONS-001 : extension fonctionnelle en qualification
 
-**Statut : à faire.** Succède au MVP J5 fusionné et consolidé. Une seule PR Draft de développement, sans fusion automatique.
+**Statut : logiciel réalisé, qualification réelle partielle.** Succède au MVP
+J5 fusionné et consolidé. Une seule PR Draft de développement, sans fusion
+automatique. Le runtime mini-PC et le WebSocket réel sont actifs ; les essais
+visibles de l'agent/capture et les actions matérielles étendues restent la porte
+de sortie.
 
 | Ordre | Lot | Critère de sortie |
 |---|---|---|
-| J6.1 | Actions souris standard complètes : clics multiples, maintien, drag/drop, boutons compatibles, roulette verticale et horizontale si HID compatible | Tests unitaires et essais matériels sûrs |
-| J6.2 | Actions composables en séquences ; identifiant, états et événements WebSocket authentifiés | Résultats corrélables, non-rejeu, échecs configurables |
-| J6.3 | Capture ponctuelle optionnelle avant/après action configurée | Uniquement le moniteur entier sous curseur au moment de capture ; transfert LAN et conservation par action/séquence |
-| J6.4 | Qualification et documentation | Tests logiciels et matériels, sécurité, confidentialité, rapport, revue avant fusion |
+| J6.1 | Actions souris standard complètes : clics multiples, maintien, drag/drop, boutons compatibles, roulette verticale ; horizontale explicitement indisponible sur le HID actuel | Réalisé logiciel ; essai matériel sûr en attente |
+| J6.2 | Actions composables en séquences ; identifiant, états et événements WebSocket authentifiés | Réalisé ; non-rejeu persistant et WebSocket réel qualifiés |
+| J6.3 | Capture ponctuelle optionnelle avant/après action configurée | Réalisé logiciel et build cible ; essai cible en attente |
+| J6.4 | Qualification et documentation | En cours ; suite complète PASS, rapport et paquet cible préparés |
 
 Hors périmètre : clavier, capture continue/périodique, capture indépendante, moteur d'analyse d'images, garantie de réaction de l'application cible.
