@@ -232,3 +232,19 @@ et son rollback ; aucune mise à jour cible n'a été nécessaire. Suite 185/185
 PASS, test runtime limité à une attente sans HID, aucune capture réelle.
 Verdict : `PASS_WITH_RESERVATIONS`. Voir le
 [rapport post-fusion](../qualification/MC-POST-MERGE-002/RAPPORT.md).
+
+### Chantier actif — MC-API-CATALOG-001
+
+Branche `feat/mc-api-catalog-001`, base `main`
+`97d81346304b1234b77ae5a8dfe35cb63e787ad6`. Le registre central contient 28
+commandes, 12 types d'actions et 6 événements WebSocket. `api_catalog` est
+authentifié sur le endpoint loopback existant ; le routage et la validation
+statique consomment la même déclaration. La référence est générée dans
+`docs/API-REFERENCE.md` et vérifiable avec
+`python scripts/generate_api_reference.py --check`.
+
+Qualification : **195/195 PASS en 67,411 s** avec `MC_TEST_TMP` court ; 10 tests
+nouveaux couvrent exhaustivité, absence de fantômes, filtres, schémas, exemples,
+erreurs, authentification, compatibilité et absence d'effet HID/capture. Aucun
+matériel réel n'a été sollicité. État de reprise : publier une PR Draft unique,
+joindre le rapport expurgé, ne pas fusionner et ne pas modifier la production.

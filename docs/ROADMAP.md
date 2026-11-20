@@ -66,3 +66,12 @@ SSH hors sandbox vers `MonOrdinateur` qualifié via fichier dédié, autorisatio
 ### Clôture du jalon J6 dans GitHub
 
 PR #8 **fusionnée dans `main`** le 20 novembre 2026, commit `e0658142a65d8b494f109efa3318c6ea21feac3d`. **J6 : validé avec réserves**, 185 tests logiciels réussis selon les preuves publiées et 17 actions matérielles vérifiées avant les correctifs finaux. Aucune qualification post-fusion des processus installés n'est revendiquée. Réserves et contraintes de prise de souris maintenues.
+
+## J7 — Découverte automatique des contrats API
+
+MC-API-CATALOG-001 ajoute une source déclarative unique pour les commandes, les
+types d'actions et les événements. Le routeur consomme directement les contrats,
+la documentation est générée depuis eux et les tests interdisent commandes
+fantômes ou gestionnaires non catalogués. État : **implémenté et qualifié en
+logiciel sur branche dédiée, PR Draft à publier**. Critère de sortie GitHub : PR
+Draft documentée, revue puis décision explicite ; aucune fusion automatique.

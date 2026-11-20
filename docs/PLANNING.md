@@ -83,3 +83,17 @@ Sur le SHA applicatif `e7e26332e56a39cbd2ca915413c313da07c638d9`, corrections de
 ### Clôture GitHub J6
 
 **PR #8 fusionnée dans `main`** au commit `e0658142a65d8b494f109efa3318c6ea21feac3d` le 20 novembre 2026. MC-011 à MC-015 : **Validé avec réserves**, selon qualification publiée ; les deux corrections de sûreté ont été revues avant fusion. Prochaine étape opérationnelle : contrôler la concordance entre `main`, clone local et processus installés, sans déclencher de commande HID ni de capture non autorisée. Les réserves J6 restent suivies.
+
+## J7 — MC-API-CATALOG-001 : implémenté, livraison Draft en cours
+
+| ID | Travail | État |
+|---|---|---|
+| MC-016 | Registre central partagé par découverte, routage et validation statique | Validé logiciel |
+| MC-017 | Commande `api_catalog`, recherche, catégories et sélection des sections | Validé logiciel |
+| MC-018 | Contrats des 28 commandes, 12 actions et 6 événements WebSocket | Validé logiciel |
+| MC-019 | Référence API générée et garde `--check` | Validé logiciel |
+| MC-020 | Exhaustivité, compatibilité, authentification et absence d'effet matériel | 195/195 PASS ; PR Draft à publier |
+
+La qualification est strictement logicielle : aucune commande HID ni capture
+réelle. La prochaine porte est la revue de la PR Draft ; aucune fusion ni mise à
+jour de production n'est implicite.
