@@ -60,26 +60,18 @@ Sur 100 mouvements : erreur maximale 2 px, réussite 100 %, latence médiane
 l'absence de rejeu sont qualifiés ; la concurrence du contrôleur est couverte
 par des tests déterministes sur l'adaptateur simulé.
 
-## Chantier courant — MC-MOUSE-ACTIONS-001 (J6)
+## J6 — MC-MOUSE-ACTIONS-001 : qualification achevée avec réserves
 
-**Statut : en qualification.** Branche `feat/mc-mouse-actions-001` issue de
-`4b5e804`. Le moteur est activé sur mini-pc-backend ; l'agent cible compilé et
-le paquet réversible sont en staging. PR Draft unique, sans fusion automatique.
+**Statut : En revue pour fusion.** Livraison technique qualifiée `PASS_WITH_RESERVATIONS` le 20 novembre 2026 sur la [PR #8](https://github.com/Rivounet/mousse-controler/pull/8), toujours **Draft non fusionnée**. SHA applicatif de qualification `92817a7d802c0d2c0d22b4502071a3dc4a994c19`.
 
-| Priorité | ID | Travail | État |
-|---|---|---|---|
-| 1 | MC-011 | Contrat d'actions souris et capacités HID, clics multiples, maintien, drag/drop, roulette, boutons | Réalisé logiciel ; matériel ciblé à exécuter |
-| 2 | MC-012 | Composition des actions et attentes dans les séquences ; annulation, non-rejeu, arrêt | Réalisé et testé |
-| 3 | MC-013 | Identifiants et suivi d'action ; notifications WebSocket automatiques, authentifiées | Réalisé ; WebSocket runtime réel qualifié |
-| 4 | MC-014 | Capture optionnelle avant/après action, moniteur entier contenant le curseur ; stockage et rétention configurables | Réalisé logiciel/agent ; cible interactive à qualifier |
-| 5 | MC-015 | Tests, qualification matérielle, sécurité, documentation et PR Draft | En cours — 175 PASS au jalon global |
+| ID | Travail | État |
+|---|---|---|
+| MC-011 | Actions souris cinq boutons, clics multiples, maintien, glisser, roulette verticale | Validé logiciel + matériel ; horizontale indisponible sur HID actuel |
+| MC-012 | Séquences mixtes, attentes, pause/reprise, politiques d'erreur et non-rejeu | Validé logiciel + matériel |
+| MC-013 | Journal d'actions et événements WebSocket corrélés et authentifiés | Validé logiciel + runtime |
+| MC-014 | Capture optionnelle avant/après, moniteur complet sous curseur, rétention | Validé logiciel + deux captures réelles ; sources supprimées |
+| MC-015 | Tests, qualification sur deux machines, arrêt d'urgence, nettoyage, preuves | Validé avec réserves ; 177/177 tests PASS en 44,286 s |
 
-Choix validés : 1B capture avant/après uniquement ; 2C analyse future seulement ; 3C conservation par action/séquence ; 4B WebSocket ; 5C erreur configurable, arrêt par défaut. Aucun rejeu d'action incertaine, aucun clavier, aucune capture continue.
+Preuves : 17 actions matérielles réussies, 37 événements sur surface sûre ; WebSocket réel, arrêt d'urgence sans événement postérieur, reconnexion HOGP active/boutons à zéro/sans rejeu. SSH hors sandbox via configuration dédiée qualifié, tâche interactive temporaire contrôlée sans élévation.
 
-Contrôles réels sans émission HID : tâche mini-PC relancée sur le commit
-`597f740`, GATT `Started`, abonnement actif, boutons à zéro, position fraîche,
-ports commande/WebSocket limités à loopback. Une action d'attente de 200 ms a
-produit automatiquement `ACCEPTED → RUNNING → EXECUTED` avec trois événements
-uniques et corrélés. L'accès SSH `codex-remote` est volontairement séparé de la
-session propriétaire de `MousseControler-PositionAgent`; l'installation cible
-nécessite donc l'exécution du paquet préparé dans la session visible.
+**Réserves :** absence d'AC Pan pour la roulette horizontale ; ancien dossier de staging maintenance vide non supprimé sous Windows Temp ; nouvelle prise de souris soumise à avertissement et accord explicite. Aucune CI GitHub configurée. Le prochain jalon est la décision explicite de revue/fusion, **pas une reprise de qualification automatique**.
