@@ -79,3 +79,7 @@ Preuves : 17 actions matérielles réussies, 37 événements sur surface sûre ;
 ### Contrôle de sortie J6 — correctifs de revue
 
 Sur le SHA applicatif `e7e26332e56a39cbd2ca915413c313da07c638d9`, corrections de suppression des captures et du registre anti-rejeu intégrées : refus de suppression conservé en `DELETE_FAILED`, index de fichiers persistant ; réservations d'identifiants conservées 30 jours par défaut et jusqu'à éviction des états, y compris après compaction et redémarrage. **17/17 tests ciblés PASS ; 185/185 tests complets PASS en 54,007 s**, selon les preuves publiées. Aucun nouveau test HID réel après ces correctifs. **Prochaine porte : décision explicite de fusion de la PR #8**, actuellement Draft.
+
+### Clôture GitHub J6
+
+**PR #8 fusionnée dans `main`** au commit `e0658142a65d8b494f109efa3318c6ea21feac3d` le 20 novembre 2026. MC-011 à MC-015 : **Validé avec réserves**, selon qualification publiée ; les deux corrections de sûreté ont été revues avant fusion. Prochaine étape opérationnelle : contrôler la concordance entre `main`, clone local et processus installés, sans déclencher de commande HID ni de capture non autorisée. Les réserves J6 restent suivies.
