@@ -141,15 +141,19 @@ class SequenceRunner:
         self._skip.set()
         self._advance.set()
 
-    def stop(self) -> None:
+    def request_stop(self) -> None:
+        """Publish stop intent and wake waits without acquiring the HID command lock."""
         self._stop.set()
         self._skip.set()
         self._advance.set()
         self._run_gate.set()
-        self._controller.emergency_stop()
         with self._lock:
             self._status.state = SequenceState.STOPPED
             self._status.updated_at = time.time()
+
+    def stop(self) -> None:
+        self.request_stop()
+        self._controller.emergency_stop()
 
     def join(self, timeout: float | None = None) -> None:
         thread = self._thread
@@ -173,6 +177,8 @@ class SequenceRunner:
 
     def _set_state(self, state: SequenceState, **changes: object) -> None:
         with self._lock:
+            if self._stop.is_set() and state != SequenceState.STOPPED:
+                return
             self._status.state = state
             self._status.updated_at = time.time()
             for name, value in changes.items():

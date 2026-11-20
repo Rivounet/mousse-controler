@@ -95,8 +95,19 @@ class SequenceDouble:
     def stop(self) -> None:
         self.stop_calls += 1
 
+    def request_stop(self) -> None:
+        self.stop_calls += 1
+
 
 class ActionsDouble:
+    def __init__(self) -> None:
+        self.request_stop_calls = 0
+
+    def request_stop(self) -> None:
+        self.request_stop_calls += 1
+
+
+class ControllerStopDouble:
     def __init__(self) -> None:
         self.emergency_stop_calls = 0
 

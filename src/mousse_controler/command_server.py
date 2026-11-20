@@ -119,10 +119,23 @@ class CommandGateway:
             int(arguments["delta"])))
 
     def _command_stop(self, payload: dict[str, Any], arguments: dict[str, Any]) -> None:
+        errors: list[str] = []
         if self._actions is not None:
-            self._actions.emergency_stop()
-        else:
+            try:
+                self._actions.request_stop()
+            except Exception as exc:
+                errors.append(f"actions: {exc}")
+        if self._sequence is not None:
+            try:
+                self._sequence.request_stop()
+            except Exception as exc:
+                errors.append(f"sequence: {exc}")
+        try:
             self._controller.emergency_stop()
+        except Exception as exc:
+            errors.append(f"controller: {exc}")
+        if errors:
+            raise CommandError("global stop completed with errors: " + "; ".join(errors))
 
     def _command_capabilities(self, payload: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
         if self._actions is None:

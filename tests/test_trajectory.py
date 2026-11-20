@@ -170,6 +170,39 @@ class SequenceTests(unittest.TestCase):
         self.assertEqual(len(transport.events), stopped_count)
         self.assertEqual(runner.status().state, SequenceState.STOPPED)
 
+    def test_stop_from_commanded_wait_wakes_and_converges(self):
+        steps = [
+            SequenceStep(RectangleZone(100, 100, 5, 5), WaitMode.COMMANDED),
+            SequenceStep(RectangleZone(200, 200, 5, 5)),
+        ]
+        runner, transport = self.make_runner(steps)
+        runner.start()
+        deadline = time.time() + 2
+        while runner.status().state != SequenceState.WAITING and time.time() < deadline:
+            time.sleep(0.005)
+        self.assertEqual(runner.status().state, SequenceState.WAITING)
+        runner.stop(); runner.join(1)
+        stopped_count = len(transport.events)
+        time.sleep(0.05)
+        self.assertEqual(runner.status().state, SequenceState.STOPPED)
+        self.assertEqual(len(transport.events), stopped_count)
+
+    def test_stop_while_paused_wakes_and_converges(self):
+        runner, transport = self.make_runner(
+            [SequenceStep(RectangleZone(1000, 800, 5, 5))], delay=0.01)
+        runner.start()
+        deadline = time.time() + 1
+        while len([event for event in transport.events if event[0] == "move"]) < 2:
+            self.assertLess(time.time(), deadline)
+            time.sleep(0.005)
+        runner.pause()
+        self.assertEqual(runner.status().state, SequenceState.PAUSED)
+        runner.stop(); runner.join(1)
+        stopped_count = len(transport.events)
+        time.sleep(0.05)
+        self.assertEqual(runner.status().state, SequenceState.STOPPED)
+        self.assertEqual(len(transport.events), stopped_count)
+
     def test_topology_change_aborts_sequence(self):
         store = PositionStore()
         transport = FeedbackTransport(store)
