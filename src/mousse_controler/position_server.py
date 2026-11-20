@@ -5,6 +5,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from collections import deque
+import io
 import json
 import math
 import socket
@@ -24,11 +25,19 @@ DEFAULT_MAX_CONNECTIONS = 8
 DEFAULT_REQUEST_QUEUE_SIZE = 8
 DEFAULT_TLS_HANDSHAKE_TIMEOUT = 3.0
 DEFAULT_HEADER_TIMEOUT = 2.0
+DEFAULT_HEADER_TOTAL_TIMEOUT = 5.0
 DEFAULT_BODY_TIMEOUT = 5.0
+DEFAULT_BODY_TOTAL_TIMEOUT = 10.0
+DEFAULT_CAPTURE_BODY_TOTAL_TIMEOUT = 120.0
 DEFAULT_WRITE_TIMEOUT = 2.0
+MAX_HEADER_BYTES = 64 * 1024
 
 
 class IncompleteBodyError(ValueError):
+    pass
+
+
+class HeaderTooLargeError(ValueError):
     pass
 
 
@@ -48,7 +57,10 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         request_queue_size: int = DEFAULT_REQUEST_QUEUE_SIZE,
         tls_handshake_timeout: float = DEFAULT_TLS_HANDSHAKE_TIMEOUT,
         header_timeout: float = DEFAULT_HEADER_TIMEOUT,
+        header_total_timeout: float = DEFAULT_HEADER_TOTAL_TIMEOUT,
         body_timeout: float = DEFAULT_BODY_TIMEOUT,
+        body_total_timeout: float = DEFAULT_BODY_TOTAL_TIMEOUT,
+        capture_body_total_timeout: float = DEFAULT_CAPTURE_BODY_TOTAL_TIMEOUT,
         write_timeout: float = DEFAULT_WRITE_TIMEOUT,
     ) -> None:
         count_limits = {
@@ -58,7 +70,9 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         timeout_limits = {
             "tls_handshake_timeout": tls_handshake_timeout,
             "header_timeout": header_timeout,
+            "header_total_timeout": header_total_timeout,
             "body_timeout": body_timeout,
+            "body_total_timeout": body_total_timeout,
             "write_timeout": write_timeout,
         }
         if any(isinstance(value, bool) or not isinstance(value, int) or
@@ -67,11 +81,23 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         if any(not math.isfinite(value) or not 0 < value <= 60
                for value in timeout_limits.values()):
             raise ValueError("server timeouts must be finite and in (0, 60]")
+        if (not math.isfinite(capture_body_total_timeout) or
+                not 0 < capture_body_total_timeout <= 300):
+            raise ValueError("capture body total timeout must be finite and in (0, 300]")
+        if header_total_timeout < header_timeout:
+            raise ValueError("header total timeout must cover the inactivity timeout")
+        if body_total_timeout < body_timeout:
+            raise ValueError("body total timeout must cover the inactivity timeout")
+        if capture_body_total_timeout < body_timeout:
+            raise ValueError("capture body total timeout must cover the inactivity timeout")
         self.request_queue_size = int(request_queue_size)
         self.max_connections = int(max_connections)
         self.tls_handshake_timeout = float(tls_handshake_timeout)
         self.header_timeout = float(header_timeout)
+        self.header_total_timeout = float(header_total_timeout)
         self.body_timeout = float(body_timeout)
+        self.body_total_timeout = float(body_total_timeout)
+        self.capture_body_total_timeout = float(capture_body_total_timeout)
         self.write_timeout = float(write_timeout)
         self._ssl_context = ssl_context
         self._connection_slots = threading.BoundedSemaphore(self.max_connections)
@@ -84,11 +110,18 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     def _prepare_request(self, request: socket.socket) -> socket.socket:
         if self._ssl_context is not None:
             request.settimeout(self.tls_handshake_timeout)
-            request = self._ssl_context.wrap_socket(
-                request, server_side=True, do_handshake_on_connect=False,
-            )
-            request.settimeout(self.tls_handshake_timeout)
-            request.do_handshake()
+            wrapped: socket.socket | None = None
+            try:
+                wrapped = self._ssl_context.wrap_socket(
+                    request, server_side=True, do_handshake_on_connect=False,
+                )
+                wrapped.settimeout(self.tls_handshake_timeout)
+                wrapped.do_handshake()
+            except BaseException:
+                if wrapped is not None:
+                    wrapped.close()
+                raise
+            request = wrapped
         request.settimeout(self.header_timeout)
         return request
 
@@ -100,17 +133,25 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
             request.close()
             raise ConnectionAbortedError("position server connection limit reached")
         try:
-            request = self._prepare_request(request)
+            with self._connection_lock:
+                self._active_connections += 1
+                self._max_active_connections = max(
+                    self._max_active_connections, self._active_connections,
+                )
         except BaseException:
             self._connection_slots.release()
             request.close()
             raise
-        with self._connection_lock:
-            self._active_connections += 1
-            self._max_active_connections = max(
-                self._max_active_connections, self._active_connections,
-            )
         return request, client_address
+
+    def process_request_thread(self, request: socket.socket, client_address: Any) -> None:
+        """Prepare TLS inside the admitted worker, never in the accept loop."""
+        try:
+            prepared = self._prepare_request(request)
+        except BaseException:
+            self.shutdown_request(request)
+            return
+        super().process_request_thread(prepared, client_address)
 
     def shutdown_request(self, request: socket.socket) -> None:
         try:
@@ -130,7 +171,10 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
                 "request_queue_size": self.request_queue_size,
                 "tls_handshake_timeout": self.tls_handshake_timeout,
                 "header_timeout": self.header_timeout,
+                "header_total_timeout": self.header_total_timeout,
                 "body_timeout": self.body_timeout,
+                "body_total_timeout": self.body_total_timeout,
+                "capture_body_total_timeout": self.capture_body_total_timeout,
                 "write_timeout": self.write_timeout,
             }
 
@@ -249,18 +293,89 @@ def handler_factory(receiver: PositionReceiver):
     class Handler(BaseHTTPRequestHandler):
         server_version = "MoussePosition/1"
         protocol_version = "HTTP/1.1"
+        rbufsize = 0
+
+        def setup(self) -> None:
+            super().setup()
+            self._request_buffer = bytearray()
 
         def _set_timeout(self, timeout: float) -> None:
             self.connection.settimeout(timeout)
 
+        def _recv_before(self, deadline: float, inactivity_timeout: float,
+                         size: int = 64 * 1024) -> bytes:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise socket.timeout("total request receive deadline exceeded")
+            self._set_timeout(min(inactivity_timeout, remaining))
+            return self.connection.recv(size)
+
+        def _read_headers_bounded(self) -> tuple[bytes, bytes]:
+            inactivity = float(getattr(
+                self.server, "header_timeout", DEFAULT_HEADER_TIMEOUT,
+            ))
+            total = float(getattr(
+                self.server, "header_total_timeout", DEFAULT_HEADER_TOTAL_TIMEOUT,
+            ))
+            deadline = time.monotonic() + total
+            while True:
+                candidates = []
+                for marker in (b"\r\n\r\n", b"\n\n"):
+                    index = self._request_buffer.find(marker)
+                    if index >= 0:
+                        candidates.append((index, len(marker)))
+                if candidates:
+                    index, marker_length = min(candidates)
+                    end = index + marker_length
+                    if end > MAX_HEADER_BYTES:
+                        raise HeaderTooLargeError("request headers too large")
+                    block = bytes(self._request_buffer[:end])
+                    del self._request_buffer[:end]
+                    line_end = block.find(b"\n")
+                    if line_end < 0:
+                        raise ValueError("request line is incomplete")
+                    return block[:line_end + 1], block[line_end + 1:]
+                if len(self._request_buffer) > MAX_HEADER_BYTES:
+                    raise HeaderTooLargeError("request headers too large")
+                chunk = self._recv_before(deadline, inactivity)
+                if not chunk:
+                    if not self._request_buffer:
+                        return b"", b""
+                    raise ConnectionResetError("connection closed during request headers")
+                self._request_buffer.extend(chunk)
+
         def _read_exact_body(self, length: int) -> bytes:
-            self._set_timeout(float(getattr(self.server, "body_timeout", DEFAULT_BODY_TIMEOUT)))
-            body = self.rfile.read(length)
+            inactivity = float(getattr(
+                self.server, "body_timeout", DEFAULT_BODY_TIMEOUT,
+            ))
+            timeout_name = (
+                "capture_body_total_timeout" if self.path == "/v1/capture"
+                else "body_total_timeout"
+            )
+            timeout_default = (
+                DEFAULT_CAPTURE_BODY_TOTAL_TIMEOUT if self.path == "/v1/capture"
+                else DEFAULT_BODY_TOTAL_TIMEOUT
+            )
+            deadline = time.monotonic() + float(getattr(
+                self.server, timeout_name, timeout_default,
+            ))
+            body = bytearray()
+            buffered = min(length, len(self._request_buffer))
+            if buffered:
+                body.extend(self._request_buffer[:buffered])
+                del self._request_buffer[:buffered]
+            while len(body) < length:
+                chunk = self._recv_before(
+                    deadline, inactivity, min(64 * 1024, length - len(body)),
+                )
+                if not chunk:
+                    break
+                body.extend(chunk)
             if len(body) != length:
                 raise IncompleteBodyError(
                     f"incomplete request body: expected {length}, received {len(body)}"
                 )
-            return body
+            return bytes(body)
 
         def _send_error_bounded(self, status: HTTPStatus) -> None:
             self._set_timeout(float(getattr(self.server, "write_timeout", DEFAULT_WRITE_TIMEOUT)))
@@ -271,10 +386,39 @@ def handler_factory(receiver: PositionReceiver):
                 self.close_connection = True
 
         def handle_one_request(self) -> None:
-            self._set_timeout(float(getattr(
-                self.server, "header_timeout", DEFAULT_HEADER_TIMEOUT,
-            )))
-            super().handle_one_request()
+            try:
+                self.requestline = ""
+                self.request_version = ""
+                self.command = ""
+                self.raw_requestline, header_bytes = self._read_headers_bounded()
+                if not self.raw_requestline:
+                    self.close_connection = True
+                    return
+                if len(self.raw_requestline) > 65536:
+                    self.send_error(HTTPStatus.REQUEST_URI_TOO_LONG)
+                    return
+                socket_rfile = self.rfile
+                self.rfile = io.BytesIO(header_bytes)
+                try:
+                    if not self.parse_request():
+                        return
+                finally:
+                    self.rfile = socket_rfile
+                method_name = "do_" + self.command
+                if not hasattr(self, method_name):
+                    self.send_error(
+                        HTTPStatus.NOT_IMPLEMENTED,
+                        "Unsupported method (%r)" % self.command,
+                    )
+                    return
+                getattr(self, method_name)()
+                self.wfile.flush()
+            except HeaderTooLargeError:
+                self.close_connection = True
+                self._send_error_bounded(HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE)
+            except (TimeoutError, ConnectionError, ValueError):
+                self.close_connection = True
+                return
 
         def do_POST(self) -> None:  # noqa: N802
             if self.path not in ("/v1/position", "/v1/capture"):
@@ -333,7 +477,10 @@ def make_https_server(
     request_queue_size: int = DEFAULT_REQUEST_QUEUE_SIZE,
     tls_handshake_timeout: float = DEFAULT_TLS_HANDSHAKE_TIMEOUT,
     header_timeout: float = DEFAULT_HEADER_TIMEOUT,
+    header_total_timeout: float = DEFAULT_HEADER_TOTAL_TIMEOUT,
     body_timeout: float = DEFAULT_BODY_TIMEOUT,
+    body_total_timeout: float = DEFAULT_BODY_TOTAL_TIMEOUT,
+    capture_body_total_timeout: float = DEFAULT_CAPTURE_BODY_TOTAL_TIMEOUT,
     write_timeout: float = DEFAULT_WRITE_TIMEOUT,
 ) -> BoundedThreadingHTTPServer:
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -343,5 +490,8 @@ def make_https_server(
         (bind_host, port), handler_factory(receiver), ssl_context=context,
         max_connections=max_connections, request_queue_size=request_queue_size,
         tls_handshake_timeout=tls_handshake_timeout, header_timeout=header_timeout,
-        body_timeout=body_timeout, write_timeout=write_timeout,
+        header_total_timeout=header_total_timeout, body_timeout=body_timeout,
+        body_total_timeout=body_total_timeout,
+        capture_body_total_timeout=capture_body_total_timeout,
+        write_timeout=write_timeout,
     )

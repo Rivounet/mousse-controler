@@ -20,11 +20,23 @@ Couverture HOGP :
 Couverture LAN :
 
 - en-têtes et corps lents ;
+- en-têtes et corps `trickle` progressant avant chaque timeout d'inactivité,
+  mais arrêtés par leur deadline absolue ;
 - corps tronqué et déconnexion ;
 - plafond de connexions et refus de l'excès ;
 - timeout TLS simulé ;
+- vrai TLS loopback avec certificat de test : handshake muet concurrent d'un
+  handshake valide, sans blocage de l'accept-loop, puis libération des slots ;
+- capture loopback de 24 Mio progressant normalement ;
+- deux requêtes pipelinées sur une connexion persistante, y compris lorsque
+  les octets de la seconde ont été lus avec les premiers en-têtes ;
 - reprise par client sain ;
 - HMAC et anti-rejeu via le handler HTTP borné.
+
+Le certificat et sa clé privée sont des données de test auto-signées intégrées
+au test, utilisables uniquement sur `127.0.0.1`. La vérification du client est
+désactivée uniquement dans ce scénario. Cela ne qualifie ni le certificat de
+production, ni Schannel, ni un trafic LAN réel.
 
 ## Caractérisations R0 adaptées
 

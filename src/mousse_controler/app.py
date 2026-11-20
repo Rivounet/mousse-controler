@@ -65,7 +65,13 @@ def serve(config_path: Path) -> int:
             tls_handshake_timeout=float(config.get(
                 "position_tls_handshake_timeout_seconds", 3.0)),
             header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
+            header_total_timeout=float(config.get(
+                "position_header_total_timeout_seconds", 5.0)),
             body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+            body_total_timeout=float(config.get(
+                "position_body_total_timeout_seconds", 10.0)),
+            capture_body_total_timeout=float(config.get(
+                "position_capture_body_total_timeout_seconds", 120.0)),
             write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
         )
         command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
@@ -145,7 +151,13 @@ def serve_position_only(config_path: Path) -> int:
         tls_handshake_timeout=float(config.get(
             "position_tls_handshake_timeout_seconds", 3.0)),
         header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
+        header_total_timeout=float(config.get(
+            "position_header_total_timeout_seconds", 5.0)),
         body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+        body_total_timeout=float(config.get(
+            "position_body_total_timeout_seconds", 10.0)),
+        capture_body_total_timeout=float(config.get(
+            "position_capture_body_total_timeout_seconds", 120.0)),
         write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
     )
     proof_emitted = threading.Event()

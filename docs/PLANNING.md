@@ -106,7 +106,7 @@ J7 / PR #10 est **fusionnée** dans `main` au SHA `d19db664bc1e7d83ab1d289f89373
 |---|---|---|---|---|
 | R0 | Baseline, tests simulés, non-régression et consentement matériel | Prérequis | Validé — PR #13 fusionnée, `d8b412f` | Scénarios reproductibles sans HID |
 | R1 | Boutons incertains, arrêt global des séquenceurs, file d'actions | P1/P2 | Validé logiciel — PR #14 fusionnée, `5b158a6` | Aucune poursuite ambiguë, états cohérents |
-| R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | Qualifié logiciel — PR Draft | Attentes bornées, aucune reprise ambiguë |
+| R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | Correctif de revue B1/B2 qualifié — PR Draft #15 | Attentes bornées, aucune reprise ambiguë |
 | R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | À lancer après R0 | Quota strict, ressources fermées, restauration testée |
 | R4 | Tests comportementaux, opt-in matériel, compilation C#, builds reproductibles | P2 | En accompagnement R1–R3 | Suite logicielle reproductible |
 | R5 | Séquenceurs, validations, historique HOGP, refactoring ciblé | P2/P3 | Différé | Aucun changement de contrat, gain démontré |

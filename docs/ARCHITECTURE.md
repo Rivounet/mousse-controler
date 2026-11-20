@@ -232,9 +232,17 @@ nouveau moteur ne peut être lancé. La fin du processus ou une tentative de
 relâchement ne confirme jamais l'état physique des boutons.
 
 Le récepteur HTTPS utilise `BoundedThreadingHTTPServer`. L'admission précède
-le handler métier et borne à 8 les connexions actives ainsi que le backlog. Les
-deadlines par phase sont : handshake TLS 3 s, en-têtes 2 s, inactivité de
-lecture du corps 5 s et écriture 2 s. Le corps doit correspondre exactement à
-`Content-Length` avant HMAC. Les slots sont libérés en `finally`, y compris sur
-timeout ou déconnexion. TLS 1.2 minimum, HMAC, anti-rejeu, tailles maximales,
+la création du thread et borne à 8 les connexions actives ainsi que le backlog.
+Le thread d'acceptation ne réalise aucun handshake : chaque handshake TLS est
+effectué dans le worker déjà admis, avec une borne de 3 s. Un client TLS muet
+ne retarde donc pas l'acceptation d'un autre client tant qu'un slot reste libre,
+et aucun thread n'est créé pour une connexion excédentaire.
+
+Les lectures HTTP combinent une limite d'inactivité et une deadline absolue,
+recalculée avant chaque `recv` : 2 s/5 s pour les en-têtes, 5 s/10 s pour un
+corps de position et 5 s/120 s pour une capture. La progression partielle ne
+renouvelle jamais le budget total. Les 120 s autorisent le maximum de 24 Mio à
+environ 205 Kio/s, tout en restant finis. Le corps doit correspondre exactement
+à `Content-Length` avant HMAC. Les slots sont libérés en `finally`, y compris
+sur timeout ou déconnexion. TLS 1.2 minimum, HMAC, anti-rejeu, tailles maximales,
 interfaces d'écoute et protocoles publics restent inchangés.

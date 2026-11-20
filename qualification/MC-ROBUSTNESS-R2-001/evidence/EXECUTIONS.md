@@ -1,6 +1,6 @@
 # Preuves d'exécution — MC-ROBUSTNESS-R2-001
 
-Date : 20 novembre 2026, Europe/Paris.
+Date : 21 novembre 2026, Europe/Paris.
 
 ## Baseline
 
@@ -35,6 +35,25 @@ Date : 20 novembre 2026, Europe/Paris.
 ## Sécurité de l'exécution
 
 - moteurs HOGP : sous-processus Python factices ou doubles en mémoire ;
-- serveur : HTTP loopback éphémère, handshake TLS simulé ;
+- serveur : HTTP/TLS loopback éphémère, certificat auto-signé de test ;
 - Bluetooth/HID, capture, SSH, cible et production : non sollicités ;
 - aucune preuve ne revendique un relâchement physique de bouton.
+
+## Correctif de revue B1/B2
+
+- commentaires GitHub B1/B2 lus avant modification, SHA examiné
+  `ff1cc898a9fe4f4f4f06ecf9206e6684d0bf61c2` ;
+- ciblés R2 et transport finaux : **25/25 PASS**, 8,796 s, avec
+  `ResourceWarning` traités comme erreurs ;
+- stabilité finale B1/B2 : **3 x 25/25 PASS**, entre 8,807 s et 9,149 s
+  par passe (`unittest`), sans avertissement de ressource ;
+- non-régression R1 : **14/14 PASS**, 0,288 s ;
+- cœur et caractérisations : **168/168 PASS**, 17,072 s ;
+- simulations remote/déploiement : **69/69 PASS**, 37,561 s ;
+- contrats non matériels : **5/5 PASS**, 0,008 s ;
+- runner logiciel R0 agrégé : **242/242 PASS**, zéro échec attendu ;
+- diagnostics matériels exclus : **7** ;
+- B1 : vrai TLS loopback, client muet puis client valide servi en moins de
+  0,4 s avant la borne de 0,6 s du premier, slots revenus à zéro ;
+- B2 : en-têtes et corps `trickle` expirés sans appel métier, reprise saine ;
+- capture de **24 Mio** acceptée sur loopback dans son budget total.

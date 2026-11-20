@@ -1,6 +1,6 @@
 # MC-ROBUSTNESS-R2-001 — rapport de qualification
 
-Date : 20 novembre 2026
+Date : 21 novembre 2026
 
 Base obligatoire : `5b158a68325154be0621fd8764fb3d09b6d2e398`
 
@@ -36,7 +36,10 @@ cible distante n'a été sollicité.
 
 - 8 connexions actives maximum et backlog de 8 par défaut ;
 - admission avant création du thread handler et avant authentification métier ;
-- deadlines distinctes pour TLS, en-têtes, corps et écriture ;
+- handshake TLS déplacé hors du thread d'acceptation, dans le worker déjà
+  couvert par le slot ; un client TLS muet ne bloque plus les acceptations ;
+- délais d'inactivité et deadlines absolues distinctes pour les en-têtes et
+  le corps ; chaque `recv` utilise le plus petit budget restant ;
 - lecture exacte de `Content-Length` ; un corps tronqué n'atteint jamais
   `PositionReceiver` ni HMAC ;
 - les déconnexions et écritures interrompues libèrent leur slot ;
@@ -55,16 +58,35 @@ cible distante n'a été sollicité.
 | Connexions LAN actives | 8 | `position_max_connections` |
 | Backlog LAN | 8 | `position_request_queue_size` |
 | Handshake TLS | 3 s | `position_tls_handshake_timeout_seconds` |
-| En-têtes HTTP | 2 s | `position_header_timeout_seconds` |
-| Corps HTTP | 5 s d'inactivité socket | `position_body_timeout_seconds` |
+| En-têtes HTTP, inactivité | 2 s | `position_header_timeout_seconds` |
+| En-têtes HTTP, total | 5 s | `position_header_total_timeout_seconds` |
+| Corps position, inactivité | 5 s | `position_body_timeout_seconds` |
+| Corps position, total | 10 s | `position_body_total_timeout_seconds` |
+| Corps capture, total | 120 s | `position_capture_body_total_timeout_seconds` |
 | Écriture HTTP | 2 s | `position_write_timeout_seconds` |
 
-Les valeurs sont validées positives. La limite du corps est une limite
-d'inactivité par opération socket, afin de ne pas refuser une capture autorisée
-de 24 Mio qui progresse normalement.
+Les valeurs sont validées positives et les budgets totaux doivent couvrir leur
+limite d'inactivité. La capture dispose de 120 s pour 24 Mio, soit un débit
+moyen minimal d'environ 205 Kio/s, compatible avec un LAN normal. Un client qui
+envoie régulièrement quelques octets ne peut pas repousser cette échéance.
 Les configurations ne peuvent pas neutraliser les bornes : démarrage HOGP
 maximum 60 s, autres bornes HOGP maximum 10 s, timeouts LAN maximum 60 s,
-connexions et backlog maximum 64.
+deadline totale de capture maximum 300 s, connexions et backlog maximum 64.
+
+## Correctif de revue B1/B2
+
+Le test B1 emploie un certificat auto-signé réservé au loopback : une connexion
+TCP reste muette avant son `ClientHello`, tandis qu'un second client termine un
+vrai handshake TLS et reçoit `202` avant l'expiration du premier. Le premier
+expire ensuite et le compteur de slots revient à zéro. Le test couvre la pile
+TLS de Python présente sur la machine de qualification, pas Schannel ni le
+certificat de production.
+
+Le test B2 envoie en continu des fragments à un intervalle inférieur à la
+limite d'inactivité, pour les en-têtes puis le corps. Les deadlines absolues
+ferment les deux connexions, aucun corps incomplet n'atteint le récepteur et un
+client sain est ensuite accepté. Une capture loopback de 24 Mio est acceptée ;
+HMAC et anti-rejeu restent vérifiés par leur test existant.
 
 ## Non-régression R1
 

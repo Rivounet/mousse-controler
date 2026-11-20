@@ -7,6 +7,7 @@ import io
 import json
 from pathlib import Path
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -18,7 +19,8 @@ from unittest import mock
 from mousse_controler.actions import ActionExecutor, ActionRegistry
 from mousse_controler.controller import MouseController, PositionStore
 from mousse_controler.position_server import (
-    BoundedThreadingHTTPServer, PositionReceiver, handler_factory,
+    MAX_CAPTURE_BODY_BYTES, BoundedThreadingHTTPServer, PositionReceiver,
+    handler_factory,
 )
 from mousse_controler.security import HmacVerifier, sign
 from mousse_controler.transport import (
@@ -28,6 +30,55 @@ from tests.r0_doubles import BlockingLineStream, ProcessDouble
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
+
+TEST_CERTIFICATE = """-----BEGIN CERTIFICATE-----
+MIICqTCCAZGgAwIBAgIJAI+ta4uLcoVFMA0GCSqGSIb3DQEBCwUAMBQxEjAQBgNV
+BAMTCWxvY2FsaG9zdDAeFw0yNjExMTkyMzAyMjFaFw0zMTExMjAyMzAyMjFaMBQx
+EjAQBgNVBAMTCWxvY2FsaG9zdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+ggEBAM+BHFke1dOxiw4NxdA6NE4k0vj2dcpA2ghHszmnlbdds59c9Pwq3AI+u5UP
+W4UFwlOexmVVpf6WXPBei/F8Akx9vUIGVCMyreVZ7krZP3sBFikuqizYJXHmrDcK
+WgvcYj09mfkQtg22NeB61Hsg6XPFB4YtYA485Lvu2mq1zlLj6xL6U1ZMO+zZjreJ
+tCIZeO6XQccC9k1jg24HAfghyb2mW1mOk66QpyNp3H1GSaUySIQr//3g6ZmrYG6e
+0aYexHMF8+3hogoZSxWcbBXgAXM8Mn4JBkcKNCqOeT0tV9LCqsrENmR4x9v1EFvu
+JekQ8BqnJAPVsFlRvxAO81lenYUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAI+Gy
+dD5zSPtyuRQRt+i0XVnEKTkIDs2k3uqntn3ckPasbcyAnRmhD0PITe//9yjxrRSM
+lbpUKk8FJ9yNccEl6VtXy5+jiP1Os8bSjUqLFHOgpOtFVV8mGYvtWGXBMFvPwWg+
+Y8WOSrCYwcthB8POtuOmYw/sKFbXcJ1l+r1Irc1ekLQLUpFdUBIFNtEFF41Glhk7
+FA2oMvBNKHiFjWWteUoI+rO2mBWC7ZLJi3O7STHQcBIXtUAwdLkjSCK0WIiS9Hmt
+5jviRHgwZOb7MrVLUEcVLeFAq3CcK+ryC7GvitG4F51yIC1jPo5m0tl4soujK6cY
+epVyO4hL6XVIOZlBTg==
+-----END CERTIFICATE-----
+"""
+
+TEST_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDPgRxZHtXTsYsO
+DcXQOjROJNL49nXKQNoIR7M5p5W3XbOfXPT8KtwCPruVD1uFBcJTnsZlVaX+llzw
+XovxfAJMfb1CBlQjMq3lWe5K2T97ARYpLqos2CVx5qw3CloL3GI9PZn5ELYNtjXg
+etR7IOlzxQeGLWAOPOS77tpqtc5S4+sS+lNWTDvs2Y63ibQiGXjul0HHAvZNY4Nu
+BwH4Icm9pltZjpOukKcjadx9RkmlMkiEK//94OmZq2BuntGmHsRzBfPt4aIKGUsV
+nGwV4AFzPDJ+CQZHCjQqjnk9LVfSwqrKxDZkeMfb9RBb7iXpEPAapyQD1bBZUb8Q
+DvNZXp2FAgMBAAECggEBAKtWLnQgE+tCdFFcafPvu3Syz0knKEeimOWxXnnCuMq5
+ojF6bgcx1Iw+BGGmVqlWAglN1v+hYvj+aytGxkLVZIiIYpd75klR9Wilgy9mhxYn
+5YaHs5hnuTN9hsHD2GpmxO9QSCzx8YEM7Ru4EG7C1ED1dasDGIdpHG1ZYhwulni1
+oIMbiEIO95l/4HgUqcZmv28F8bKh6uK4Mn1Eqvuq0524VHVC7Rguq569H8f8MQih
+DjEMtKIvj/6aRfLZCrM/HC7h7YTjBJ9D5bXd9OBSbnt8OHo/YYI5gtwpyYU0PTY+
+WOkcv2ViS7JBYjXmorZh77zGLyiyx1Kng9wap4rkgBkCgYEA7T9P6KFcRqNZbaXf
+pY3Ub4fQdiGLGcyi4xhFBANFcS4TPD0E+8gtI5Xs3KAsX5vi9XhvckLkiZ0lq6xh
+QhGtvG1Vcycr84DCNIZM9Ajsm5bujpqyEtd8zfU36/WYWMoznPpu4CgP5HiKZ4B6
+GKhAdaBKt4XE/lTlSa2f9rmuncsCgYEA3+fzcZjBUvHByGCFRXNtIqfC2L0FDFjF
+v6yNW0E8Izuy3THxO6eL5+6/weUf7UmIvg4UKMMwI1PyAmUC9Vsder43ep9UD24x
+Upgcd8jLGPef8i4Hiqkv4Ge+9grNbDUdePo2KxJrx0G1qxCuBP94WndhivROU9l+
+KwTUE0ICR+8CgYAc0MvL3Y1vpvd9sd/wI8HhqgVP09MpVwmRu6jmS99rV8VOU7r/
+OdkBsXwLcAjzs+NlHTOsFSPc8xFYQJ+vfqYzdLQkQGW+Na1g488E9PCIFVT0TSXD
+1Bh8i4Q3TKUsY6LRNjmxUCxd+6YT3C74P7dUkhuBHuZGXdlbkZMUTIlA8QKBgAEo
+fv7gbmeSbpEtxqK0VSUvvvdGCwekUemK5/RH4xq/jU5NmtTXKgcaGg3TtJWSos1w
+3zPSxqX4IjFW+mvwe7eN0lWlC1dFF6Y4uTT5aeuIJGCpUkqqU2ASyU8WgTeFEtD0
+YmFYqAwQz/LBlFTcSXAWW//PAbS3VEq+rKYo2kArAoGBAIU2xIxQt+s2SWOziByR
+iMHRexQVvxK9aPIW2hAiICfkzXY8JSHfKX7OwHVy/h29reseVDrQMbhbyd8Rv9c5
+IqwDSKJxur76ScJRdrWOO6ZIYaRRdZNr37msm8NwDZvoW77aAwSP+lmUeywqtXP3
+XZVLhIjrgrGeulGvBUQklvU/
+-----END PRIVATE KEY-----
+"""
 
 ENGINE_SCRIPT = r"""
 import pathlib
@@ -324,6 +375,7 @@ class ReceiverDouble:
         self.entered = threading.Event()
         self.release = threading.Event()
         self.bodies: list[bytes] = []
+        self.capture_lengths: list[int] = []
         self.active = 0
         self.max_active = 0
         self._lock = threading.Lock()
@@ -343,14 +395,29 @@ class ReceiverDouble:
     def next_capture_request(self):
         return None
 
+    def accept_capture(self, headers, body: bytes, path: str):
+        with self._lock:
+            self.capture_lengths.append(len(body))
+        return {"accepted": True}
+
 
 class LanBoundTests(unittest.TestCase):
-    def start_server(self, receiver, *, max_connections: int = 2):
+    def start_server(self, receiver, *, max_connections: int = 2,
+                     ssl_context=None, **overrides):
+        settings = {
+            "request_queue_size": 2,
+            "header_timeout": 0.1,
+            "header_total_timeout": 0.25,
+            "body_timeout": 0.1,
+            "body_total_timeout": 0.3,
+            "capture_body_total_timeout": 10.0,
+            "write_timeout": 0.1,
+            "tls_handshake_timeout": 0.1,
+        }
+        settings.update(overrides)
         server = BoundedThreadingHTTPServer(
             ("127.0.0.1", 0), handler_factory(receiver),
-            max_connections=max_connections, request_queue_size=2,
-            header_timeout=0.1, body_timeout=0.1, write_timeout=0.1,
-            tls_handshake_timeout=0.1,
+            ssl_context=ssl_context, max_connections=max_connections, **settings,
         )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -364,6 +431,9 @@ class LanBoundTests(unittest.TestCase):
             {"max_connections": 65},
             {"request_queue_size": 0},
             {"body_timeout": float("inf")},
+            {"body_total_timeout": float("inf")},
+            {"capture_body_total_timeout": 301},
+            {"header_timeout": 2, "header_total_timeout": 1},
             {"write_timeout": 61},
         ):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
@@ -372,10 +442,10 @@ class LanBoundTests(unittest.TestCase):
                 )
 
     @staticmethod
-    def post(server, body: bytes = b"x") -> int:
+    def post(server, body: bytes = b"x", path: str = "/v1/position") -> int:
         connection = http.client.HTTPConnection(*server.server_address, timeout=1)
         try:
-            connection.request("POST", "/v1/position", body=body, headers={
+            connection.request("POST", path, body=body, headers={
                 "Content-Length": str(len(body)), "Connection": "close",
             })
             return connection.getresponse().status
@@ -404,6 +474,50 @@ class LanBoundTests(unittest.TestCase):
         self.assertEqual(receiver.bodies, [])
         self.assertEqual(self.post(server), 202)
 
+    def test_absolute_header_and_body_deadlines_defeat_regular_trickle(self) -> None:
+        receiver = ReceiverDouble()
+        server = self.start_server(receiver)
+
+        slow_header = socket.create_connection(server.server_address, timeout=1)
+        header_started = time.monotonic()
+        for byte in b"POST /v1/position HTTP/1.1\r\nHost: loopback":
+            try:
+                slow_header.sendall(bytes([byte]))
+            except OSError:
+                break
+            time.sleep(0.03)
+        self.assertLess(time.monotonic() - header_started, 1.5)
+        slow_header.close()
+
+        slow_body = socket.create_connection(server.server_address, timeout=1)
+        slow_body.sendall(
+            b"POST /v1/position HTTP/1.1\r\nHost: local\r\n"
+            b"Content-Length: 32\r\nConnection: close\r\n\r\n"
+        )
+        body_started = time.monotonic()
+        for _ in range(32):
+            try:
+                slow_body.sendall(b"x")
+            except OSError:
+                break
+            time.sleep(0.04)
+        self.assertLess(time.monotonic() - body_started, 1.5)
+        slow_body.close()
+        self.assertEqual(receiver.bodies, [])
+
+        deadline = time.monotonic() + 1
+        while server.limits_status()["active_connections"]:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.005)
+        self.assertEqual(self.post(server), 202)
+
+    def test_full_size_capture_progressing_normally_is_accepted(self) -> None:
+        receiver = ReceiverDouble()
+        server = self.start_server(receiver)
+        body = b"c" * MAX_CAPTURE_BODY_BYTES
+        self.assertEqual(self.post(server, body, "/v1/capture"), 202)
+        self.assertEqual(receiver.capture_lengths, [MAX_CAPTURE_BODY_BYTES])
+
     def test_truncated_and_disconnected_requests_are_rejected_then_recover(self) -> None:
         receiver = ReceiverDouble()
         server = self.start_server(receiver)
@@ -431,6 +545,26 @@ class LanBoundTests(unittest.TestCase):
         disconnected.close()
         time.sleep(0.05)
         self.assertEqual(self.post(server), 202)
+
+    def test_keepalive_pipeline_preserves_bytes_read_with_first_headers(self) -> None:
+        receiver = ReceiverDouble()
+        server = self.start_server(receiver)
+        client = socket.create_connection(server.server_address, timeout=1)
+        client.sendall(
+            b"POST /v1/position HTTP/1.1\r\nHost: local\r\n"
+            b"Content-Length: 1\r\nConnection: keep-alive\r\n\r\na"
+            b"POST /v1/position HTTP/1.1\r\nHost: local\r\n"
+            b"Content-Length: 1\r\nConnection: close\r\n\r\nb"
+        )
+        response = b""
+        while True:
+            chunk = client.recv(64 * 1024)
+            if not chunk:
+                break
+            response += chunk
+        client.close()
+        self.assertEqual(response.count(b"HTTP/1.1 202 Accepted"), 2)
+        self.assertEqual(receiver.bodies, [b"a", b"b"])
 
     def test_connection_limit_rejects_excess_and_releases_slots(self) -> None:
         receiver = ReceiverDouble(block=True)
@@ -497,6 +631,55 @@ class LanBoundTests(unittest.TestCase):
         self.assertEqual(wrapped.timeouts, [0.1])
         server._ssl_context = None
         self.assertEqual(self.post(server), 202)
+
+    def test_real_tls_stalled_handshake_does_not_block_valid_client(self) -> None:
+        receiver = ReceiverDouble()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            certificate = root / "loopback-test-cert.pem"
+            private_key = root / "loopback-test-key.pem"
+            certificate.write_text(TEST_CERTIFICATE, encoding="ascii")
+            private_key.write_text(TEST_PRIVATE_KEY, encoding="ascii")
+            server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            server_context.minimum_version = ssl.TLSVersion.TLSv1_2
+            server_context.load_cert_chain(certificate, private_key)
+            server = self.start_server(
+                receiver, ssl_context=server_context, max_connections=2,
+                tls_handshake_timeout=0.6,
+            )
+
+            stalled = socket.create_connection(server.server_address, timeout=1)
+            deadline = time.monotonic() + 1
+            while server.limits_status()["active_connections"] != 1:
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.005)
+
+            client_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            client_context.check_hostname = False
+            client_context.verify_mode = ssl.CERT_NONE
+            started = time.monotonic()
+            healthy = http.client.HTTPSConnection(
+                *server.server_address, timeout=1, context=client_context,
+            )
+            try:
+                healthy.request(
+                    "POST", "/v1/position", body=b"x",
+                    headers={"Content-Length": "1", "Connection": "close"},
+                )
+                self.assertEqual(healthy.getresponse().status, 202)
+            finally:
+                healthy.close()
+            self.assertLess(time.monotonic() - started, 0.4)
+
+            stalled.settimeout(1)
+            self.assertEqual(stalled.recv(1), b"")
+            stalled.close()
+            deadline = time.monotonic() + 1
+            while server.limits_status()["active_connections"]:
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.005)
+            self.assertEqual(server.limits_status()["active_connections"], 0)
+            self.assertEqual(server_context.minimum_version, ssl.TLSVersion.TLSv1_2)
 
     def test_hmac_and_replay_protection_are_preserved_through_server(self) -> None:
         secret = b"r2-test-secret"

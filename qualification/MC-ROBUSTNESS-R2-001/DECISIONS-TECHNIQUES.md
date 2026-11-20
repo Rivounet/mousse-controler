@@ -33,15 +33,21 @@ borne Python reste l'autorité externe et termine le processus hébergeant.
 Les appels synchrones de publicité ne peuvent pas recevoir un jeton
 d'annulation ; ils sont donc bornés par cette même supervision externe.
 
-## D-R2-06 — admission LAN avant thread
+## D-R2-06 — admission LAN avant thread, handshake dans le worker
 
-Le sémaphore est acquis après `accept()` mais avant handshake et création du
-handler. Un client excédentaire est fermé sans thread ni authentification. Le
-backlog est configuré avant `listen()`, contrairement à l'affectation tardive
-historique.
+Le sémaphore est acquis après `accept()` et avant la création du worker. Un
+client excédentaire est fermé sans thread ni authentification. Le handshake TLS
+est ensuite exécuté par ce worker admis, jamais par le thread unique
+d'acceptation. Son échec ferme la socket enveloppée et libère le slot par le
+même chemin que le handler. Le nombre de handshakes et de threads concurrents
+reste donc limité par `max_connections`. Le backlog est configuré avant
+`listen()`, contrairement à l'affectation tardive historique.
 
-## D-R2-07 — deadlines par phase
+## D-R2-07 — inactivité et deadline absolue par phase
 
-TLS, en-têtes, corps et écriture ont des budgets distincts. Cela rend le motif
-d'échec observable et permet un budget de corps compatible avec les captures,
-sans autoriser un client immobile. La lecture exacte précède HMAC et l'anti-rejeu.
+TLS, en-têtes, corps et écriture ont des budgets distincts. Pour les lectures,
+le timeout socket limite l'inactivité et une échéance monotone limite la durée
+totale. Avant chaque `recv`, le timeout effectif devient le minimum entre les
+deux budgets ; aucun fragment ne réinitialise l'échéance totale. La position a
+10 s au total et la capture 120 s, ce qui accepte 24 Mio à environ 205 Kio/s.
+La lecture exacte précède HMAC et l'anti-rejeu.
