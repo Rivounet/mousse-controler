@@ -1,8 +1,9 @@
 # Planning opérationnel
 
 **Statuts :** À faire / En cours / En revue / Validé / Bloqué. Le mandat
-MC-HID-EXEC-001 est réalisé et qualifié `PASS_WITH_RESERVATIONS` dans la PR #6
-Draft ; la fusion reste une décision explicite.
+MC-HID-EXEC-001 est réalisé et qualifié `PASS_WITH_RESERVATIONS`. La PR #6 est
+fusionnée dans `main` au commit
+`77d4a5939673053fa2e0dae73bc3a284a8597ac7`.
 
 ## État de référence
 
@@ -34,14 +35,15 @@ Draft ; la fusion reste une décision explicite.
 | MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | Validé matériellement |
 | MC-008 | J3 | Trajectoires, zones et séquences A→B→C | code, API et tests | Validé logiciel et matériel |
 | MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | Validé avec réserves ; concurrence finale durcie |
-| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | En revue — PR #6 Draft prête à arbitrage après corrections |
+| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | Validé avec réserves — PR #6 fusionnée |
 
 **Mandat :** Codex sur mini-pc-backend, autorisé à coordonner les deux machines dans les limites du mandat exécutoire ; les modifications sensibles, l'accès distant et l'appairage restent supervisables. Une seule PR Draft cohérente, sans fusion automatique. Ne pas enregistrer le texte du mandat dans GitHub.
 
 ## Prochaine porte
 
-Examiner les corrections finales et les preuves de la PR #6, puis décider
-explicitement de la fusion. La PR demeure Draft et aucune fusion n'est implicite.
+Maintenir la cohérence entre `main` et les composants installés. Toute correction
+post-fusion indispensable est isolée dans une PR Draft ciblée ; aucune fusion
+supplémentaire n'est implicite.
 
 ## Règles de livraison
 

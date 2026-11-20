@@ -120,4 +120,15 @@ Après ajout du nettoyage d'un démarrage transport partiel, la suite finale a
 exécuté **136/136 tests en 35,659 s : PASS** hors du chemin temporaire long du
 bac à sable.
 
+## Revalidation post-fusion
+
+Le 20 novembre 2026, après synchronisation de `main` sur le commit de fusion
+`77d4a5939673053fa2e0dae73bc3a284a8597ac7`, la commande de référence a
+réexécuté **136/136 tests en 37,648 s : PASS**. Le contrôleur rechargé depuis ce
+contenu a ensuite confirmé, sans mouvement de souris : publicité HOGP
+`Started`, abonnement HID actif, boutons à zéro, API locale accessible et
+position distante HTTPS/HMAC fraîche.
+La branche documentaire post-fusion a ensuite exécuté la même suite :
+**136/136 tests en 38,938 s : PASS**.
+
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.

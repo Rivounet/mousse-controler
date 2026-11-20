@@ -1,5 +1,11 @@
 # MC-HID-EXEC-001 — Rapport d'exécution
 
+> **État postérieur au rapport :** la PR #6 a été fusionnée dans `main` le
+> 20 novembre 2026 au commit
+> `77d4a5939673053fa2e0dae73bc3a284a8597ac7`. Les mentions « Draft » de ce
+> rapport décrivent l'état historique au moment de la qualification et sont
+> conservées comme preuves.
+
 **Date :** 20 novembre 2026  
 **Branche :** `feat/mc-hid-exec-001`  
 **Verdict :** `PASS_WITH_RESERVATIONS` — fonctions matérielles, performances et
