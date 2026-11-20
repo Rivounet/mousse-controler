@@ -40,3 +40,16 @@ Date : 20 novembre 2026, Europe/Paris.
 - capture : non sollicitée ;
 - production : aucun processus, fichier de configuration ou journal actif
   modifié.
+
+## Correctif de revue — PR #14
+
+- SHA examiné : `c73fab0da4f71f0770d1888106dfc02bec722ed1` ;
+- suite ciblée R1 et trajectoires : **28/28 PASS**, 0,778 s ;
+- stress de la course `hold` et de son enfant de séquence :
+  **20 x 2/2 PASS** ;
+- runner R0 agrégé après ajout des trois tests : **222/222 PASS**,
+  aucun échec attendu ;
+- détail : 148 tests cœur/R0 en 6,853 s, 69 tests remote en 35,953 s et
+  5 contrats de sécurité non matériels en 0,004 s ;
+- diagnostics matériels exclus : **7** ;
+- HID réel, capture, SSH, cible et production : **non sollicités**.

@@ -74,6 +74,21 @@ configuration ou composant de production n'a été modifié.
 3. Aucune qualification matérielle, aucun HID réel, aucune capture et aucun
    accès à la cible n'ont été réalisés.
 
+## Correctif de revue de la PR #14
+
+La revue du SHA `c73fab0da4f71f0770d1888106dfc02bec722ed1` a identifié
+une fenêtre entre la fin normale de l'attente d'un `hold` et son relâchement.
+Le contrôle de `button_state_uncertain`, déjà appliqué à `drag` et
+`move_with_buttons`, est désormais exécuté après le `finally` de `hold`.
+Une incertitude lève `ActionExecutionError` avec `emitted=true`, conserve
+`UNKNOWN`, déclenche la quarantaine et publie `release_confirmed=false`.
+
+Un double synchronisé force l'arrêt exactement avant l'acquisition du verrou
+de relâchement. Les politiques `stop`, `continue` et `retry`, l'enfant de
+séquence, le non-rejeu après redémarrage et les chemins de succès de `drag` et
+`move_with_buttons` sont couverts. La suite logicielle compte maintenant
+**222/222 PASS**.
+
 ## Rollback
 
 Le rollback Git consiste à revenir au parent du commit R1. Aucun état de

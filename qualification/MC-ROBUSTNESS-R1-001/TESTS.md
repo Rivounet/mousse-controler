@@ -20,6 +20,15 @@ Couverture ajoutée :
 - course soumission/fermeture ;
 - persistance des états et anti-rejeu après redémarrage.
 
+Correctif de revue :
+
+- interleaving déterministe `hold` : attente terminée, arrêt contrôleur,
+  tentative de relâchement refusée ;
+- résultat `UNKNOWN` et quarantaine pour `stop`, `continue` et `retry` ;
+- même garantie pour un `hold` enfant d'une séquence `continue` ;
+- identifiant persistant non rejouable après reconstruction du registre ;
+- chemins nominaux `drag` et `move_with_buttons` inchangés.
+
 ## Suite logicielle complète R0
 
 Commande :

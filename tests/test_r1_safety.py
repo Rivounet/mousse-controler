@@ -10,7 +10,7 @@ import unittest
 
 from mousse_controler.actions import ActionExecutor, ActionRegistry
 from mousse_controler.command_server import CommandError, CommandGateway
-from mousse_controler.controller import MouseController, PositionStore
+from mousse_controler.controller import MouseController, PositionSnapshot, PositionStore
 from mousse_controler.transport import SimulatedHidTransport, TransportError
 
 
@@ -48,6 +48,50 @@ class ArmedButtonFailureTransport(SimulatedHidTransport):
         if self.remaining == 0:
             self.remaining = None
             raise TransportError("simulated acknowledgement loss after button effect")
+
+
+class StopBeforeReleaseController(MouseController):
+    """Pauses the selected release before the controller lock is acquired."""
+
+    def __init__(self, transport: SimulatedHidTransport, positions: PositionStore) -> None:
+        super().__init__(transport, positions)
+        self.release_entered = threading.Event()
+        self.allow_release = threading.Event()
+        self._race_armed = False
+
+    def arm_release_race(self) -> None:
+        self._race_armed = True
+
+    def release_buttons(self, mask: int) -> int:
+        if self._race_armed:
+            self._race_armed = False
+            self.release_entered.set()
+            if not self.allow_release.wait(1):
+                raise AssertionError("test did not release the deterministic race gate")
+        return super().release_buttons(mask)
+
+
+class FeedbackTransport(SimulatedHidTransport):
+    def __init__(self, store: PositionStore) -> None:
+        super().__init__()
+        self.store = store
+        self.x = 0
+        self.y = 0
+        self.sequence = 1
+        self._sample()
+
+    def _sample(self) -> None:
+        self.store.update(PositionSnapshot(
+            self.x, self.y, self.sequence, 1, "topology",
+            int(time.time() * 1000), time.monotonic(),
+        ))
+
+    def move(self, dx: int, dy: int) -> None:
+        super().move(dx, dy)
+        self.x += dx
+        self.y += dy
+        self.sequence += 1
+        self._sample()
 
 
 class ButtonSafetyTests(unittest.TestCase):
@@ -117,6 +161,101 @@ class ButtonSafetyTests(unittest.TestCase):
             with self.assertRaises(KeyError):
                 registry.get("must-not-run")
             self.assertTrue(controller.is_stopped())
+        finally:
+            executor.close()
+
+    def test_hold_stop_between_wait_and_release_is_unknown_for_every_policy(self):
+        for policy in ("stop", "continue", "retry"):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as directory:
+                transport = SimulatedHidTransport()
+                controller = StopBeforeReleaseController(transport, PositionStore())
+                controller.start()
+                controller.arm_release_race()
+                journal = Path(directory) / "actions.jsonl"
+                registry = ActionRegistry(journal_path=journal)
+                executor = ActionExecutor(controller, registry)
+                action_id = f"hold-release-race-{policy}"
+                try:
+                    executor.submit({
+                        "kind": "hold", "button": "left", "duration_seconds": 0,
+                        "error_policy": policy, "max_attempts": 3,
+                    }, action_id=action_id)
+                    self.assertTrue(controller.release_entered.wait(1))
+                    controller.emergency_stop()
+                    controller.allow_release.set()
+                    result = wait_terminal(registry, action_id)
+                    self.assertEqual(result["state"], "UNKNOWN")
+                    self.assertEqual(result["error_code"], "BUTTON_UNCERTAIN")
+                    self.assertFalse(
+                        result["result"]["safety_stop"]["release_confirmed"])
+                    self.assertEqual(
+                        [event for event in transport.events if event == ("buttons", 1)],
+                        [("buttons", 1)],
+                    )
+                    with self.assertRaisesRegex(RuntimeError, "safety-stopped"):
+                        executor.submit({"kind": "wait", "duration_seconds": 0})
+                finally:
+                    controller.allow_release.set()
+                    executor.close()
+
+                recovered = ActionRegistry(journal_path=journal)
+                self.assertEqual(recovered.get(action_id)["state"], "UNKNOWN")
+                with self.assertRaisesRegex(ValueError, "duplicate"):
+                    recovered.create(action_id, "hold")
+
+    def test_hold_release_race_in_sequence_stops_before_next_child(self):
+        transport = SimulatedHidTransport()
+        controller = StopBeforeReleaseController(transport, PositionStore())
+        controller.start()
+        controller.arm_release_race()
+        registry = ActionRegistry()
+        executor = ActionExecutor(controller, registry)
+        try:
+            executor.submit({
+                "kind": "sequence", "error_policy": "continue", "actions": [
+                    {"kind": "hold", "button": "left", "duration_seconds": 0,
+                     "error_policy": "continue", "action_id": "hold-race-child"},
+                    {"kind": "wait", "duration_seconds": 0,
+                     "action_id": "must-not-run-after-hold"},
+                ],
+            }, action_id="hold-race-parent")
+            self.assertTrue(controller.release_entered.wait(1))
+            controller.emergency_stop()
+            controller.allow_release.set()
+            parent = wait_terminal(registry, "hold-race-parent")
+            self.assertEqual(parent["state"], "UNKNOWN")
+            self.assertEqual(registry.get("hold-race-child")["state"], "UNKNOWN")
+            with self.assertRaises(KeyError):
+                registry.get("must-not-run-after-hold")
+            with self.assertRaisesRegex(RuntimeError, "safety-stopped"):
+                executor.submit({"kind": "wait", "duration_seconds": 0})
+        finally:
+            controller.allow_release.set()
+            executor.close()
+
+    def test_drag_and_move_with_buttons_success_paths_are_unchanged(self):
+        store = PositionStore()
+        transport = FeedbackTransport(store)
+        controller = MouseController(transport, store)
+        controller.start()
+        registry = ActionRegistry()
+        executor = ActionExecutor(controller, registry)
+        try:
+            executor.submit({
+                "kind": "drag", "button": "left", "x": 4, "y": -3,
+                "tolerance_px": 0,
+            }, action_id="drag-regression")
+            self.assertEqual(
+                wait_terminal(registry, "drag-regression")["state"], "CONFIRMED")
+            executor.submit({
+                "kind": "move_with_buttons", "button": "left", "dx": 2, "dy": 3,
+            }, action_id="move-buttons-regression")
+            self.assertEqual(
+                wait_terminal(registry, "move-buttons-regression")["state"], "EXECUTED")
+            self.assertEqual(controller.buttons_mask(), 0)
+            self.assertGreaterEqual(sum(
+                event[0] == "move" and event[3] == 1 for event in transport.events
+            ), 2)
         finally:
             executor.close()
 

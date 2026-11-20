@@ -729,6 +729,11 @@ class ActionExecutor:
                             button_state_uncertain=True,
                         ) from exc
                     control.button_state_uncertain.set()
+            if control.button_state_uncertain.is_set():
+                raise ActionExecutionError(
+                    "button release was attempted during stop but is not physically confirmed",
+                    code="BUTTON_UNCERTAIN", emitted=True, button_state_uncertain=True,
+                )
             return {"held_mask": mask, "duration_seconds": float(spec["duration_seconds"]), "reports": 2}, False, True
         if kind in ("drag", "move_with_buttons"):
             mask = self._button_mask(spec)
