@@ -181,3 +181,11 @@ et la reprise GATT transitoire avant convergence automatique. La PR #6 a depuis
 ## Gouvernance
 
 D-021 : mandats dans le chat. D-022 : pas de revue exhaustive systématique. D-023 : autonomie orientée résultats, avec limites d'autorisation. Toute fusion requiert un accord explicite.
+
+## Nouveau chantier validé — MC-MOUSE-ACTIONS-001
+
+**20 novembre 2026 — planifié, non développé.** Le MVP est fusionné (PR #6), la consolidation documentaire également (PR #7). Le verdict existant reste PASS_WITH_RESERVATIONS.
+
+Souris uniquement, sans clavier : clics multiples, maintien, glisser-déposer, boutons compatibles, roulette, actions composables. Résultats d'action corrélés par identifiant et transmis automatiquement par WebSocket (4B). Capture optionnelle avant/après action si activée (1B), jamais continue : écran entier contenant le curseur au moment de la capture. Conservation configurable par action/séquence (3C). Analyse locale future préparée, non implémentée (2C). Erreurs configurables arrêt/retry/poursuite, arrêt par défaut (5C), sans rejeu automatique d'action incertaine.
+
+Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et captures. Agent cible visible limité aux mesures/captures, sans exécution de commandes souris. Codex sur mini-pc-backend développe dans une seule PR Draft, sans fusion automatique. Voir roadmap/planning ; mandat intégral dans le chat.
