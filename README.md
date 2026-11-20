@@ -85,3 +85,9 @@ sélection des commandes, types d'actions ou événements WebSocket. La
 [référence API](docs/API-REFERENCE.md) est générée depuis ce même registre avec
 `python scripts/generate_api_reference.py`; `--check` détecte toute référence
 obsolète. La consultation n'émet aucun rapport HID et ne demande aucune capture.
+
+## État courant après PR #10 et audits indépendants (20 novembre 2026)
+
+La PR #8 (J6) et la PR #10 (J7, registre API) sont **fusionnées dans `main`** ; les mentions « non fusionnée » dans les comptes rendus J6 plus haut sont historiques. La PR #11 de contre-expertise reste **Draft, non fusionnée**. La voie HOGP active qualifiée est **PowerShell/WinRT dans un MSIX** ; le moteur C++/WinRT demeure une implémentation historique distincte.
+
+**Verdict consolidé :** `MAINTENABLE_WITH_MAJOR_RESERVATIONS`. Voir le [rapport contradictoire et plan global de correction](audits/2026-11-20-consolidation/REPORT.md) et le [planning](docs/PLANNING.md). Quatre P1 restent ouverts (attentes HOGP, bouton incertain, quota de captures, bornes du serveur LAN). Aucune extension fonctionnelle importante ni synchronisation des processus n'est réputée validée par ces audits.

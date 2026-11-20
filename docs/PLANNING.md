@@ -97,3 +97,19 @@ Sur le SHA applicatif `e7e26332e56a39cbd2ca915413c313da07c638d9`, corrections de
 La qualification est strictement logicielle : aucune commande HID ni capture
 réelle. La prochaine porte est la revue de la PR Draft ; aucune fusion ni mise à
 jour de production n'est implicite.
+
+## J8 — Plan global de correction après double audit (état courant, 20 novembre 2026)
+
+J7 / PR #10 est **fusionnée** dans `main` au SHA `d19db664bc1e7d83ab1d289f89373f9e327a482b` ; les mentions « Draft à publier » ci-dessus sont des états historiques. La PR #11 d'audit indépendant reste **Draft non fusionnée**. Rapport contradictoire : [MC-AUDIT-CONSOLIDATION-001](../audits/2026-11-20-consolidation/REPORT.md).
+
+| Lot | Périmètre | Priorité | État | Porte de sortie |
+|---|---|---|---|---|
+| R0 | Baseline, tests simulés, non-régression et consentement matériel | Prérequis | À lancer | Scénarios reproductibles sans HID |
+| R1 | Boutons incertains, arrêt global des séquenceurs, file d'actions | P1/P2 | À lancer après R0 | Aucune poursuite ambiguë, états cohérents |
+| R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | À lancer après R0 | Attentes bornées, aucune reprise ambiguë |
+| R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | À lancer après R0 | Quota strict, ressources fermées, restauration testée |
+| R4 | Tests comportementaux, opt-in matériel, compilation C#, builds reproductibles | P2 | En accompagnement R1–R3 | Suite logicielle reproductible |
+| R5 | Séquenceurs, validations, historique HOGP, refactoring ciblé | P2/P3 | Différé | Aucun changement de contrat, gain démontré |
+| R6 | Documentation, roadmap, planning, reprise et suivi des preuves | Transversal | En cours | Statuts courants cohérents |
+
+**Règles :** PR distinctes, revue avant fusion, aucun HID/capture réelle ni intervention sur `MonOrdinateur` sans autorisation. Aucune synchronisation de la production impliquée par ce planning.

@@ -248,3 +248,13 @@ nouveaux couvrent exhaustivité, absence de fantômes, filtres, schémas, exempl
 erreurs, authentification, compatibilité et absence d'effet HID/capture. Aucun
 matériel réel n'a été sollicité. État de reprise : publier une PR Draft unique,
 joindre le rapport expurgé, ne pas fusionner et ne pas modifier la production.
+
+### État de reprise actuel — 20 novembre 2026 : double audit et plan global
+
+- **Code de référence :** `main` `d19db664bc1e7d83ab1d289f89373f9e327a482b`, PR #10 **MERGED**. Le paragraphe « Chantier actif MC-API-CATALOG-001 » précédent est historique, non une instruction en vigueur.
+- **Audit ChatGPT :** branche isolée `audit/independent-review-chatgpt-20261120`, commit `81e840668a07f135f925b7f9e0b92c083c3cdcf0` ; ne pas le modifier.
+- **Audit Codex :** [PR #11](https://github.com/Rivounet/mousse-controler/pull/11), SHA `42adb2976edac4048cfc2150ce247dc7c2951a74`, **Draft non fusionnée** ; 188/188 tests logiciels PASS sur 195 définis, 7 diagnostics matériels exclus, compilation C# et syntaxe PowerShell PASS.
+- **Arbitrage :** [MC-AUDIT-CONSOLIDATION-001](../audits/2026-11-20-consolidation/REPORT.md), verdict `MAINTENABLE_WITH_MAJOR_RESERVATIONS` ; architecture conservée, quatre P1 à traiter avant extension fonctionnelle majeure : HOGP non borné, bouton incertain, quota capture non strict, limites serveur LAN.
+- **Plan :** R0 baseline/tests sûrs ; R1 sûreté actions et arrêt ; R2 transport/LAN ; R3 quotas/ressources/rollback ; R4 tests/builds ; R5 refactoring minimal ; R6 documentation. Consulter [PLANNING.md](PLANNING.md) et [ROADMAP.md](ROADMAP.md).
+- **Production :** ne pas supposer que les processus du mini-PC exécutent le dernier `main`. Aucun déploiement ni test HID/capture réelle autorisé implicitement. Les deux audits et la consolidation sont documentaires, sans correctif produit.
+- **Prochaine porte :** revue/validation de la PR documentaire de consolidation, puis préparation d'un mandat correctif R0/R1. Fusion uniquement sur accord explicite.
