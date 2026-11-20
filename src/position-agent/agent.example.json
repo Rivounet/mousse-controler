@@ -1,0 +1,9 @@
+{
+  "Endpoint": "https://MINI_PC_PRIVATE_ADDRESS:8765/v1/position",
+  "KeyId": "monordinateur",
+  "SecretDpapi": "GENERATE_WITH_POSITION_AGENT_PROTECT_SECRET",
+  "CertificateSha256": "PINNED_SERVER_CERTIFICATE_SHA256",
+  "IntervalMilliseconds": 40,
+  "RequestTimeoutMilliseconds": 1000,
+  "HogpDeviceName": "MINI-PC-BACKEND"
+}

@@ -1,0 +1,87 @@
+{
+  "schema": 3,
+  "date": "2026-11-20",
+  "redacted": true,
+  "remote_access": {
+    "transport": "existing OpenSSH with strict host-key checking",
+    "rustdesk_used": false
+  },
+  "package": {
+    "identity": "Rivounet.MousseControler.Hogp",
+    "version": "1.0.0.2",
+    "publisher": "CN=MousseControler",
+    "certificate_thumbprint": "F4D17F09181DE18154C429C0ED762AD66A762C54",
+    "sha256": "907AFB9E458C7DA5C2B5555581065A310CD8EBC39BC9BB5EAE2CA508A0B12042",
+    "signature_valid": true
+  },
+  "bluetooth": {
+    "pairing_status": "Paired",
+    "pairing_ceremony": "ConfirmOnly",
+    "protection_level_used": "Encryption",
+    "paired_on_both_hosts": true,
+    "native_hid_device": true,
+    "native_mouse_device": true,
+    "report_subscription": true
+  },
+  "movement": {
+    "reports_accepted": 3,
+    "sample_count": 454,
+    "sample_duration_ms": 14965.414,
+    "observed_transitions": 2,
+    "total_dx_pixels": 3,
+    "total_dy_pixels": 0,
+    "absolute_coordinates_published": false
+  },
+  "reconnection": {
+    "without_agent_after_provider_recreation": false,
+    "explicit_gatt_status": "Success",
+    "hid_service_count": 1,
+    "prototype_recovery_ms": 15409,
+    "final_package_recovery_ms": 14276,
+    "target_radio_cycle_restored": true,
+    "new_pairing_required": false,
+    "stale_reports_replayed": false,
+    "target_physical_reboots_executed": 2,
+    "target_pairing_persisted": true,
+    "target_final_reconnect_state": "PASS after manual logon; automatic reconnect without pairing",
+    "target_final_reconnect_upper_bound_ms": 197731,
+    "mini_physical_reboot_executed": true,
+    "mini_pairing_persisted": true,
+    "mini_new_pairing_required": false,
+    "mini_final_reconnect_state": "PASS after startup recovery; automatic reconnect without pairing",
+    "mini_final_reconnect_upper_bound_ms": 51248,
+    "mini_controlled_failure_recovery": true,
+    "mini_reboot_blocker": null
+  },
+  "hardware_qualification": {
+    "safe_surface": true,
+    "left_click_confirmed": true,
+    "right_click_confirmed": true,
+    "scroll_confirmed": true,
+    "rectangle_circle_polygon_confirmed": true,
+    "trajectory_sample_count": 100,
+    "position_success_rate_percent": 100.0,
+    "position_error_mean_px": 0.796,
+    "position_error_max_px": 2.0,
+    "position_latency_median_ms": 670.483,
+    "position_latency_p95_ms": 983.052,
+    "position_latency_max_ms": 1245.531,
+    "pause_confirmed": true,
+    "emergency_stop_confirmed": true
+  },
+  "emergency_stop_concurrency": {
+    "deterministic_scenarios": 9,
+    "command_after_effective_stop": false,
+    "repeated_stop_idempotent": true,
+    "explicit_start_required_for_resume": true,
+    "partial_start_cleanup_confirmed": true
+  },
+  "tests": {
+    "total": 136,
+    "passed": 136,
+    "failed": 0,
+    "duration_seconds": 35.659
+  },
+  "verdict": "PASS_WITH_RESERVATIONS",
+  "hogp_core_verdict": "PASS_WITH_RESERVATIONS"
+}

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "attempts": [
+    {
+      "attempt": 1,
+      "initial_state": "Off",
+      "confirmed_on": true,
+      "probe_result": "script error before complete result: descriptor ProtectionLevel property name incompatible",
+      "final_state": "Off",
+      "restoration_confirmed": true
+    },
+    {
+      "attempt": 2,
+      "initial_state": "Off",
+      "confirmed_on": true,
+      "probe_result": "script error before complete result: PowerShell IBuffer projection conversion",
+      "final_state": "Off",
+      "restoration_confirmed": true
+    },
+    {
+      "attempt": 3,
+      "initial_state": "Off",
+      "confirmed_on": true,
+      "probe_result": "Success",
+      "hid_provider": "Success",
+      "battery_provider": "Success",
+      "device_information_provider": "DisabledByPolicy",
+      "final_state": "Off",
+      "restoration_confirmed": true
+    }
+  ],
+  "start_advertising_called": false,
+  "pairing_executed": false,
+  "hid_report_emitted": false
+}

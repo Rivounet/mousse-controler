@@ -37,11 +37,11 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-023 | 2026-11-19 | Validé | Mandats Codex orientés vers un objectif fonctionnel complet et vérifiable, autonomie technique encadrée plutôt que micro-mandats | Codex conçoit, implémente, teste et corrige dans le même mandat ; points d'étape significatifs ; arrêt seulement pour décisions structurantes ou opérations sensibles ; PR Draft cohérentes, revues sur demande |
 
-| D-024 | 2026-11-19 | Validé, remplace D-002 et D-003 pour l'organisation courante | Codex, Git, développement, tests et exécution résident directement sur `mini-pc-backend` ; `MonOrdinateur` est uniquement la cible HID | Suppression du transfert distant dans le cycle quotidien ; preuves Bluetooth toujours observées sur les deux machines |
+| D-024 | 2026-11-19 | Validé, remplace D-002 et D-003 pour l'organisation courante et amende D-004 sur le rôle cible | Codex, Git, développement, tests et exécution résident directement sur `mini-pc-backend` ; commandes vers `MonOrdinateur` par Bluetooth HID, retour de position réelle par un canal LAN privé sécurisé distinct | Agent Windows visible limité à `GetCursorPos` et à la transmission horodatée multi-écrans/DPI ; aucune réception/exécution de commande souris ; documenter installation, arrêt, fraîcheur et protections réseau |
 
 | D-025 | 2026-11-19 | Validé | Conserver les composants SSH/SFTP et releases sans les supprimer, en les classant comme maintenance/rollback secondaires | Le travail des PR #2 et #3 est préservé ; il ne bloque pas J2 et devra être requalifié avant un nouvel usage distant réel |
 
-| D-026 | 2026-11-19 | Qualification partielle | Le Realtek et Windows exposent rôle périphérique BLE, serveur GATT, notifications, publicité et appairage ; verdict HOGP `GO_WITH_RESERVATIONS` | `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels ; protocole soumis à autorisation |
+| D-026 | 2026-11-19 | Qualification renforcée | Le Realtek et Windows exposent rôle périphérique BLE ; radio On temporaire, fournisseurs HID/Battery, quatre caractéristiques HID et Report Reference créés sans publicité puis radio restaurée Off | Device Information est réservé (`DisabledByPolicy`) ; `GO` exige encore publicité, bonding, chargement HID natif et événement souris réels |
 
 | D-027 | 2026-11-19 | Validé | Consolider les commits utiles des PR #1 à #3 sur une branche neuve issue de `main`, sans modifier les PR historiques | Une PR Draft unique MC-REPRISE-001 porte la base cohérente ; aucune fusion ou fermeture automatique |
 
@@ -53,12 +53,22 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-032 | 2026-11-19 | Validé | Trajectoires courbes, vitesse variable avec accélération/décélération et micro-variations bornées seulement pendant les déplacements | Moteur de trajectoires indépendant du transport HID ; comportement paramétrable et interruptible, sans objectif de dissimulation d'automatisation |
 | D-033 | 2026-11-19 | Validé | Après arrivée : attente temporisée configurable ou attente de commande explicite, combinables dans une séquence | États de séquence, pause/reprise/étape suivante/arrêt, aucune reprise/reconnexion ne rejoue les actions déjà effectuées |
 | D-034 | 2026-11-19 | Qualification partielle | La radio du mini-PC activée temporairement permet la création GATT HID/Battery et caractéristiques sans publicité ; retour Off confirmé | Lever l'ancienne incertitude RadioNotAvailable ; HOGP réel, publicité, pairing, mouvement et retour LAN restent non qualifiés (preuves PR #5) |
+| D-035 | 2026-11-20 | Validé | Séparer transport HOGP, contrôle de position, trajectoire pure et orchestration de séquence | Le moteur de trajectoires n'accède jamais au Bluetooth ; toute arrivée est confirmée par une mesure réelle |
+| D-036 | 2026-11-20 | Validé | Agent cible visible .NET Framework 4.8, sortie HTTPS seulement, lancé par tâche interactive temporaire | Aucun service caché, démarrage automatique ou commande souris sur la cible ; session console vérifiée |
+| D-037 | 2026-11-20 | Validé | Secrets HMAC et bearer protégés par DPAPI ; TLS épinglé ; pare-feu limité au port, programme et deux hôtes privés | Ne publier ni secret, certificat privé, adresse privée exacte ni identifiant matériel |
+| D-038 | 2026-11-20 | Validé | Zones physiques validées conservativement contre la topologie et sélectionnées avec une graine configurable | Rectangles, cercles et polygones sont reproductibles en test ; une zone traversant un vide d'écran est refusée |
+| D-039 | 2026-11-20 | Bloqué par confirmation humaine | Utiliser une identité MSIX avec capacité `bluetooth`, exigée par Windows pour la publicité GATT | Paquet signé de développement prêt ; aucune élévation globale ou baisse de protection ; approbation du certificat utilisateur nécessaire avant essai réel |
+| D-040 | 2026-11-20 | Validé ; clôt D-039 | Conserver le MSIX HOGP signé dont le certificat public exact est limité à `LocalMachine\TrustedPeople` | Publicité, appairage `ConfirmOnly` chiffré, HID natif et rapports réels qualifiés sans magasin Root ni désactivation de protection |
+| D-041 | 2026-11-20 | Validé ; amende D-036 | Exploiter l'agent visible et le contrôleur par tâches interactives `AtLogOn`, sans auto-logon | Reconnexion après redémarrage et reprise transitoire qualifiées ; ouverture manuelle de session toujours requise |
+| D-042 | 2026-11-20 | Validé | Sérialiser l'arrêt effectif et toutes les émissions HID dans le contrôleur, avec intention d'arrêt publiée avant le verrou | Toute commande en attente revalide l'état sous verrou ; arrêt répété idempotent ; `start()` seul ouvre une nouvelle époque de commandes |
+| D-043 | 2026-11-20 | Validé avec réserves | Retenir le verdict MC-HID-EXEC-001 `PASS_WITH_RESERVATIONS` dans la PR #6 Draft | HOGP, LAN, fonctions souris, trajectoires, séquences, AtLogOn et performances sont qualifiés ; réserves sur latence LAN aller simple et reprise GATT transitoire ; fusion explicite requise |
 
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
 
-**Inconnues majeures :** acceptation réelle du service HOGP par le pilote,
-bonding/chiffrement avec MonOrdinateur, chargement du pilote souris natif,
-reconnexion et stabilité. L'accès distant n'est plus une inconnue bloquante du
-MVP ; l'activation locale réelle et le rollback restent à qualifier.
+**Réserves résiduelles :** la latence LAN aller simple absolue n'est pas
+calculable sans synchronisation d'horloges et une reprise GATT transitoire peut
+précéder le retour automatique à `subscribed=True`. L'acceptation HOGP, le
+bonding/chiffrement, le pilote souris natif, la reconnexion, AtLogOn, l'arrêt et
+les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.

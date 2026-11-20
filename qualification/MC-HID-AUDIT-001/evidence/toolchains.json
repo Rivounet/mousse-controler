@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "observed_on": "mini-pc-backend",
+  "available": {
+    "python": "3.12.10",
+    "node": "26.12.1",
+    "dotnet_framework_full": "4.8.10008",
+    "dotnet_framework_release": 534296,
+    "inbox_csc": "14.8 / C# 5"
+  },
+  "not_found_in_path": ["dotnet", "cl", "msbuild", "cmake", "ninja", "rustc", "cargo", "go"],
+  "windows_sdk_metadata": {
+    "windows_winmd_found": false,
+    "conclusion": "Inbox csc can build a Win32 position agent, but the audited machine lacks the Windows SDK metadata/toolchain required for a maintainable C++/WinRT or C# WinRT HOGP build."
+  }
+}

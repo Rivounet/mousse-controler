@@ -58,3 +58,36 @@ Pour une activation : branche, SHA demandé, SHA actif, commande, résultat des
 tests, santé, rollback éventuel et fichiers de logs expurgés. Pour HOGP : ajouter
 reconnaissance côté cible, type de pilote chargé, événements minimaux observés et
 preuve d'arrêt.
+
+## Composants MC-HID-EXEC-001
+
+```powershell
+# Compilation de l'agent cible
+powershell.exe -NoProfile -File .\scripts\build\Build-PositionAgent.ps1
+
+# Construction du MSIX HOGP (ne l'installe pas)
+powershell.exe -NoProfile -File .\scripts\build\Build-HogpPackage.ps1 `
+  -CertificateThumbprint <EMPREINTE_VERIFIEE>
+
+# Tests
+python -m unittest discover -v
+```
+
+Le paquet HOGP doit être signé par le certificat exact préalablement vérifié.
+Le moteur WinRT est un script livré dans le catalogue MSIX et hébergé par la
+copie intacte et Authenticode-valide du `powershell.exe` Windows. Cette
+architecture conserve l'identité MSIX nécessaire au serveur GATT tout en
+respectant Smart App Control, qui refuse le binaire C++ auto-signé. Le manifeste
+déclare uniquement `runFullTrust` et `bluetooth`; aucun service, mode développeur
+ou démarrage automatique.
+
+L'exécution contrôlée utilise `python -m mousse_controler.app serve --config
+<runtime-config>`. Le fichier de configuration reste hors Git, ACL utilisateur +
+SYSTEM, et ne contient que des blobs DPAPI. L'arrêt est `Ctrl+C` ou la commande
+locale authentifiée `stop`, qui libère les boutons, arrête la publicité et ferme
+les serveurs.
+
+Restauration : arrêter le contrôleur, désenregistrer les tâches temporaires
+cible, retirer la règle pare-feu privée dédiée, restaurer chaque radio à son état
+initial, supprimer le paquet `Rivounet.MousseControler.Hogp` et retirer uniquement
+les certificats `CN=MousseControler` dont l'empreinte correspond à l'installation.
