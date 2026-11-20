@@ -1,0 +1,14 @@
+MC-POST-MERGE-002 software qualification
+Date: 2026-11-20
+Main: 09fa2fe475cc70c9bdaf375fffc684195207161b
+Command: python -m compileall -q src tests scripts\qualification
+Result: PASS
+Command: python -m unittest discover -v
+Result: 185 tests, 185 PASS, 0 FAIL, 0 ERROR
+Test duration: 49.178 s
+Compile and full-suite elapsed time: 50.365 s
+Build: PositionAgent.exe /warn:4 /warnaserror+ — PASS
+Build: MouseWitness.exe /warn:4 /warnaserror+ — PASS
+Runtime test: authenticated WebSocket wait-only action — PASS
+Replay test: duplicate wait-only action_id rejected — PASS
+Effects: zero HID reports, zero real mouse actions, zero real captures.

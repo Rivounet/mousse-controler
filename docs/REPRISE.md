@@ -220,3 +220,15 @@ Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et capt
 ### Fusion J6 confirmée — 20 novembre 2026
 
 La PR #8 MC-MOUSE-ACTIONS-001 est **MERGED** dans `main` au commit `e0658142a65d8b494f109efa3318c6ea21feac3d` (autorisation explicite de l'utilisateur). Le dernier SHA de branche fusionné est `578acf976e3ce00a4f01142aaedad243bb19284a`, les corrections applicatives qualifiées sont au SHA `e7e26332e56a39cbd2ca915413c313da07c638d9`. **J6 intégré, PASS_WITH_RESERVATIONS**. Tests Codex 185/185 PASS ; les essais matériels antérieurs couvrent 17 actions et 37 événements, sans nouvelle émission HID après les corrections. Pas de CI GitHub configurée. La fusion Git ne prouve pas à elle seule la synchronisation du clone ou des processus en cours sur mini-pc-backend ; contrôler les SHA locaux avant tout redéploiement, sans prise de souris non autorisée. Les réserves restent ouvertes : roulette horizontale sans AC Pan, dossier temporaire vide résiduel, accord préalable pour toute prise de souris.
+
+### Qualification post-fusion MC-POST-MERGE-002 — 20 novembre 2026
+
+`main` local et GitHub concordent au SHA
+`09fa2fe475cc70c9bdaf375fffc684195207161b`. Le contrôleur mini-PC a été
+rechargé depuis ce contenu : GATT annoncé et abonné, boutons zéro, position
+fraîche, WebSocket authentifié et registre anti-rejeu `.ids` migré avec le
+journal. `MonOrdinateur` conserve l'agent qualifié exact en session interactive
+et son rollback ; aucune mise à jour cible n'a été nécessaire. Suite 185/185
+PASS, test runtime limité à une attente sans HID, aucune capture réelle.
+Verdict : `PASS_WITH_RESERVATIONS`. Voir le
+[rapport post-fusion](../qualification/MC-POST-MERGE-002/RAPPORT.md).

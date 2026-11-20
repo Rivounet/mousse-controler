@@ -1,0 +1,75 @@
+{
+  "schema": "mc-post-merge-002-v1",
+  "date": "2026-11-20",
+  "redacted": true,
+  "verdict": "PASS_WITH_RESERVATIONS",
+  "git": {
+    "main_sha": "09fa2fe475cc70c9bdaf375fffc684195207161b",
+    "pr8_merge_sha": "e0658142a65d8b494f109efa3318c6ea21feac3d",
+    "safety_fix_sha": "e7e26332e56a39cbd2ca915413c313da07c638d9",
+    "worktree_clean_before_sync": true,
+    "sync_method": "fast-forward"
+  },
+  "mini_pc": {
+    "task": "MousseControler-HOGP",
+    "task_state": "Running",
+    "logon_trigger": true,
+    "limited_run_level": true,
+    "launcher_sha256": "E2B0A993BB31E2B42433EC73A108B0BDE12C9E857613A2A93B7D408FE0FD4C77",
+    "hogp_package": {
+      "identity": "Rivounet.MousseControler.Hogp",
+      "version": "1.0.0.2",
+      "publisher": "CN=MousseControler",
+      "status": "Ok",
+      "qualified_msix_sha256": "907AFB9E458C7DA5C2B5555581065A310CD8EBC39BC9BB5EAE2CA508A0B12042"
+    },
+    "transport": {
+      "advertising": true,
+      "subscribed": true,
+      "buttons": 0
+    },
+    "position": {
+      "fresh": true,
+      "age_ms_at_check": 15.0,
+      "session_id": 1
+    },
+    "action_id_retention_seconds": 2592000,
+    "journal_present": true,
+    "id_ledger_present": true,
+    "journal_and_ledger_together": true,
+    "nonterminal_actions": 0,
+    "historical_unknown_actions": 1,
+    "capture_broker_loaded": true,
+    "real_capture_requested": false
+  },
+  "target": {
+    "ssh_alias": "MonOrdinateur",
+    "task": "MousseControler-PositionAgent",
+    "task_state": "Running",
+    "interactive_session": 1,
+    "process_count": 1,
+    "agent_sha256": "0562CC27694964406311C62E963B5F1BA6913B49EE2A3D6B0605F9088FEDF73F",
+    "agent_matches_qualified_artifact": true,
+    "rollback_available": true,
+    "rollback_sha256": "C19B14127CBE1504C74DC53C653494471D2E6827E79D2557A68541D866DC1071",
+    "native_mouse_ok": true,
+    "bluetooth_ok": true,
+    "modified": false
+  },
+  "checks": {
+    "software_tests_passed": 185,
+    "software_tests_total": 185,
+    "software_test_duration_seconds": 49.178,
+    "python_compile": "PASS",
+    "position_agent_build": "PASS",
+    "mouse_witness_build": "PASS",
+    "command_api_unauthenticated_status": 401,
+    "websocket_unauthenticated_status": 401,
+    "websocket_states": ["ACCEPTED", "RUNNING", "EXECUTED"],
+    "websocket_event_ids_unique": true,
+    "duplicate_action_id_rejected": true,
+    "hid_reports_requested": 0,
+    "real_mouse_control": false,
+    "real_capture": false
+  }
+}
