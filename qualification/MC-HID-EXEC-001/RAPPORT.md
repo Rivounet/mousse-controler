@@ -39,6 +39,10 @@ cache et conserve la connexion. Il réessaie après une perte de lien. Il ne
 reçoit et n'exécute aucune commande souris ; les rapports restent exclusivement
 transportés par le pilote HID Bluetooth natif.
 
+La tâche de l'agent possède un déclencheur `AtLogOn` pour redémarrer dans la
+session interactive après redémarrage de MonOrdinateur. Elle sera retirée lors
+du nettoyage final de qualification.
+
 Deux recréations complètes du fournisseur ont été qualifiées : retour de
 l'abonnement en 15,409 s sur le prototype puis en 14,276 s avec le MSIX final
 1.0.0.2 et la commande normale `advertise start`. Un cycle radio cible Off→On a

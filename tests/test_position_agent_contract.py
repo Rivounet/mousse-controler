@@ -30,6 +30,7 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         source = MANAGER.read_text(encoding="utf-8")
         self.assertIn("HogpReconnect", source)
         self.assertIn("--hogp-reconnect", source)
+        self.assertIn("New-ScheduledTaskTrigger -AtLogOn", source)
 
 
 if __name__ == "__main__":

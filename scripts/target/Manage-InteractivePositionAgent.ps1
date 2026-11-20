@@ -56,9 +56,11 @@ switch ($Action) {
         }
         $taskAction = New-ScheduledTaskAction -Execute $ExecutablePath -Argument $arguments
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
             -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
-        Register-ScheduledTask -TaskName $TaskName -Action $taskAction -Principal $principal -Settings $settings | Out-Null
+        Register-ScheduledTask -TaskName $TaskName -Action $taskAction -Trigger $trigger `
+            -Principal $principal -Settings $settings | Out-Null
         Start-ScheduledTask -TaskName $TaskName
         Start-Sleep -Milliseconds 800
         Get-AgentTaskState | ConvertTo-Json -Depth 4
