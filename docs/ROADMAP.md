@@ -47,3 +47,16 @@ atteint 100 % de réussite, médiane 670,483 ms, P95 983,052 ms et erreur maxima
 Toute modification de périmètre, de jalon ou de critère de sortie est documentée dans [DECISIONS.md](DECISIONS.md), puis reflétée ici et dans [PLANNING.md](PLANNING.md). Aucun jalon validé par simple déclaration non accompagnée de preuves.
 
 **Responsabilités :** Codex réalise, documente les tests et propose les changements ; ChatGPT tient cette roadmap à jour, suit Git/GitHub, et réalise les revues de code ou de preuves sur demande explicite ou au jalon convenu ; l'utilisateur arbitre les décisions engageantes.
+
+## J6 — MC-MOUSE-ACTIONS-001 : extension fonctionnelle planifiée
+
+**Statut : à faire.** Succède au MVP J5 fusionné et consolidé. Une seule PR Draft de développement, sans fusion automatique.
+
+| Ordre | Lot | Critère de sortie |
+|---|---|---|
+| J6.1 | Actions souris standard complètes : clics multiples, maintien, drag/drop, boutons compatibles, roulette verticale et horizontale si HID compatible | Tests unitaires et essais matériels sûrs |
+| J6.2 | Actions composables en séquences ; identifiant, états et événements WebSocket authentifiés | Résultats corrélables, non-rejeu, échecs configurables |
+| J6.3 | Capture ponctuelle optionnelle avant/après action configurée | Uniquement le moniteur entier sous curseur au moment de capture ; transfert LAN et conservation par action/séquence |
+| J6.4 | Qualification et documentation | Tests logiciels et matériels, sécurité, confidentialité, rapport, revue avant fusion |
+
+Hors périmètre : clavier, capture continue/périodique, capture indépendante, moteur d'analyse d'images, garantie de réaction de l'application cible.
