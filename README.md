@@ -58,8 +58,9 @@ elles ne décrivent pas l'état courant de la PR #6.
 - Arrêt d'urgence sérialisé avec toutes les émissions HID : les commandes qui
   attendent le verrou sont refusées après une demande d'arrêt, l'arrêt répété
   est idempotent et une reprise explicite crée une nouvelle époque de commandes.
-- PR #6 : **Draft ouverte, non fusionnée**, branche
-  `feat/mc-hid-exec-001`; verdict `PASS_WITH_RESERVATIONS`.
+- PR #6 : **fusionnée dans `main`** le 20 novembre 2026 au commit
+  `77d4a5939673053fa2e0dae73bc3a284a8597ac7`; verdict de qualification
+  conservé : `PASS_WITH_RESERVATIONS`.
 
 ## Documentation
 

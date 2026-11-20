@@ -8,10 +8,10 @@ Codex **sur mini-pc-backend** pilote un mandat global **MC-HID-EXEC-001** : fair
 
 L'agent cible lit `GetCursorPos`, la topologie et la session ; **il n'exécute aucune commande souris**. Le récepteur USB Logitech Nano est hors périmètre. Pas d'analyse d'écran ni de prise de décision applicative autonome.
 
-**État courant :** réalisation et qualification terminées dans la PR #6 Draft,
-branche `feat/mc-hid-exec-001`, non fusionnée. Verdict
-`PASS_WITH_RESERVATIONS`; les corrections finales de concurrence et la
-réconciliation documentaire précèdent l'arbitrage de fusion.
+**État courant :** réalisation et qualification terminées, puis fusionnées dans
+`main` par la PR #6 au commit
+`77d4a5939673053fa2e0dae73bc3a284a8597ac7`. Verdict conservé :
+`PASS_WITH_RESERVATIONS`.
 
 ## Fonctionnalités validées pour réalisation
 
@@ -26,9 +26,10 @@ réconciliation documentaire précèdent l'arbitrage de fusion.
 - PR #4 MC-REPRISE-001 **fusionnée** dans `main` (merge `d74e13e9a1af502a952d7cfdedf4aef5b0ec7473`).
 - PR #1–#3 **clôturées sans fusion directe** ; branches conservées.
 - PR #5 MC-HID-AUDIT-001/002 : **Draft, base main, non fusionnée**, dernier SHA connu `275571182aac2b17d2c6f0092a78470a3f14e5a9`. Ses scripts et rapports ne sont pas nécessairement présents dans `main` : récupérer depuis sa branche sans écrasement.
-- PR #6 MC-HID-EXEC-001 : **Draft ouverte, base main, non fusionnée** ; HOGP,
-  retour LAN, fonctions souris, trajectoires/séquences, AtLogOn, reconnexion et
-  performances qualifiés. SHA de référence avant corrections finales :
+- PR #6 MC-HID-EXEC-001 : **fusionnée dans `main`** le 20 novembre 2026 au
+  commit `77d4a5939673053fa2e0dae73bc3a284a8597ac7` ; HOGP, retour LAN,
+  fonctions souris, trajectoires/séquences, AtLogOn, reconnexion et performances
+  qualifiés. SHA de référence avant corrections finales :
   `751f75dfe2486ad630364fe7a072a8c06dd08b83`.
 
 ## Historique avant réalisation — preuves des audits
@@ -171,8 +172,9 @@ L'arrêt d'urgence partage désormais son verrou avec toutes les émissions HID.
 Une commande en attente revalide l'état avant transport, l'arrêt répété n'émet
 rien et une reprise explicite ouvre une nouvelle époque de commandes. Les
 réserves restantes sont la mesure LAN aller simple sans horloges synchronisées
-et la reprise GATT transitoire avant convergence automatique. La PR #6 reste
-Draft et non fusionnée.
+et la reprise GATT transitoire avant convergence automatique. La PR #6 a depuis
+été fusionnée dans `main` au commit
+`77d4a5939673053fa2e0dae73bc3a284a8597ac7`.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Planning](PLANNING.md) · [Tests](TESTS.md) · [Décisions](DECISIONS.md) · [Consignes Codex](../AGENTS.md) · [PR #6](https://github.com/Rivounet/mousse-controler/pull/6).
 

@@ -62,6 +62,7 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-041 | 2026-11-20 | Validé ; amende D-036 | Exploiter l'agent visible et le contrôleur par tâches interactives `AtLogOn`, sans auto-logon | Reconnexion après redémarrage et reprise transitoire qualifiées ; ouverture manuelle de session toujours requise |
 | D-042 | 2026-11-20 | Validé | Sérialiser l'arrêt effectif et toutes les émissions HID dans le contrôleur, avec intention d'arrêt publiée avant le verrou | Toute commande en attente revalide l'état sous verrou ; arrêt répété idempotent ; `start()` seul ouvre une nouvelle époque de commandes |
 | D-043 | 2026-11-20 | Validé avec réserves | Retenir le verdict MC-HID-EXEC-001 `PASS_WITH_RESERVATIONS` dans la PR #6 Draft | HOGP, LAN, fonctions souris, trajectoires, séquences, AtLogOn et performances sont qualifiés ; réserves sur latence LAN aller simple et reprise GATT transitoire ; fusion explicite requise |
+| D-044 | 2026-11-20 | Validé ; clôt la porte de fusion de D-043 | Reconnaître la fusion de la PR #6 dans `main` au commit `77d4a5939673053fa2e0dae73bc3a284a8597ac7` et consolider les installations sans réinstallation inutile | Contenus HOGP et agent installés concordants avec les artefacts qualifiés ; contrôleur Python rechargé depuis `main` ; verdict `PASS_WITH_RESERVATIONS` inchangé |
 
 ## En cas de changement
 

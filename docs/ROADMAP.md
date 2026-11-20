@@ -1,7 +1,8 @@
 # Roadmap — jalons sans échéances fixes
 
 Pilotage par **preuves fonctionnelles**, non par simple disponibilité d'API.
-MC-HID-EXEC-001 est livré dans la PR #6 Draft, non fusionnée, avec un verdict
+MC-HID-EXEC-001 est fusionné dans `main` par la PR #6 au commit
+`77d4a5939673053fa2e0dae73bc3a284a8597ac7`, avec un verdict
 `PASS_WITH_RESERVATIONS`.
 
 | Jalon | Finalité | Livrable attendu | Critère de sortie | État |
@@ -11,7 +12,7 @@ MC-HID-EXEC-001 est livré dans la PR #6 Draft, non fusionnée, avec un verdict
 | J2 — Faisabilité HID | Déterminer une voie Bluetooth native viable | Rapport matériel/OS, diagnostic GATT et prototype HID minimal | MonOrdinateur reconnaît une souris Bluetooth issue du mini-PC, avec événement de test | Validé — HOGP natif et appairage chiffré démontrés |
 | J3 — API et position | Transformer des commandes API en événements souris corrigés par retour réel | API locale + moteur + adaptateur HID + agent position LAN | Positions, mouvements, clics et défilement testés de bout en bout | Validé — chaîne matérielle complète qualifiée |
 | J4 — Activation robuste | Automatiser artefact Git, lancement local, état, arrêt et rollback | Scripts versionnés ; accès distant optionnel | Version SHA confirmée, idempotence, erreurs gérées et rollback local testés | Validé avec réserves — AtLogOn et reprise qualifiés |
-| J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | En revue — PASS_WITH_RESERVATIONS, PR #6 Draft |
+| J5 — MVP qualifié | Vérifier comportement, robustesse et sécurité | Batterie de tests, rapport de qualification, limites résiduelles | Revue indépendante du code et des preuves ; arbitrage explicite | Validé avec réserves — PR #6 fusionnée |
 
 ## Dépendances et priorités
 
