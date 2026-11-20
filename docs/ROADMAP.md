@@ -75,3 +75,9 @@ la documentation est générée depuis eux et les tests interdisent commandes
 fantômes ou gestionnaires non catalogués. État : **implémenté et qualifié en
 logiciel sur branche dédiée, PR Draft à publier**. Critère de sortie GitHub : PR
 Draft documentée, revue puis décision explicite ; aucune fusion automatique.
+
+## J8 — Consolidation des audits et programme de fiabilisation (20 novembre 2026)
+
+**État courant :** J7 MC-API-CATALOG-001 **MERGED** via [PR #10](https://github.com/Rivounet/mousse-controler/pull/10), commit `d19db664bc1e7d83ab1d289f89373f9e327a482b`. Les anciennes mentions Draft ci-dessus sont historiques et ne sont plus le statut courant. Audit indépendant Codex [PR #11](https://github.com/Rivounet/mousse-controler/pull/11) **Draft, non fusionnée** ; audit ChatGPT archivé sur branche isolée.
+
+**Verdict consolidé :** `MAINTENABLE_WITH_MAJOR_RESERVATIONS`. [Comparaison et plan global](../audits/2026-11-20-consolidation/REPORT.md). Lots R0 baseline/tests sûrs, R1 sûreté actions/arrêt, R2 bornes HOGP/LAN, R3 quotas/ressources/rollback, R4 tests et builds, R5 refactoring minimal, R6 documentation. Les quatre P1 issus de la contre-expertise sont des portes avant extension fonctionnelle importante. Aucun correctif ou déploiement encore effectué. Fusion des PR et HID réel uniquement après accord explicite.
