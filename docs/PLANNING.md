@@ -8,7 +8,7 @@
 - PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
 - Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
 - Appairage HOGP chiffré, souris native, mouvement minimal et retour LAN démontrés.
-- MC-HID-EXEC-001 : 113 PASS ; reconnexion après recréation HOGP en 14,276 s via l'agent. Redémarrages matériels et qualification fonctionnelle complète restent à faire.
+- MC-HID-EXEC-001 : 115 PASS ; reconnexion après recréation HOGP en 14,276 s via l'agent. Redémarrages matériels et qualification fonctionnelle complète restent à faire.
 
 ## Travaux structurants
 

@@ -38,7 +38,7 @@ Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse
 
 ## État MC-HID-EXEC-001 vérifié le 20 novembre 2026
 
-- 113/113 tests réussis en 63,730 s avec le chemin temporaire court prévu.
+- 115/115 tests réussis en 78,087 s avec le chemin temporaire court prévu.
 - MSIX 1.0.0.2 signé et vérifié ; appairage `ConfirmOnly` chiffré persistant.
 - Pilotes HID et souris natifs chargés ; mouvement minimal mesuré +3 px horizontal, 0 px vertical.
 - Reconnexion après recréation HOGP en 14,276 s grâce au moniteur GATT de l'agent.

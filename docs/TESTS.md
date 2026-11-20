@@ -97,7 +97,7 @@ deux tests supplémentaires vérifient la commande de l'alias packagé et la
 compatibilité du contrat historique direct.
 
 Après correction de la pairabilité et de la reconnexion, la suite complète a
-exécuté **113/113 tests en 63,730 s**. Le chemin court `MC_TEST_TMP` est requis
+exécuté **115/115 tests en 78,087 s**. Le chemin court `MC_TEST_TMP` est requis
 pour les tests de déploiement sous la limite de chemins Windows.
 
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.

@@ -25,7 +25,8 @@ def serve(config_path: Path) -> int:
     receiver = PositionReceiver(store, HmacVerifier(keys))
     transport = NativeHogpTransport(Path(config["hogp_executable"]))
     controller = MouseController(transport, store)
-    controller.start()  # prepares GATT only; advertising remains stopped
+    controller.start()
+    transport.advertise()
     gateway = CommandGateway(unprotect(config["command_token_dpapi"]), controller, transport, receiver)
     position_server = make_https_server(
         config["position_bind"], int(config["position_port"]), receiver,
@@ -45,7 +46,7 @@ def serve(config_path: Path) -> int:
 
     signal.signal(signal.SIGINT, stop_handler)
     signal.signal(signal.SIGTERM, stop_handler)
-    print("Mousse controller ready; GATT prepared, advertising stopped.", flush=True)
+    print("Mousse controller ready; GATT advertising active.", flush=True)
     print(f"Position HTTPS: {config['position_bind']}:{config['position_port']}", flush=True)
     print(f"Command API: 127.0.0.1:{config.get('command_port', 8766)}", flush=True)
     try:

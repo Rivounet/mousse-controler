@@ -43,6 +43,11 @@ La tâche de l'agent possède un déclencheur `AtLogOn` pour redémarrer dans la
 session interactive après redémarrage de MonOrdinateur. Elle sera retirée lors
 du nettoyage final de qualification.
 
+Le runtime du mini-PC démarre désormais la publicité juste après la préparation
+GATT. Un gestionnaire de tâche `AtLogOn` est livré pour relancer le runtime avec
+sa configuration après ouverture de session ; son installation permanente
+reste une étape de déploiement explicitement contrôlée.
+
 Deux recréations complètes du fournisseur ont été qualifiées : retour de
 l'abonnement en 15,409 s sur le prototype puis en 14,276 s avec le MSIX final
 1.0.0.2 et la commande normale `advertise start`. Un cycle radio cible Off→On a
@@ -70,7 +75,7 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 ## Tests et jalons
 
 `python -m unittest discover -v`, avec le répertoire temporaire court prévu :
-**113/113 PASS en 63,730 s**. Les builds réels de `PairingTool.exe`,
+**115/115 PASS en 78,087 s**. Les builds réels de `PairingTool.exe`,
 `PositionAgent.exe` et du MSIX signé ont également réussi.
 
 | Jalon | Résultat |
