@@ -11,6 +11,7 @@ import threading
 import time
 from typing import Any
 
+from .actions import ActionState
 from .controller import MouseController
 from .geometry import CircleZone, PolygonZone, RectangleZone
 from .sequence import SequenceRunner, SequenceStep, WaitMode
@@ -25,11 +26,15 @@ class CommandError(ValueError):
 
 
 class CommandGateway:
-    def __init__(self, token: bytes, controller: MouseController, transport: Any, position_receiver: Any):
+    def __init__(self, token: bytes, controller: MouseController, transport: Any,
+                 position_receiver: Any, action_executor: Any | None = None,
+                 capture_broker: Any | None = None):
         self._token = token
         self._controller = controller
         self._transport = transport
         self._receiver = position_receiver
+        self._actions = action_executor
+        self._captures = capture_broker
         self._seen: dict[str, int] = {}
         self._lock = threading.Lock()
         self._sequence: SequenceRunner | None = None
@@ -75,15 +80,77 @@ class CommandGateway:
                     raise CommandError("position metrics are unavailable")
                 return {"accepted": True, "command": command, "metrics": metrics()}
             elif command == "move":
-                self._controller.move(int(arguments["dx"]), int(arguments["dy"]))
+                tracked = self._tracked_legacy(
+                    str(payload["command_id"]), command,
+                    lambda: self._controller.move(int(arguments["dx"]), int(arguments["dy"])))
+                if tracked is not None:
+                    return {"accepted": True, "command": command, "action": tracked}
             elif command == "click":
-                self._controller.click(int(arguments["button_bit"]))
+                tracked = self._tracked_legacy(
+                    str(payload["command_id"]), command,
+                    lambda: self._controller.click(int(arguments["button_bit"])))
+                if tracked is not None:
+                    return {"accepted": True, "command": command, "action": tracked}
             elif command == "buttons":
-                self._controller.set_buttons(int(arguments["mask"]))
+                tracked = self._tracked_legacy(
+                    str(payload["command_id"]), command,
+                    lambda: self._controller.set_buttons(int(arguments["mask"])))
+                if tracked is not None:
+                    return {"accepted": True, "command": command, "action": tracked}
             elif command == "scroll":
-                self._controller.scroll(int(arguments["delta"]))
+                tracked = self._tracked_legacy(
+                    str(payload["command_id"]), command,
+                    lambda: self._controller.scroll(int(arguments["delta"])))
+                if tracked is not None:
+                    return {"accepted": True, "command": command, "action": tracked}
             elif command == "stop":
-                self._controller.emergency_stop()
+                if self._actions is not None:
+                    self._actions.emergency_stop()
+                else:
+                    self._controller.emergency_stop()
+            elif command == "capabilities":
+                if self._actions is None:
+                    return {
+                        "accepted": True, "command": command,
+                        "capabilities": {
+                            "buttons": {"left": 1, "right": 2, "middle": 4, "back": 8, "forward": 16},
+                            "vertical_wheel": True, "horizontal_wheel": False,
+                        },
+                    }
+                return {"accepted": True, "command": command,
+                        "capabilities": self._actions.capabilities()}
+            elif command == "action_submit":
+                actions = self._require_actions()
+                record = actions.submit(arguments["action"], action_id=arguments.get("action_id"))
+                return {"accepted": True, "command": command, "action": record}
+            elif command == "action_status":
+                record = self._require_actions().registry.get(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "action": record}
+            elif command == "action_list":
+                records = self._require_actions().registry.list(int(arguments.get("limit", 100)))
+                return {"accepted": True, "command": command, "actions": records}
+            elif command == "action_cancel":
+                record = self._require_actions().cancel(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "action": record}
+            elif command == "action_pause":
+                event = self._require_actions().pause(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "event": event}
+            elif command == "action_resume":
+                event = self._require_actions().resume(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "event": event}
+            elif command == "action_continue":
+                event = self._require_actions().advance(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "event": event}
+            elif command == "action_events":
+                events = self._require_actions().registry.history(
+                    arguments.get("after_event_id"), int(arguments.get("limit", 100)))
+                return {"accepted": True, "command": command, "events": events}
+            elif command == "capture_status":
+                captures = self._require_captures().list_for_action(str(arguments["action_id"]))
+                return {"accepted": True, "command": command, "captures": captures}
+            elif command == "capture_delete":
+                capture = self._require_captures().delete(str(arguments["capture_id"]))
+                return {"accepted": True, "command": command, "capture": capture}
             elif command == "sequence_start":
                 self._start_sequence(arguments)
             elif command == "sequence_pause":
@@ -101,6 +168,33 @@ class CommandGateway:
             else:
                 raise CommandError("unknown command")
             return {"accepted": True, "command": command}
+
+    def _require_actions(self):
+        if self._actions is None:
+            raise CommandError("action engine is unavailable")
+        return self._actions
+
+    def _require_captures(self):
+        if self._captures is None:
+            raise CommandError("capture subsystem is unavailable")
+        return self._captures
+
+    def _tracked_legacy(self, action_id: str, kind: str, callback):
+        if self._actions is None:
+            callback()
+            return None
+        registry = self._actions.registry
+        registry.create(action_id, kind)
+        registry.transition(action_id, ActionState.RUNNING)
+        try:
+            callback()
+        except Exception as exc:
+            registry.transition(action_id, ActionState.UNKNOWN,
+                                error_code="LEGACY_ACTION_UNCERTAIN", error=str(exc))
+            raise
+        registry.transition(action_id, ActionState.EXECUTED,
+                            result={"legacy_command": True})
+        return registry.get(action_id)
 
     def _validate_envelope(self, payload: dict[str, Any]) -> None:
         now = int(time.time() * 1000)
