@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "redacted": true,
+  "reference_sha": "751f75dfe2486ad630364fe7a072a8c06dd08b83",
+  "cause": "command methods checked the stopped flag before acquiring the controller lock, or did not check it, so a command queued behind the lock could cross a concurrent stop; repeated stop also reissued transport cleanup",
+  "correction": {
+    "single_controller_lock_for_state_and_transport": true,
+    "stop_intent_published_before_lock_wait": true,
+    "running_state_revalidated_immediately_before_each_hid_command": true,
+    "effective_transport_stopped_state_tracked_under_lock": true,
+    "repeated_stop_idempotent": true,
+    "explicit_start_opens_new_command_epoch": true,
+    "partial_start_failure_cleaned": true
+  },
+  "deterministic_scenarios": [
+    "move queued on lock while stop is requested",
+    "click queued on lock while stop is requested",
+    "scroll queued on lock while stop is requested",
+    "button command queued on lock while stop is requested",
+    "click already pressed when stop is requested",
+    "transport reconnect queued while stop is requested",
+    "repeated emergency stop",
+    "explicit start and move after effective stop",
+    "injected partial transport start failure"
+  ],
+  "adapter_assertions": {
+    "simulated_hid_events_checked": true,
+    "command_after_effective_stop": false,
+    "buttons_released_before_transport_stop": true,
+    "reconnect_after_stop": false,
+    "stale_command_replayed": false
+  },
+  "tests": {
+    "focused": {
+      "passed": 41,
+      "failed": 0,
+      "duration_seconds": 0.345
+    },
+    "controller_repeatability": {
+      "iterations": 50,
+      "tests_per_iteration": 19,
+      "failed_iterations": 0
+    },
+    "complete": {
+      "passed": 136,
+      "failed": 0,
+      "duration_seconds": 35.659
+    }
+  },
+  "hardware_requalification": {
+    "performed": false,
+    "reason": "no HOGP protocol, movement algorithm, package, agent or Windows configuration changed; previously qualified hardware behavior is preserved and the corrected race is deterministically exercised at the transport boundary"
+  },
+  "verdict": "PASS"
+}

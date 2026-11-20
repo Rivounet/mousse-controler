@@ -30,15 +30,20 @@ Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse
 
 ## État Git et qualification
 
+Les trois puces suivantes conservent l'historique antérieur à la réalisation ;
+elles ne décrivent pas l'état courant de la PR #6.
+
 - PR #4 de consolidation fusionnée dans `main` (merge `d74e13e9a1af502a952d7cfdedf4aef5b0ec7473`) ; PR #1–#3 clôturées sans fusion directe.
 - PR #5 Draft : audits MC-HID-AUDIT-001/002, **non fusionnée** ; résultats et scripts présents sur sa branche, à intégrer sans écrasement.
 - Audits : radio mini-PC On temporaire, fournisseurs HID/Battery et caractéristiques GATT créés avec succès sans publicité, puis radio restaurée Off. Service Device Information réservé : `DisabledByPolicy`.
-- Audit de MonOrdinateur : lecture locale de position et deux écrans confirmés ; intégration réseau et Bluetooth HID réel non qualifiés.
+- Audit historique de MonOrdinateur : lecture locale de position et deux écrans
+  confirmés ; l'intégration réseau et le Bluetooth HID réel, alors non
+  qualifiés, le sont désormais dans MC-HID-EXEC-001.
 - Les **79 tests** sont déclarés réussis dans le dernier compte rendu d'audit de la PR #5 ; ne pas les attribuer à la suite actuelle de `main` sans réexécution.
 
 ## État MC-HID-EXEC-001 vérifié le 20 novembre 2026
 
-- 127/127 tests réussis en 41,984 s hors du chemin temporaire artificiellement long du bac à sable.
+- 136/136 tests réussis en 35,659 s hors du chemin temporaire artificiellement long du bac à sable.
 - MSIX 1.0.0.2 signé et vérifié ; appairage `ConfirmOnly` chiffré persistant.
 - Pilotes HID et souris natifs chargés ; mouvement minimal mesuré +3 px horizontal, 0 px vertical.
 - Reconnexion après recréation HOGP en 14,276 s grâce au moniteur GATT de l'agent.
@@ -50,6 +55,11 @@ Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse
   traitement récepteur 0,145 ms et `GetPhysicalCursorPos` 20 us. La latence LAN
   aller simple reste non calculable sans horloges synchronisées.
 - Deux redémarrages cible et un redémarrage mini-PC qualifiés ; reconnexion après ouverture manuelle de session, sans nouvel appairage. Une reprise interne bornée corrige l'échec Bluetooth transitoire observé au premier lancement AtLogOn du mini-PC.
+- Arrêt d'urgence sérialisé avec toutes les émissions HID : les commandes qui
+  attendent le verrou sont refusées après une demande d'arrêt, l'arrêt répété
+  est idempotent et une reprise explicite crée une nouvelle époque de commandes.
+- PR #6 : **Draft ouverte, non fusionnée**, branche
+  `feat/mc-hid-exec-001`; verdict `PASS_WITH_RESERVATIONS`.
 
 ## Documentation
 

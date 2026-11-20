@@ -151,8 +151,33 @@ intacte de `powershell.exe` signée Microsoft avec l'identité du paquet.
 ## Tests et jalons
 
 `python -m unittest discover -v`, hors du chemin temporaire artificiellement
-long du bac à sable : **127/127 PASS en 41,984 s**. Les builds réels de `PairingTool.exe`,
+long du bac à sable : **136/136 PASS en 35,659 s**. Les builds réels de `PairingTool.exe`,
 `PositionAgent.exe` et du MSIX signé ont également réussi.
+
+## Correction finale de l'arrêt d'urgence
+
+La revue a identifié une fenêtre de concurrence : `move()` testait l'arrêt avant
+le verrou, tandis que `set_buttons()`, `click()` et `scroll()` ne le revalidaient
+pas sous verrou. Une commande déjà en attente pouvait donc franchir une demande
+d'arrêt. Un second `emergency_stop()` répétait en outre `release_all/stop` après
+l'arrêt effectif.
+
+Le contrôleur publie désormais l'intention d'arrêt avant d'attendre le verrou,
+mais sérialise l'arrêt effectif et chaque émission transport sous ce même verrou.
+Chaque commande revalide l'état immédiatement avant l'adaptateur. L'état du
+transport effectivement arrêté est explicite : l'arrêt répété est idempotent,
+`restart_transport()` abandonne une reconnexion concurrente, et seul `start()`
+ouvre une nouvelle époque. Un échec après démarrage transport partiel déclenche
+son nettoyage et laisse le contrôleur arrêté.
+
+Neuf scénarios déterministes vérifient les événements exacts du transport simulé :
+mouvement, clic, défilement et boutons en attente du verrou, clic déjà engagé,
+reconnexion concurrente, arrêt répété, reprise explicite et échec injecté de
+démarrage. Aucun événement souris ne suit l'arrêt effectif et les boutons sont
+libérés avant `stop`. Aucune requalification matérielle n'a été nécessaire : ni
+le protocole HOGP, ni l'algorithme de mouvement, ni les composants déployés ne
+changent. Les 19 tests du contrôleur ont également réussi 50 fois de suite sans
+échec d'ordonnancement.
 
 | Jalon | Résultat |
 |---|---|
@@ -170,6 +195,7 @@ long du bac à sable : **127/127 PASS en 41,984 s**. Les builds réels de `Pairi
 | Précision | PASS — 100 mouvements, moyenne 0,796 px, maximum 2 px |
 | Latence | PASS — 100 mouvements, médiane 0,670 s, P95 0,983 s |
 | Pause et arrêt d'urgence | PASS matériel |
+| Concurrence arrêt/commandes | PASS — neuf scénarios déterministes |
 | Livraison | PR #6 Draft, aucune fusion |
 
 ## État courant et réserves

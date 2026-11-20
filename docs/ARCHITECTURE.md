@@ -17,7 +17,9 @@ MonOrdinateur : pile Bluetooth et souris HID natives Windows
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
 ```
 
-Codex travaille **directement sur mini-pc-backend** et pilote les interventions autorisées sur MonOrdinateur via un accès distant authentifié à établir ou à qualifier ; un accès réseau distant n'assure pas à lui seul l'accès à la session graphique interactive.
+Codex travaille **directement sur mini-pc-backend**. L'accès OpenSSH à clé et
+host key stricte vers MonOrdinateur est qualifié pour la maintenance ; l'agent
+de position s'exécute séparément dans la session interactive.
 
 ## Contrats et limites
 
@@ -39,7 +41,13 @@ P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534` est h
 
 ## État des preuves
 
-Sur mini-pc-backend, radio Bluetooth temporairement On et créations non diffusées HID `0x1812`, Battery `0x180F`, caractéristiques HID et Report Reference réussies ; radio restaurée Off. Device Information `0x180A` : `DisabledByPolicy` (service réservé Windows). **Aucune publicité, association, notification HID ni commande réelle démontrée.** Sur MonOrdinateur, `GetCursorPos` et deux écrans ont été observés ; liaison LAN sécurisée non qualifiée. Ces résultats proviennent des audits en PR #5, non encore fusionnés.
+Les audits de la PR #5 avaient démontré uniquement la création GATT non diffusée
+et `GetCursorPos`; cette limite est conservée comme preuve historique. La PR #6
+démontre désormais publicité, appairage `ConfirmOnly` chiffré persistant,
+pilote/souris HID natifs, mouvements, clics, défilement, retour HTTPS/HMAC,
+zones, trajectoires, séquences, reconnexion et tâches `AtLogOn` sur les deux
+machines. La série stable de 100 mouvements atteint 100 % de réussite, une
+médiane de 670,483 ms, un P95 de 983,052 ms et une erreur maximale de 2 px.
 
 ## Exploitation et sécurité
 
@@ -58,7 +66,10 @@ isolés dans `scripts/remote/` et ne sont pas une dépendance de l'application.
 ## Limites du MVP
 
 Commandes prévues : `move(dx, dy)`, `click(button)`, `press`, `release`,
-`scroll(delta)`, `status()` et `stop()`. Les coordonnées absolues, l'analyse de
+`scroll(delta)`, `status()` et `stop()`. Toutes les émissions passent sous le
+même verrou que l'arrêt : l'intention d'arrêt est publiée avant l'attente du
+verrou, puis chaque commande revalide l'époque active juste avant le transport.
+Les coordonnées absolues, l'analyse de
 l'écran et le contrôle intelligent des applications sont hors périmètre.
 
 L'API de commande est liée à `127.0.0.1` par défaut. Un endpoint LAN distinct,
@@ -101,12 +112,15 @@ La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
 public exact est dans `LocalMachine\TrustedPeople`. Le paquet utilise donc une
 copie Authenticode-valide de `powershell.exe`, signée Microsoft, pour héberger le
-script WinRT catalogué dans le MSIX. `CreateAsync`, la création des services et
-la publicité `Started` ont été démontrés sans désactiver de protection. La
-reconnaissance HID et les rapports réels restent à qualifier sur la cible.
+script WinRT catalogué dans le MSIX. `CreateAsync`, la création des services,
+la publicité `Started`, la reconnaissance HID et les rapports réels ont été
+démontrés sans désactiver de protection.
 
-Le processus de qualification reste au premier plan ; l'agent cible est visible
-et à démarrage manuel. L'arrêt d'urgence purge les commandes et relâche les
-boutons ; TTL, limites de débit et absence de rejeu après reconnexion sont
-imposés. Les scripts SSH/SFTP et releases restent des moyens secondaires de
-maintenance. Aucune garantie d'indétectabilité par les applications.
+L'agent cible reste visible et démarre par tâche interactive `AtLogOn`, après
+ouverture manuelle de session, sans auto-logon. L'arrêt d'urgence publie d'abord
+l'état arrêté, attend l'émission en cours, libère les boutons et arrête le
+transport sous le même verrou. Un second arrêt n'émet rien ; seul `start()`
+ouvre une nouvelle époque. TTL, limites de débit et absence de rejeu après
+reconnexion restent imposés. Les scripts SSH/SFTP et releases sont des moyens
+secondaires de maintenance. Aucune garantie d'indétectabilité par les
+applications.

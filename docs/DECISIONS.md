@@ -58,12 +58,17 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 | D-037 | 2026-11-20 | Validé | Secrets HMAC et bearer protégés par DPAPI ; TLS épinglé ; pare-feu limité au port, programme et deux hôtes privés | Ne publier ni secret, certificat privé, adresse privée exacte ni identifiant matériel |
 | D-038 | 2026-11-20 | Validé | Zones physiques validées conservativement contre la topologie et sélectionnées avec une graine configurable | Rectangles, cercles et polygones sont reproductibles en test ; une zone traversant un vide d'écran est refusée |
 | D-039 | 2026-11-20 | Bloqué par confirmation humaine | Utiliser une identité MSIX avec capacité `bluetooth`, exigée par Windows pour la publicité GATT | Paquet signé de développement prêt ; aucune élévation globale ou baisse de protection ; approbation du certificat utilisateur nécessaire avant essai réel |
+| D-040 | 2026-11-20 | Validé ; clôt D-039 | Conserver le MSIX HOGP signé dont le certificat public exact est limité à `LocalMachine\TrustedPeople` | Publicité, appairage `ConfirmOnly` chiffré, HID natif et rapports réels qualifiés sans magasin Root ni désactivation de protection |
+| D-041 | 2026-11-20 | Validé ; amende D-036 | Exploiter l'agent visible et le contrôleur par tâches interactives `AtLogOn`, sans auto-logon | Reconnexion après redémarrage et reprise transitoire qualifiées ; ouverture manuelle de session toujours requise |
+| D-042 | 2026-11-20 | Validé | Sérialiser l'arrêt effectif et toutes les émissions HID dans le contrôleur, avec intention d'arrêt publiée avant le verrou | Toute commande en attente revalide l'état sous verrou ; arrêt répété idempotent ; `start()` seul ouvre une nouvelle époque de commandes |
+| D-043 | 2026-11-20 | Validé avec réserves | Retenir le verdict MC-HID-EXEC-001 `PASS_WITH_RESERVATIONS` dans la PR #6 Draft | HOGP, LAN, fonctions souris, trajectoires, séquences, AtLogOn et performances sont qualifiés ; réserves sur latence LAN aller simple et reprise GATT transitoire ; fusion explicite requise |
 
 ## En cas de changement
 
 Ajouter une ligne datée avec la décision remplacée et sa justification ; ne pas effacer silencieusement une décision antérieure. Répercuter les modifications sur [ROADMAP.md](ROADMAP.md), [PLANNING.md](PLANNING.md) et [ARCHITECTURE.md](ARCHITECTURE.md) lorsque cela s'applique.
 
-**Inconnues majeures :** acceptation réelle du service HOGP par le pilote,
-bonding/chiffrement avec MonOrdinateur, chargement du pilote souris natif,
-reconnexion et stabilité. L'accès distant n'est plus une inconnue bloquante du
-MVP ; l'activation locale réelle et le rollback restent à qualifier.
+**Réserves résiduelles :** la latence LAN aller simple absolue n'est pas
+calculable sans synchronisation d'horloges et une reprise GATT transitoire peut
+précéder le retour automatique à `subscribed=True`. L'acceptation HOGP, le
+bonding/chiffrement, le pilote souris natif, la reconnexion, AtLogOn, l'arrêt et
+les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.

@@ -69,11 +69,18 @@
     "pause_confirmed": true,
     "emergency_stop_confirmed": true
   },
+  "emergency_stop_concurrency": {
+    "deterministic_scenarios": 9,
+    "command_after_effective_stop": false,
+    "repeated_stop_idempotent": true,
+    "explicit_start_required_for_resume": true,
+    "partial_start_cleanup_confirmed": true
+  },
   "tests": {
-    "total": 127,
-    "passed": 127,
+    "total": 136,
+    "passed": 136,
     "failed": 0,
-    "duration_seconds": 41.984
+    "duration_seconds": 35.659
   },
   "verdict": "PASS_WITH_RESERVATIONS",
   "hogp_core_verdict": "PASS_WITH_RESERVATIONS"

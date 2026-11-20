@@ -68,8 +68,14 @@ class MouseController:
         self._positions = positions
         self._lock = threading.Lock()
         self._stopped = threading.Event()
+        self._stopped.set()
+        self._transport_stopped = True
         self._buttons = 0
         self._last_positioning_metrics: dict[str, float | int] = {}
+
+    def _ensure_running_locked(self) -> None:
+        if self._stopped.is_set() or self._transport_stopped:
+            raise RuntimeError("controller is stopped")
 
     def positioning_metrics(self) -> dict[str, float | int]:
         with self._lock:
@@ -77,8 +83,20 @@ class MouseController:
 
     def start(self) -> None:
         with self._lock:
+            if not self._stopped.is_set() and not self._transport_stopped:
+                return
+            try:
+                self._transport.start()
+            except Exception:
+                try:
+                    self._transport.stop()
+                finally:
+                    self._buttons = 0
+                    self._transport_stopped = True
+                raise
+            self._buttons = 0
+            self._transport_stopped = False
             self._stopped.clear()
-            self._transport.start()
 
     def is_stopped(self) -> bool:
         return self._stopped.is_set()
@@ -94,7 +112,13 @@ class MouseController:
             finally:
                 self._buttons = 0
                 self._transport.stop()
+                self._transport_stopped = True
+            if self._stopped.is_set():
+                return
             self._transport.start()
+            self._transport_stopped = False
+            if self._stopped.is_set():
+                return
             advertise = getattr(self._transport, "advertise", None)
             if advertise is not None:
                 advertise()
@@ -105,24 +129,27 @@ class MouseController:
     def emergency_stop(self) -> None:
         self._stopped.set()
         with self._lock:
+            if self._transport_stopped:
+                return
             try:
                 self._transport.release_all()
             finally:
                 self._buttons = 0
                 self._transport.stop()
+                self._transport_stopped = True
 
     def move(self, dx: int, dy: int) -> None:
-        if self._stopped.is_set():
-            raise RuntimeError("controller is stopped")
         if not -32768 <= dx <= 32767 or not -32768 <= dy <= 32767:
             raise ValueError("movement outside int16 bounds")
         with self._lock:
+            self._ensure_running_locked()
             self._transport.move(dx, dy)
 
     def set_buttons(self, mask: int) -> None:
         if not 0 <= mask <= 0x1F:
             raise ValueError("button mask outside five-button range")
         with self._lock:
+            self._ensure_running_locked()
             self._transport.buttons(mask)
             self._buttons = mask
 
@@ -130,6 +157,7 @@ class MouseController:
         if button_bit not in (1, 2, 4, 8, 16):
             raise ValueError("invalid button")
         with self._lock:
+            self._ensure_running_locked()
             self._transport.buttons(self._buttons | button_bit)
             try:
                 if self._stopped.wait(hold_seconds):
@@ -139,6 +167,7 @@ class MouseController:
 
     def scroll(self, delta: int) -> None:
         with self._lock:
+            self._ensure_running_locked()
             self._transport.scroll(delta)
 
     def move_to(

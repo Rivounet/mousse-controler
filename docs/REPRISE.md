@@ -1,12 +1,17 @@
 # Reprise — Mousse-controler
 
-**État documentaire : 19 novembre 2026.** Les mandats complets sont fournis dans le chat, jamais archivés dans GitHub.
+**État documentaire : 20 novembre 2026.** Les mandats complets sont fournis dans le chat, jamais archivés dans GitHub.
 
 ## Objectif actuel
 
 Codex **sur mini-pc-backend** pilote un mandat global **MC-HID-EXEC-001** : faire reconnaître le mini-PC comme souris Bluetooth LE HOGP sur **MonOrdinateur**, contrôler mouvements/clics/défilement, recevoir la position réelle via un **agent Windows visible sortant sur LAN HTTPS sécurisé**, et exécuter des séquences de zones avec trajectoires et correction de position.
 
 L'agent cible lit `GetCursorPos`, la topologie et la session ; **il n'exécute aucune commande souris**. Le récepteur USB Logitech Nano est hors périmètre. Pas d'analyse d'écran ni de prise de décision applicative autonome.
+
+**État courant :** réalisation et qualification terminées dans la PR #6 Draft,
+branche `feat/mc-hid-exec-001`, non fusionnée. Verdict
+`PASS_WITH_RESERVATIONS`; les corrections finales de concurrence et la
+réconciliation documentaire précèdent l'arbitrage de fusion.
 
 ## Fonctionnalités validées pour réalisation
 
@@ -21,9 +26,16 @@ L'agent cible lit `GetCursorPos`, la topologie et la session ; **il n'exécute a
 - PR #4 MC-REPRISE-001 **fusionnée** dans `main` (merge `d74e13e9a1af502a952d7cfdedf4aef5b0ec7473`).
 - PR #1–#3 **clôturées sans fusion directe** ; branches conservées.
 - PR #5 MC-HID-AUDIT-001/002 : **Draft, base main, non fusionnée**, dernier SHA connu `275571182aac2b17d2c6f0092a78470a3f14e5a9`. Ses scripts et rapports ne sont pas nécessairement présents dans `main` : récupérer depuis sa branche sans écrasement.
-- MC-HID-EXEC-001 : mandat élargi à l'accès autorisé aux deux machines et au moteur de trajectoires. **Aucune livraison de ce mandat n'est confirmée ici.**
+- PR #6 MC-HID-EXEC-001 : **Draft ouverte, base main, non fusionnée** ; HOGP,
+  retour LAN, fonctions souris, trajectoires/séquences, AtLogOn, reconnexion et
+  performances qualifiés. SHA de référence avant corrections finales :
+  `751f75dfe2486ad630364fe7a072a8c06dd08b83`.
 
-## Preuves techniques et réserves
+## Historique avant réalisation — preuves des audits
+
+Les constats de cette section décrivent l'état des PR #4/#5 avant la PR #6 ; ils
+sont conservés pour la traçabilité et ne doivent pas être lus comme l'état
+courant.
 
 - mini-PC Windows 11 Pro 26H2, Realtek ; radio Bluetooth temporairement activée et **HID/Battery GATT + caractéristiques et Report Reference créés sans publicité** ; radio restaurée Off. Device Information `0x180A` : `DisabledByPolicy` (service réservé).
 - Sur la branche de PR #5, Codex déclare **79 tests PASS** ; pas de nouvelle exécution indépendante sur main.
@@ -31,11 +43,11 @@ L'agent cible lit `GetCursorPos`, la topologie et la session ; **il n'exécute a
 - **Non démontré** : publicité BLE, appairage, chargement pilote souris HID, mouvement depuis mini-PC, canal HTTPS/HMAC réel, positionnement précis, trajectoires exécutées.
 - Accès distant depuis mini-PC à MonOrdinateur : aucun canal natif utilisable trouvé lors de l'audit ; établir/qualifier un accès authentifié, sans présumer d'un accès à la session graphique.
 
-## Prochaine exécution
+## Plan historique avant réalisation
 
 Codex sur mini-pc-backend : vérifier Git et PR #5, sécuriser l'accès autorisé à MonOrdinateur, installer MSVC/Windows SDK nécessaires, développer et tester HOGP, agent position LAN, contrôleur Python, moteurs de trajectoires et séquences ; démontrer la boucle réelle et publier une **PR Draft unique**. Essais matériels supervisés, arrêt d'urgence, modifications réversibles. Pas de fusion implicite.
 
-## Références
+## Constats historiques de faisabilité
 
 Le matériel retourne `true` pour BLE, le rôle périphérique et le rôle central.
 Les API WinRT de serveur GATT, création de caractéristiques, notification,
@@ -59,7 +71,7 @@ Device Information réservé retourne `DisabledByPolicy`. Toutes les ressources
 ont été libérées et l'état final `Off` confirmé. Aucun accès natif à
 MonOrdinateur n'est configuré depuis le mini-PC ; la cible reste `INCOMPLETE`.
 
-## Réalisé, simulé, non qualifié
+## État historique réalisé, simulé et non qualifié
 
 | Domaine | État |
 |---|---|
@@ -73,7 +85,7 @@ MonOrdinateur n'est configuré depuis le mini-PC ; la cible reste `INCOMPLETE`.
 | Publicité, bonding, pilote souris, mouvement | Non exécutés — autorisation requise |
 | API de commandes | Non développée |
 
-## Prochaine action
+## Porte historique avant autorisation d'exécution
 
 Décider l'autorisation du
 [`PROTOCOLE-HID.md`](../qualification/MC-REPRISE-001/PROTOCOLE-HID.md). Il
@@ -103,7 +115,10 @@ chaque livraison. D-023 : autonomie technique de Codex dans les limites
 explicites. Aucune fusion, publicité Bluetooth, modification système ou émission
 HID n'est implicite.
 
-## Reprise MC-HID-EXEC-001 — 20 novembre 2026
+## Historique de la qualification initiale MC-HID-EXEC-001
+
+Cette section conserve l'échec initial d'appairage et le nettoyage intermédiaire.
+Elle est supersédée par l'état qualifié courant ci-dessous.
 
 - branche de travail : `feat/mc-hid-exec-001`, sans fusion ;
 - Build Tools 17.14.45, MSVC 14.44 et SDK 10.0.26100 installés ;
@@ -133,7 +148,7 @@ corrigée et compilée, mais pas requalifiée dans un nouveau MSIX après nettoy
 `Encryption`. Ne retenter mouvement, clic/scroll ou batterie complète qu'après
 pairing et abonnement HID natif.
 
-## Références actuelles
+## État qualifié courant — 20 novembre 2026
 
 ### Correction de reconnexion — 20 novembre 2026
 
@@ -142,10 +157,24 @@ sont démontrés. La paire persistait après recréation du fournisseur, mais
 Windows ne rouvrait pas spontanément le service GATT. L'agent cible sélectionne
 désormais l'endpoint exact déjà appairé et ouvre l'unique service HID sans cache.
 Le MSIX 1.0.0.2 a retrouvé `subscribed=True` en 14,276 s après recréation
-complète, sans nouvel appairage ni rejeu. Les redémarrages matériels complets
-restent non exécutés.
+complète, sans nouvel appairage ni rejeu. Deux redémarrages de MonOrdinateur et
+un redémarrage du mini-PC ont ensuite conservé la paire ; les tâches interactives
+`AtLogOn` relancent les composants après ouverture manuelle de session.
 
-[Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Planning](PLANNING.md) · [Tests](TESTS.md) · [Décisions](DECISIONS.md) · [Consignes Codex](../AGENTS.md) · [PR #5](https://github.com/Rivounet/mousse-controler/pull/5).
+Le retour de position HTTPS/HMAC est opérationnel. Mouvements, clics gauche et
+droit, défilement, rectangle, cercle, polygone, trajectoires, attentes,
+pause/reprise et arrêt d'urgence ont été qualifiés sur surface sûre. Sur 100
+mouvements : réussite 100 %, médiane 670,483 ms, P95 983,052 ms, erreur moyenne
+0,796 px et maximum 2 px.
+
+L'arrêt d'urgence partage désormais son verrou avec toutes les émissions HID.
+Une commande en attente revalide l'état avant transport, l'arrêt répété n'émet
+rien et une reprise explicite ouvre une nouvelle époque de commandes. Les
+réserves restantes sont la mesure LAN aller simple sans horloges synchronisées
+et la reprise GATT transitoire avant convergence automatique. La PR #6 reste
+Draft et non fusionnée.
+
+[Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Planning](PLANNING.md) · [Tests](TESTS.md) · [Décisions](DECISIONS.md) · [Consignes Codex](../AGENTS.md) · [PR #6](https://github.com/Rivounet/mousse-controler/pull/6).
 
 ## Gouvernance
 

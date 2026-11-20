@@ -1,6 +1,8 @@
 # Planning opérationnel
 
-**Statuts :** À faire / En cours / En revue / Validé / Bloqué. Le mandat global en cours de cadrage est **MC-HID-EXEC-001** ; ne pas confondre spécification et fonctionnalité réalisée.
+**Statuts :** À faire / En cours / En revue / Validé / Bloqué. Le mandat
+MC-HID-EXEC-001 est réalisé et qualifié `PASS_WITH_RESERVATIONS` dans la PR #6
+Draft ; la fusion reste une décision explicite.
 
 ## État de référence
 
@@ -8,7 +10,10 @@
 - PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
 - Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
 - Appairage HOGP chiffré, souris native, mouvement minimal et retour LAN démontrés.
-- MC-HID-EXEC-001 : 115 PASS ; reconnexion après recréation HOGP en 14,276 s via l'agent. Redémarrages matériels et qualification fonctionnelle complète restent à faire.
+- MC-HID-EXEC-001 : chaîne matérielle, redémarrages, AtLogOn, reconnexion,
+  fonctions souris, trajectoires/séquences et performance qualifiés. Référence
+  publiée : 127 PASS au SHA `751f75d`; corrections de concurrence finales
+  revalidées par une suite complète de 136 PASS dans la même PR #6.
 
 ## Travaux structurants
 
@@ -22,24 +27,21 @@
 | MC-003C | J4 | Maintenance SSH/SFTP optionnelle | requalification seulement si nécessaire | Secondaire |
 | MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
 | MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | Réalisé — build natif et GATT préparé |
-| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | Validé avec réserves — redémarrage matériel non testé |
+| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | Validé — redémarrages et reconnexion ensuite qualifiés |
 | MC-005C | J2/J3 | Auditer HOGP, retour position et boucle précise | `MC-HID-AUDIT-001` | En revue — audit livré |
-| MC-005D | J2/J3 | Qualifier cause radio et prérequis cible | `MC-HID-AUDIT-002` | En revue — mini-PC READY, cible INCOMPLETE |
+| MC-005D | J2/J3 | Qualifier cause radio et prérequis cible | `MC-HID-AUDIT-002` | Validé historiquement ; prérequis cible levés par la PR #6 |
 | MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | Réalisé logiciel ; agent réel opérationnel |
-| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | En cours — chaîne prête, mouvement réel non atteint |
-| MC-008 | J3 | Trajectoires, zones et séquences A→B→C | code, API et tests | Réalisé en simulation ; matériel à qualifier |
-| MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | À faire |
-| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | À faire |
+| MC-007 | J3 | Intégrer HOGP et sécurités | démo API → souris | Validé matériellement |
+| MC-008 | J3 | Trajectoires, zones et séquences A→B→C | code, API et tests | Validé logiciel et matériel |
+| MC-009 | J5 | Robustesse, reconnexion et arrêt d'urgence | rapport de qualification | Validé avec réserves ; concurrence finale durcie |
+| MC-010 | J5 | Revue finale sur demande/jalon | verdict motivé | En revue — PR #6 Draft prête à arbitrage après corrections |
 
 **Mandat :** Codex sur mini-pc-backend, autorisé à coordonner les deux machines dans les limites du mandat exécutoire ; les modifications sensibles, l'accès distant et l'appairage restent supervisables. Une seule PR Draft cohérente, sans fusion automatique. Ne pas enregistrer le texte du mandat dans GitHub.
 
 ## Prochaine porte
 
-Approuver ou refuser l'ancre de confiance de développement limitée à
-`CurrentUser` nécessaire à l'installation du MSIX HOGP. La cible, l'agent
-interactif, le HTTPS privé et la compilation sont déjà qualifiés. Après cette
-approbation seulement : publicité, appairage, mouvement minimal puis batterie
-matérielle complète. Ne pas déclarer PASS avant ces mesures.
+Examiner les corrections finales et les preuves de la PR #6, puis décider
+explicitement de la fusion. La PR demeure Draft et aucune fusion n'est implicite.
 
 ## Règles de livraison
 
@@ -49,6 +51,9 @@ chat (D-021), une livraison ne déclenche pas automatiquement une revue exhausti
 (D-022) et l'autonomie technique reste bornée par les opérations sensibles
 (D-023).
 
-## Critères proposés (non mesurés)
+## Critères mesurés
 
-Erreur finale ≤ 2 px sur trois mesures, P95 ≤ 4 px, ≥ 99 % des cibles sous 2 s, refus d'une mesure > 150 ms, arrêt cible ≤ 250 ms. Les seuils sont à valider par essais réels et peuvent nécessiter arbitrage motivé.
+Sur 100 mouvements : erreur maximale 2 px, réussite 100 %, latence médiane
+670,483 ms et P95 983,052 ms. L'arrêt matériel, la libération des boutons et
+l'absence de rejeu sont qualifiés ; la concurrence du contrôleur est couverte
+par des tests déterministes sur l'adaptateur simulé.

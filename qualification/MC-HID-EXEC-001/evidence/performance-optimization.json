@@ -158,10 +158,10 @@
     "pairing_preserved": true
   },
   "software_tests": {
-    "total": 127,
-    "passed": 127,
+    "total": 136,
+    "passed": 136,
     "failed": 0,
-    "duration_seconds": 41.984,
+    "duration_seconds": 35.659,
     "note": "first sandbox run produced 23 path-budget errors because its temporary path exceeded 240 characters; unchanged suite passed outside that artificial path"
   },
   "goals": {
