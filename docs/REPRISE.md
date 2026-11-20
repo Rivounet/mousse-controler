@@ -205,3 +205,14 @@ Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et capt
 - Preuves : [rapport J6](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md), `evidence/hardware-summary.json` et `evidence/ssh-summary.json`. Pas de CI GitHub configurée ; tests exécutés sur les machines, pas dans un workflow distant.
 
 **Prochaine porte :** suivi documentaire et décision explicite de revue/fusion de la [PR #8](https://github.com/Rivounet/mousse-controler/pull/8). Ne pas annoncer le code J6 comme intégré à `main` avant fusion. Codex reste responsable de l'exécution ; ChatGPT maintient la documentation et pilote l'arbitrage GitHub. Les mandats complets restent dans le chat.
+
+### Clôture de revue ciblée — correctifs de sûreté (20 novembre 2026)
+
+**SHA logiciel revu :** `e7e26332e56a39cbd2ca915413c313da07c638d9`, PR #8 toujours Draft, non fusionnée. Deux anomalies identifiées pendant la revue ont reçu des correctifs :
+
+- Capture : `DELETED` exige la disparition constatée du fichier ; `DELETE_FAILED` est conservé par index persistant, les fichiers sont comptabilisés dans les quotas, le redémarrage réconcilie les orphelins et une suppression refusée est retentable.
+- Actions : registre durable `<action_journal>.ids` ; les identifiants demeurent réservés malgré éviction, saturation, compaction, redémarrage et reconnexion ; rétention anti-rejeu **30 jours par défaut**, configurable, avec expiration seulement après éviction de l'état. Le journal et le fichier `.ids` doivent être sauvegardés/restaurés ensemble.
+
+**Validation Codex déclarée et publiée :** 17/17 tests ciblés PASS et 185/185 tests complets PASS en 54,007 s. Aucune nouvelle prise de souris, émission HID ni capture réelle. Les preuves matérielles qualifiées au SHA précédent restent valides pour les composants non retouchés ; le correctif logiciel récent n'a pas été requalifié sur la souris réelle. Pas de CI GitHub configurée.
+
+**État de pilotage :** revue ciblée favorable sur les deux corrections ; aucune fusion sans autorisation explicite. Après fusion autorisée, mettre à jour planning/roadmap/reprise sur `main` et qualifier la synchronisation locale sans prise de souris non approuvée.
