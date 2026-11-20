@@ -167,8 +167,15 @@ du commit `597f740`, annonce `Started`, `subscribed=True`, boutons `0`, position
 fraîche 47 ms. Le WebSocket réel a diffusé `ACCEPTED → RUNNING → EXECUTED` pour
 une attente de 200 ms, identifiants d'événements uniques, zéro rapport HID.
 
-Restent à exécuter dans la session interactive de MonOrdinateur : installation
-de l'agent compilé, capture réelle avant/après, sélection physique du moniteur,
-et matrice matérielle des nouvelles actions sur la fenêtre témoin sûre. Les
-résultats historiques du MVP (clics gauche/droit, scroll, drag par position et
-100 mouvements) restent valides mais ne sont pas réattribués à ce nouveau code.
+### Qualification cible réelle clôturée le 20 novembre 2026
+
+Sur la PR #8, au SHA applicatif `92817a7d802c0d2c0d22b4502071a3dc4a994c19` :
+
+- **17 actions souris** réussies sur surface dédiée et **37 événements** témoins, tous dans les bornes sûres ; cinq boutons, clics simple/double/triple, combinaison, maintien, drag/drop, roulettes discrète/continue et séquence.
+- Événements WebSocket corrélés, IDs uniques ; positions marquées `CONFIRMED` uniquement si observées, autres actions `EXECUTED`.
+- **Deux captures réelles avant/après de 1920×1080**, sources supprimées et absentes ; seuls deux recadrages témoins 884×611 publiés dans `qualification/MC-MOUSE-ACTIONS-001/evidence/`.
+- Arrêt d'urgence : action en attente `CANCELLED`, aucun événement témoin après acceptation ; reconnexion GATT `Started`, `subscribed=True`, boutons 0, aucune action active ni rejeu.
+- SSH hors sandbox vérifié avec identité d'hôte stricte, compte et tâche interactifs identifiés, session SSH 0 et console/témoin 1, sans élévation ou changement de protections.
+- **177/177 tests PASS en 44,286 s**, compilations Python et Roslyn warnings-as-errors. Pas de workflow CI GitHub configuré.
+
+**Verdict J6 : PASS_WITH_RESERVATIONS**, branche PR #8 non fusionnée. Réserves : roulette horizontale absente du descripteur HID, dossier vide de maintenance non supprimé, et toute prise de souris future soumise à accord explicite. Voir [rapport et preuves](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md).
