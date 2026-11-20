@@ -762,9 +762,26 @@ def render_markdown_reference() -> str:
         "`Authorization: Bearer <token>`. L'enveloppe exige `command_id`, `issued_at_ms`, "
         "`ttl_ms` (1 à 5000 ms), `command` et accepte `arguments`.",
         "",
+        "Les horodatages `issued_at_ms` présents dans les exemples sont purement illustratifs. "
+        "Avant d'utiliser une requête, remplacer cette valeur par l'heure Unix actuelle en "
+        "millisecondes ; une valeur d'exemple ancienne sera refusée par le contrôle de TTL.",
+        "",
         f"Le registre contient **{len(COMMAND_CONTRACTS)} commandes**, "
         f"**{len(ACTION_CONTRACTS)} types d'actions** et "
         f"**{len(WEBSOCKET_EVENT_CONTRACTS)} événements WebSocket**.",
+        "",
+        "## Lecture des contraintes",
+        "",
+        "Les **contraintes statiques** sont validées automatiquement par le registre avant le "
+        "routage : présence et type des paramètres, valeurs autorisées, bornes et structure "
+        "déclarée. Une requête qui ne les respecte pas n'atteint pas le gestionnaire de commande.",
+        "",
+        "Les **contraintes dynamiques** dépendent de l'état réel au moment de l'exécution : "
+        "disponibilité du transport ou d'un moteur, fraîcheur de la position, état d'une action "
+        "ou d'une séquence, topologie et capacités HID. Le catalogue les décrit, mais elles sont "
+        "vérifiées par les composants concernés (contrôleur, transport, moteurs d'actions et de "
+        "séquences, ou gestionnaire de captures). Leur présence dans le catalogue ne garantit "
+        "donc pas qu'elles soient satisfaites lors d'un appel ultérieur.",
         "",
         "## Commandes API",
         "",

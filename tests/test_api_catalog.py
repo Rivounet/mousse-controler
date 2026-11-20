@@ -168,10 +168,14 @@ class ApiCatalogTests(unittest.TestCase):
         self.assertIn("buttons", result["capabilities"])
 
     def test_generated_reference_is_current(self):
+        generated = render_markdown_reference()
         self.assertEqual(
             (ROOT / "docs" / "API-REFERENCE.md").read_text(encoding="utf-8"),
-            render_markdown_reference(),
+            generated,
         )
+        self.assertIn("horodatages `issued_at_ms` présents dans les exemples", generated)
+        self.assertIn("contraintes statiques", generated)
+        self.assertIn("contraintes dynamiques", generated)
 
     def test_http_authentication_is_still_required(self):
         server = make_command_server(0, self.gateway)
