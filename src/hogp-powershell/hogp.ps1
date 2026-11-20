@@ -87,6 +87,20 @@ function Test-AdvertisingStatus {
     $name -eq 'Started' -or $name -eq 'StartedWithoutAllAdvertisementData'
 }
 
+function Stop-AdvertisingAndWait {
+    param([Parameter(Mandatory)]$Provider)
+
+    if (-not (Test-AdvertisingStatus $Provider.AdvertisementStatus)) { return }
+    $Provider.StopAdvertising()
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    while ((Test-AdvertisingStatus $Provider.AdvertisementStatus) -and [DateTime]::UtcNow -lt $deadline) {
+        Start-Sleep -Milliseconds 20
+    }
+    if (Test-AdvertisingStatus $Provider.AdvertisementStatus) {
+        throw "advertising did not stop; status=$($Provider.AdvertisementStatus)"
+    }
+}
+
 function New-ReportBuffer {
     param(
         [ValidateRange(0, 31)][int]$Buttons,
@@ -140,7 +154,7 @@ function Send-Report {
 
 function Stop-Hogp {
     if ($null -ne $script:HidProvider -and (Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus)) {
-        try { $script:HidProvider.StopAdvertising() } catch {}
+        try { Stop-AdvertisingAndWait $script:HidProvider } catch {}
     }
     $script:Buttons = 0
     $script:InputReport = $null
@@ -230,19 +244,20 @@ try {
                     Write-Event 'status' $true "prepared=True,advertising=$(Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus),advertisement_status=$($script:HidProvider.AdvertisementStatus),subscribed=$subscribed,buttons=$script:Buttons"
                 }
                 'advertise' {
-                    if ($parts.Count -ne 2 -or $parts[1] -notin @('start', 'stop')) {
-                        throw 'advertise expects start or stop'
+                    if ($parts.Count -ne 2 -or $parts[1] -notin @('start', 'pairable', 'stop')) {
+                        throw 'advertise expects start, pairable or stop'
                     }
                     if ($parts[1] -eq 'stop') {
-                        if (Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus) {
-                            $script:HidProvider.StopAdvertising()
-                        }
-                        Write-Event 'advertise-stop' $true
+                        Stop-AdvertisingAndWait $script:HidProvider
+                        Write-Event 'advertise-stop' $true ([string]$script:HidProvider.AdvertisementStatus)
                         break
                     }
                     $advertisingParametersType = [Windows.Devices.Bluetooth.GenericAttributeProfile.GattServiceProviderAdvertisingParameters, Windows, ContentType=WindowsRuntime]
                     $advertisingParameters = $advertisingParametersType::new()
                     $advertisingParameters.IsConnectable = $true
+                    # This Windows provider only reaches Started with discoverable
+                    # advertising on the qualified adapter. Incoming pairing is
+                    # still gated separately by the bounded OS pairability window.
                     $advertisingParameters.IsDiscoverable = $true
                     $script:HidProvider.StartAdvertising($advertisingParameters)
                     $deadline = [DateTime]::UtcNow.AddSeconds(3)
@@ -252,7 +267,8 @@ try {
                     if (-not (Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus)) {
                         throw "advertising did not start; status=$($script:HidProvider.AdvertisementStatus)"
                     }
-                    Write-Event 'advertise-start' $true ([string]$script:HidProvider.AdvertisementStatus)
+                    $mode = if ($parts[1] -eq 'pairable') { 'pairable' } else { 'connectable' }
+                    Write-Event 'advertise-start' $true "$($script:HidProvider.AdvertisementStatus);mode=$mode"
                 }
                 'move' {
                     if ($parts.Count -ne 3) { throw 'move expects dx and dy' }

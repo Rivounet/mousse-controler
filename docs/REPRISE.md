@@ -135,6 +135,16 @@ pairing et abonnement HID natif.
 
 ## Références actuelles
 
+### Correction de reconnexion — 20 novembre 2026
+
+L'appairage `ConfirmOnly` chiffré, la souris HID native et le mouvement minimal
+sont démontrés. La paire persistait après recréation du fournisseur, mais
+Windows ne rouvrait pas spontanément le service GATT. L'agent cible sélectionne
+désormais l'endpoint exact déjà appairé et ouvre l'unique service HID sans cache.
+Le MSIX 1.0.0.2 a retrouvé `subscribed=True` en 14,276 s après recréation
+complète, sans nouvel appairage ni rejeu. Les redémarrages matériels complets
+restent non exécutés.
+
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Planning](PLANNING.md) · [Tests](TESTS.md) · [Décisions](DECISIONS.md) · [Consignes Codex](../AGENTS.md) · [PR #5](https://github.com/Rivounet/mousse-controler/pull/5).
 
 ## Gouvernance

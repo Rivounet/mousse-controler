@@ -23,6 +23,19 @@ class NativeHogpTransportCommandTests(unittest.TestCase):
 
         self.assertEqual(transport._engine_command(), [str(executable), "--stdio"])
 
+    def test_powershell_engine_waits_for_advertising_to_stop(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(encoding="utf-8")
+        self.assertIn("function Stop-AdvertisingAndWait", source)
+        self.assertIn("advertising did not stop", source)
+
+    def test_pairability_is_an_explicit_command_mode(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(encoding="utf-8")
+        self.assertIn("@('start', 'pairable', 'stop')", source)
+        self.assertIn("Incoming pairing is", source)
+        self.assertIn("gated separately by the bounded OS pairability window", source)
+
 
 if __name__ == "__main__":
     unittest.main()

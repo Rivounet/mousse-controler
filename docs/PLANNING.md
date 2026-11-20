@@ -7,8 +7,8 @@
 - PR #4 fusionnée dans main ; PR #1–#3 clôturées sans fusion directe.
 - PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
 - Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
-- Aucun appairage HOGP, mouvement souris depuis mini-PC ni retour LAN intégré démontré.
-- MC-HID-EXEC-001 : 105 PASS, agent réel et retour HTTPS/HMAC qualifiés ; MSIX et publicité packagée fonctionnels via l'hôte Microsoft-signé, qualification HID réelle suspendue à la remise en ligne de la cible.
+- Appairage HOGP chiffré, souris native, mouvement minimal et retour LAN démontrés.
+- MC-HID-EXEC-001 : 113 PASS ; reconnexion après recréation HOGP en 14,276 s via l'agent. Redémarrages matériels et qualification fonctionnelle complète restent à faire.
 
 ## Travaux structurants
 
@@ -22,7 +22,7 @@
 | MC-003C | J4 | Maintenance SSH/SFTP optionnelle | requalification seulement si nécessaire | Secondaire |
 | MC-004 | J2 | Qualifier matériel, pilote, rôles BLE et API GATT | diagnostic et rapport MC-REPRISE-001 | En revue — GO_WITH_RESERVATIONS |
 | MC-005A | J2 | Construire un prototype HOGP minimal | service conforme, arrêt garanti | Réalisé — build natif et GATT préparé |
-| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | Bloqué — identité MSIX/certificat utilisateur à approuver |
+| MC-005B | J2 | Publicité, appairage et mouvement minimal | protocole matériel et traces expurgées | Validé avec réserves — redémarrage matériel non testé |
 | MC-005C | J2/J3 | Auditer HOGP, retour position et boucle précise | `MC-HID-AUDIT-001` | En revue — audit livré |
 | MC-005D | J2/J3 | Qualifier cause radio et prérequis cible | `MC-HID-AUDIT-002` | En revue — mini-PC READY, cible INCOMPLETE |
 | MC-006 | J3 | Contrat API, agent LAN et moteur de commandes | contrat + adaptateurs simulés + tests | Réalisé logiciel ; agent réel opérationnel |

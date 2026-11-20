@@ -2,12 +2,12 @@
 
 Contrôle de la souris de **MonOrdinateur** depuis **mini-pc-backend**. Transport prioritaire : **Bluetooth LE HID (HOGP)**, reconnu par les pilotes Windows natifs ; retour de position réelle par **agent Windows visible et canal LAN privé sécurisé**.
 
-> **État : développement MC-HID-EXEC-001 cadré, non qualifié de bout en bout.** La création locale non diffusée des services GATT HID/Battery a réussi radio temporairement activée ; publicité, appairage, reconnaissance souris, mouvement et retour LAN intégrés restent à démontrer.
+> **État : noyau HOGP qualifié avec réserves.** Appairage chiffré, souris HID native, mouvement minimal et reconnexion assistée par l'agent sont démontrés. Redémarrages matériels, clic/scroll, précision et trajectoires complètes restent à qualifier.
 
 ## Rôles et architecture
 
 - **mini-pc-backend** : Codex unique, Git, développement, moteur HOGP C++/WinRT, contrôleur Python, moteur de trajectoires/séquences, boucle de correction et réception HTTPS des positions.
-- **MonOrdinateur** : hôte HID Bluetooth natif ; **agent C# .NET Framework 4.8 visible**, limité à GetCursorPos/topologie/session et à l'envoi sortant des mesures via HTTPS authentifié. Il n'exécute aucune commande souris.
+- **MonOrdinateur** : hôte HID Bluetooth natif ; **agent C# .NET Framework 4.8 visible**, limité à GetCursorPos/topologie/session, à l'envoi sortant des mesures via HTTPS authentifié et au réveil du lien GATT déjà appairé. Il n'exécute aucune commande souris.
 - **GitHub** : source officielle. Le récepteur USB Logitech Nano 046D:C534 reste indépendant et hors périmètre de la commande Mousse-controler.
 
 ```text
@@ -38,10 +38,11 @@ Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse
 
 ## État MC-HID-EXEC-001 vérifié le 20 novembre 2026
 
-- 103/103 tests réussis en 60,365 s ; agent visible réel et retour HTTPS/HMAC qualifiés.
-- Moteur HOGP, API, trajectoires, zones et séquences implémentés ; MSIX signé construit.
-- Publicité Win32 non packagée interrompue par Windows (`Aborted`) ; installation MSIX suspendue à l'approbation humaine de l'ancre de confiance utilisateur.
-- Aucun rapport HID émis, aucun appairage résiduel ; verdict provisoire `INCOMPLETE`.
+- 113/113 tests réussis en 63,730 s avec le chemin temporaire court prévu.
+- MSIX 1.0.0.2 signé et vérifié ; appairage `ConfirmOnly` chiffré persistant.
+- Pilotes HID et souris natifs chargés ; mouvement minimal mesuré +3 px horizontal, 0 px vertical.
+- Reconnexion après recréation HOGP en 14,276 s grâce au moniteur GATT de l'agent.
+- Verdict global `INCOMPLETE` jusqu'aux redémarrages matériels et à la qualification fonctionnelle complète.
 
 ## Documentation
 

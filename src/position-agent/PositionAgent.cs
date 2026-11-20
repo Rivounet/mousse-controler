@@ -12,6 +12,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using Windows.Devices.Enumeration;
 
 namespace MousseControler.PositionAgent
 {
@@ -23,6 +26,126 @@ namespace MousseControler.PositionAgent
         public string CertificateSha256 { get; set; }
         public int IntervalMilliseconds { get; set; }
         public int RequestTimeoutMilliseconds { get; set; }
+        public string HogpDeviceName { get; set; }
+    }
+
+    internal sealed class HogpReconnectMonitor : IDisposable
+    {
+        private const string Selector =
+            "System.Devices.Aep.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\"";
+        private static readonly string[] RequestedProperties = {
+            "System.Devices.Aep.IsPresent",
+            "System.Devices.Aep.IsConnected",
+            "System.Devices.Aep.Bluetooth.Le.IsConnectable"
+        };
+        private readonly string exactName;
+        private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
+        private readonly Thread worker;
+        private BluetoothLEDevice device;
+        private IReadOnlyList<GattDeviceService> services;
+
+        internal HogpReconnectMonitor(string exactName)
+        {
+            this.exactName = exactName;
+            worker = new Thread(Run) { IsBackground = true, Name = "HOGP reconnect monitor" };
+        }
+
+        internal void Start()
+        {
+            Console.WriteLine("HOGP reconnect monitor: paired endpoint '" + exactName + "'.");
+            worker.Start();
+        }
+
+        public void Dispose()
+        {
+            cancellation.Cancel();
+            bool stopped = !worker.IsAlive || worker.Join(35000);
+            ReleaseConnection();
+            if (stopped) cancellation.Dispose();
+        }
+
+        private void Run()
+        {
+            while (!cancellation.IsCancellationRequested)
+            {
+                try
+                {
+                    if (device == null || device.ConnectionStatus != BluetoothConnectionStatus.Connected)
+                    {
+                        ReleaseConnection();
+                        ConnectOnce();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ReleaseConnection();
+                    Console.Error.WriteLine("[{0:O}] HOGP reconnect pending: {1}",
+                        DateTimeOffset.Now, ex.Message);
+                }
+                cancellation.Token.WaitHandle.WaitOne(2000);
+            }
+        }
+
+        private void ConnectOnce()
+        {
+            DeviceInformationCollection candidates = DeviceInformation.FindAllAsync(
+                Selector, RequestedProperties, DeviceInformationKind.AssociationEndpoint)
+                .AsTask().GetAwaiter().GetResult();
+            DeviceInformation selected = null;
+            foreach (DeviceInformation candidate in candidates)
+            {
+                if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
+                    !candidate.Pairing.IsPaired ||
+                    !GetBoolean(candidate, "System.Devices.Aep.IsPresent") ||
+                    !GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable"))
+                    continue;
+                selected = candidate;
+                break;
+            }
+            if (selected == null) throw new InvalidOperationException("paired HOGP endpoint is not connectable");
+
+            BluetoothLEDevice candidateDevice = BluetoothLEDevice.FromIdAsync(selected.Id)
+                .AsTask().GetAwaiter().GetResult();
+            if (candidateDevice == null) throw new InvalidOperationException("BluetoothLEDevice creation returned null");
+            GattDeviceServicesResult result = candidateDevice.GetGattServicesForUuidAsync(
+                GattServiceUuids.HumanInterfaceDevice, BluetoothCacheMode.Uncached)
+                .AsTask().GetAwaiter().GetResult();
+            if (result.Status != GattCommunicationStatus.Success || result.Services.Count != 1)
+            {
+                foreach (GattDeviceService service in result.Services) service.Dispose();
+                candidateDevice.Dispose();
+                throw new InvalidOperationException("HOGP service connection status: " + result.Status);
+            }
+            if (cancellation.IsCancellationRequested)
+            {
+                foreach (GattDeviceService service in result.Services) service.Dispose();
+                candidateDevice.Dispose();
+                return;
+            }
+            device = candidateDevice;
+            services = result.Services;
+            Console.WriteLine("[{0:O}] HOGP link connected; native HID service active.", DateTimeOffset.Now);
+        }
+
+        private static bool GetBoolean(DeviceInformation candidate, string name)
+        {
+            object value;
+            return candidate.Properties.TryGetValue(name, out value) && value is bool && (bool)value;
+        }
+
+        private void ReleaseConnection()
+        {
+            if (services != null)
+            {
+                foreach (GattDeviceService service in services) service.Dispose();
+                services = null;
+            }
+            if (device != null)
+            {
+                device.Dispose();
+                device = null;
+            }
+        }
     }
 
     internal sealed class DisplayInfo
@@ -104,6 +227,7 @@ namespace MousseControler.PositionAgent
         private long sequence;
         private string previousTopology;
         private uint previousSession = uint.MaxValue;
+        private readonly HogpReconnectMonitor reconnectMonitor;
 
         internal Agent(AgentConfig config)
         {
@@ -113,10 +237,13 @@ namespace MousseControler.PositionAgent
                 DataProtectionScope.CurrentUser);
             certificatePin = NormalizeHex(config.CertificateSha256);
             if (certificatePin.Length != 64) throw new InvalidDataException("certificate SHA-256 must contain 64 hex characters");
+            if (!string.IsNullOrWhiteSpace(config.HogpDeviceName))
+                reconnectMonitor = new HogpReconnectMonitor(config.HogpDeviceName);
         }
 
         public void Dispose()
         {
+            if (reconnectMonitor != null) reconnectMonitor.Dispose();
             if (secret != null) Array.Clear(secret, 0, secret.Length);
         }
 
@@ -124,6 +251,7 @@ namespace MousseControler.PositionAgent
         {
             Console.WriteLine("Mousse Position Agent — visible, outbound-only. Ctrl+C to stop.");
             Console.WriteLine("Endpoint: " + config.Endpoint);
+            if (reconnectMonitor != null) reconnectMonitor.Start();
             while (!token.IsCancellationRequested)
             {
                 Stopwatch cycle = Stopwatch.StartNew();
@@ -299,9 +427,33 @@ namespace MousseControler.PositionAgent
                     finally { Array.Clear(clear, 0, clear.Length); }
                     return 0;
                 }
+                if ((args.Length == 2 || args.Length == 3) && args[0] == "--hogp-reconnect")
+                {
+                    if (string.IsNullOrWhiteSpace(args[1]))
+                        throw new InvalidDataException("HOGP device name was empty");
+                    if (args.Length == 3)
+                    {
+                        StreamWriter log = new StreamWriter(args[2], true, new UTF8Encoding(false));
+                        log.AutoFlush = true;
+                        Console.SetOut(log);
+                        Console.SetError(log);
+                    }
+                    using (CancellationTokenSource cancellation = new CancellationTokenSource())
+                    using (HogpReconnectMonitor monitor = new HogpReconnectMonitor(args[1]))
+                    {
+                        Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs) {
+                            eventArgs.Cancel = true;
+                            cancellation.Cancel();
+                        };
+                        monitor.Start();
+                        cancellation.Token.WaitHandle.WaitOne();
+                    }
+                    return 0;
+                }
                 if (args.Length != 2 || args[0] != "--config")
                 {
                     Console.Error.WriteLine("Usage: PositionAgent.exe --config <agent.json>");
+                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> [log-path]");
                     Console.Error.WriteLine("       PositionAgent.exe --protect-secret  (reads one line from stdin)");
                     return 2;
                 }

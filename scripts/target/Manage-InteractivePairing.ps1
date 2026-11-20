@@ -2,6 +2,7 @@
 param(
     [Parameter(Mandatory)][ValidateSet('Start', 'Status', 'Stop')][string]$Action,
     [string]$DeviceName = 'MINI-PC-BACKEND',
+    [ValidateSet('Pair', 'Inspect', 'Connect')][string]$Mode = 'Pair',
     [string]$WorkDirectory = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001",
     [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-Pairing'
 )
@@ -19,7 +20,12 @@ switch ($Action) {
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
         }
         Remove-Item -LiteralPath $resultPath -Force -ErrorAction SilentlyContinue
-        $arguments = '--name "{0}" "{1}"' -f $DeviceName, $resultPath
+        $modeArgument = switch ($Mode) {
+            'Inspect' { '--inspect-name' }
+            'Connect' { '--connect-name' }
+            default { '--name' }
+        }
+        $arguments = '{0} "{1}" "{2}"' -f $modeArgument, $DeviceName, $resultPath
         $taskAction = New-ScheduledTaskAction -Execute $pairingTool -Argument $arguments
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
         $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 3) -MultipleInstances IgnoreNew

@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Foundation;
 
 internal static class PairingTool
@@ -28,14 +30,18 @@ internal static class PairingTool
 
     private static int Main(string[] args)
     {
-        if (args.Length != 3 || args[0] != "--name" || args[2].Length == 0)
+        var inspectOnly = args.Length == 3 && args[0] == "--inspect-name";
+        var connectOnly = args.Length == 3 && args[0] == "--connect-name";
+        var pair = args.Length == 3 && args[0] == "--name";
+        if ((!inspectOnly && !connectOnly && !pair) || args[2].Length == 0)
         {
-            Console.Error.WriteLine("Usage: PairingTool --name <exact-name> <result-json>");
+            Console.Error.WriteLine(
+                "Usage: PairingTool (--name|--inspect-name|--connect-name) <exact-name> <result-json>");
             return 2;
         }
         try
         {
-            return Run(args[1], args[2]);
+            return Run(args[1], args[2], inspectOnly, connectOnly);
         }
         catch (Exception ex)
         {
@@ -53,14 +59,14 @@ internal static class PairingTool
         }
     }
 
-    private static int Run(string exactName, string resultPath)
+    private static int Run(string exactName, string resultPath, bool inspectOnly, bool connectOnly)
     {
         var device = DiscoverLiveEndpoint(exactName, TimeSpan.FromSeconds(35));
         var initiallyPaired = device.Pairing.IsPaired;
         var ceremonies = new List<string>();
         var status = initiallyPaired ? "AlreadyPaired" : "NotStarted";
         var protection = "None";
-        if (!initiallyPaired)
+        if (!initiallyPaired && !inspectOnly && !connectOnly)
         {
             var custom = device.Pairing.Custom;
             TypedEventHandler<DeviceInformationCustomPairing, DevicePairingRequestedEventArgs> handler =
@@ -89,6 +95,23 @@ internal static class PairingTool
 
         var paired = initiallyPaired || status == DevicePairingResultStatus.Paired.ToString() ||
             status == DevicePairingResultStatus.AlreadyPaired.ToString();
+        var connectionStatus = "NotRequested";
+        var hidServiceCount = 0;
+        if (connectOnly)
+        {
+            using (var bluetoothDevice = BluetoothLEDevice.FromIdAsync(device.Id)
+                .AsTask().GetAwaiter().GetResult())
+            {
+                if (bluetoothDevice == null)
+                    throw new InvalidOperationException("BluetoothLEDevice.FromIdAsync returned null");
+                var services = bluetoothDevice.GetGattServicesForUuidAsync(
+                    GattServiceUuids.HumanInterfaceDevice, BluetoothCacheMode.Uncached)
+                    .AsTask().GetAwaiter().GetResult();
+                connectionStatus = services.Status.ToString();
+                hidServiceCount = services.Services.Count;
+                foreach (var service in services.Services) service.Dispose();
+            }
+        }
         var resultFields = new Dictionary<string, object>(Diagnostics)
         {
             { "device_name", exactName },
@@ -99,9 +122,13 @@ internal static class PairingTool
             { "paired", paired },
             { "session_id", Process.GetCurrentProcess().SessionId }
         };
+        resultFields["inspect_only"] = inspectOnly;
+        resultFields["connect_only"] = connectOnly;
+        resultFields["gatt_status"] = connectionStatus;
+        resultFields["hid_service_count"] = hidServiceCount;
         WriteResult(resultPath, resultFields);
-        Console.WriteLine("Pairing status: " + status);
-        return paired ? 0 : 1;
+        Console.WriteLine((inspectOnly ? "Inspection" : "Pairing") + " status: " + status);
+        return inspectOnly || (connectOnly && connectionStatus == "Success") || paired ? 0 : 1;
     }
 
     private static DeviceInformation DiscoverLiveEndpoint(string exactName, TimeSpan timeout)

@@ -83,16 +83,21 @@ Le 20 novembre 2026, `python -m unittest discover -v` a exécuté **103 tests en
   après arrêt ;
 - API loopback, bearer constant-time, TTL et idempotence.
 
-Preuves réelles déjà obtenues : agent session console 1, deux écrans, échantillon
-HTTPS signé accepté, radio cible activée et publicité nominalement détectée lors
-des premières tentatives. Non qualifiés : appairage final, pilote HID, rapports
-souris, précision, P95, reconnexion et arrêt matériel. Le statut demeure donc
-`INCOMPLETE`, indépendamment des tests logiciels réussis.
+Preuves réelles obtenues : agent session console 1, deux écrans, échantillon
+HTTPS signé, appairage chiffré, pilote HID/souris natif, rapports relatifs et
+reconnexion après recréation du fournisseur en 14,276 s. Non qualifiés :
+redémarrages matériels, clic/scroll sur surface sûre, précision, P95,
+multi-écrans en trajectoire et arrêt matériel. Le statut global demeure donc
+`INCOMPLETE`.
 
 Après ajout de l'hôte MSIX compatible Smart App Control et de son routage par le
 transport Python, la suite a exécuté **105 tests en 52,869 s : 105 PASS**, puis
 une revalidation complète **105/105 en 80,412 s**. Les
 deux tests supplémentaires vérifient la commande de l'alias packagé et la
 compatibilité du contrat historique direct.
+
+Après correction de la pairabilité et de la reconnexion, la suite complète a
+exécuté **113/113 tests en 63,730 s**. Le chemin court `MC_TEST_TMP` est requis
+pour les tests de déploiement sous la limite de chemins Windows.
 
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.

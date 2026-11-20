@@ -6,9 +6,10 @@
 | 2 | session interactive 1, minimum chiffrement | `Failed`, aucune paire |
 | 3 | outil C# Custom Pairing, `ConfirmOnly` reçu et accepté | `Failed`, protection utilisée `None`, aucune paire |
 | 4 | identité MSIX vérifiée, publicité stabilisée `status=2`, session interactive 1 | `ConfirmOnly` reçu et accepté, `Failed`, protection utilisée `None`, aucune paire |
+| 5 | fenêtre système de pairabilité temporaire et réversible | `ConfirmOnly`, `Paired`, protection utilisée `Encryption` |
 
-La publicité packagée est passée transitoirement par `Aborted` avant de se
-stabiliser en `StartedWithoutAllAdvertisementData`. Le moteur a signalé trop tôt
-un échec de commande, alors que son état ultérieur confirmait la publicité
-active. Aucune nouvelle tentative ne doit précéder l'instrumentation de l'échec
-de bonding/chiffrement. Les adresses, identifiants AEP et IP privées sont omis.
+La corrélation des événements a montré que la cible attendait la réponse tandis
+que le mini-PC rejetait l'authentification entrante. L'ouverture temporaire de
+la pairabilité locale a supprimé ce rejet. La paire a ensuite été observée sur
+les deux machines. Les adresses, identifiants AEP, comptes et IP privées sont
+omis.

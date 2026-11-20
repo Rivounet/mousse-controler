@@ -5,6 +5,9 @@ param(
     [string]$Action,
     [string]$ExecutablePath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\PositionAgent.exe",
     [string]$ConfigPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\agent.json",
+    [ValidateSet('Position', 'HogpReconnect')][string]$Mode = 'Position',
+    [string]$HogpDeviceName = 'MINI-PC-BACKEND',
+    [string]$HogpLogPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\hogp-reconnect.log",
     [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-PositionAgent'
 )
 
@@ -37,13 +40,21 @@ function Get-AgentTaskState {
 switch ($Action) {
     'Start' {
         if (-not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) { throw 'PositionAgent executable not found' }
-        if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) { throw 'PositionAgent config not found' }
+        if ($Mode -eq 'Position' -and -not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+            throw 'PositionAgent config not found'
+        }
         $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
         if ($existing) {
             Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
         }
-        $taskAction = New-ScheduledTaskAction -Execute $ExecutablePath -Argument ('--config "{0}"' -f $ConfigPath)
+        $arguments = if ($Mode -eq 'HogpReconnect') {
+            Remove-Item -LiteralPath $HogpLogPath -Force -ErrorAction SilentlyContinue
+            '--hogp-reconnect "{0}" "{1}"' -f $HogpDeviceName, $HogpLogPath
+        } else {
+            '--config "{0}"' -f $ConfigPath
+        }
+        $taskAction = New-ScheduledTaskAction -Execute $ExecutablePath -Argument $arguments
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
             -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
