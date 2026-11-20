@@ -37,6 +37,7 @@ from tests.r0_doubles import (
     FailingAfterEffectTransport,
     ProcessDouble,
     SaturatingStderr,
+    ControllerStopDouble,
     SequenceDouble,
     UpdateOrderModel,
 )
@@ -119,7 +120,7 @@ class ActionCharacterizationTests(unittest.TestCase):
         registry = ActionRegistry()
         return transport, controller, registry, ActionExecutor(controller, registry)
 
-    def test_A01_current_defect_ambiguous_press_continue_leaves_pressed_state(self):
+    def test_A01_ambiguous_press_continue_enters_safety_stop(self):
         transport, controller, registry, executor = self.make_executor(
             FailingAfterEffectTransport("buttons"))
         try:
@@ -128,9 +129,12 @@ class ActionCharacterizationTests(unittest.TestCase):
             })
             result = wait_for_record(registry, accepted["action_id"])
             self.assertEqual(result["state"], "UNKNOWN")
-            self.assertFalse(controller.is_stopped())
-            self.assertEqual(controller.buttons_mask(), 1)
-            self.assertEqual(transport.buttons_mask, 1)
+            self.assertTrue(controller.is_stopped())
+            self.assertEqual(controller.buttons_mask(), 0)
+            self.assertEqual(transport.buttons_mask, 0)
+            self.assertFalse(result["result"]["safety_stop"]["release_confirmed"])
+            with self.assertRaisesRegex(RuntimeError, "safety-stopped"):
+                executor.submit({"kind": "wait", "duration_seconds": 0})
         finally:
             executor.close()
 
@@ -166,7 +170,7 @@ class ActionCharacterizationTests(unittest.TestCase):
         finally:
             executor.close()
 
-    def test_A04_current_defect_close_leaves_queued_action_accepted(self):
+    def test_A04_close_cancels_queued_action(self):
         _transport, _controller, registry, executor = self.make_executor()
         first = executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
         deadline = time.monotonic() + 1
@@ -176,19 +180,22 @@ class ActionCharacterizationTests(unittest.TestCase):
         executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
         executor.close()
         self.assertEqual(registry.get("running")["state"], "CANCELLED")
-        self.assertEqual(registry.get("queued")["state"], "ACCEPTED")
+        self.assertEqual(registry.get("queued")["state"], "CANCELLED")
+        self.assertEqual(registry.get("queued")["error_code"], "EXECUTOR_CLOSED")
 
-    def test_A05_current_defect_global_stop_omits_historical_sequence(self):
+    def test_A05_global_stop_coordinates_both_engines(self):
         actions = ActionsDouble()
-        gateway = CommandGateway(b"token", object(), object(), object(), actions)
+        controller = ControllerStopDouble()
+        gateway = CommandGateway(b"token", controller, object(), object(), actions)
         sequence = SequenceDouble()
         gateway._sequence = sequence
         gateway.execute({
             "command_id": "stop-r0", "issued_at_ms": int(time.time() * 1000),
             "ttl_ms": 1000, "command": "stop", "arguments": {},
         })
-        self.assertEqual(actions.emergency_stop_calls, 1)
-        self.assertEqual(sequence.stop_calls, 0)
+        self.assertEqual(actions.request_stop_calls, 1)
+        self.assertEqual(sequence.stop_calls, 1)
+        self.assertEqual(controller.emergency_stop_calls, 1)
 
 
 class ReceiverDouble:

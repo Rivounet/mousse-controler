@@ -399,10 +399,12 @@ class ActionCancelled(RuntimeError):
 
 
 class ActionExecutionError(RuntimeError):
-    def __init__(self, message: str, *, code: str = "ACTION_FAILED", emitted: bool = False):
+    def __init__(self, message: str, *, code: str = "ACTION_FAILED", emitted: bool = False,
+                 button_state_uncertain: bool = False):
         super().__init__(message)
         self.code = code
         self.emitted = emitted
+        self.button_state_uncertain = button_state_uncertain
 
 
 @dataclass
@@ -410,6 +412,7 @@ class _Control:
     cancel: threading.Event = field(default_factory=threading.Event)
     run_gate: threading.Event = field(default_factory=threading.Event)
     advance: threading.Event = field(default_factory=threading.Event)
+    button_state_uncertain: threading.Event = field(default_factory=threading.Event)
 
     def __post_init__(self) -> None:
         self.run_gate.set()
@@ -427,6 +430,7 @@ class ActionExecutor:
         self._controls: dict[str, _Control] = {}
         self._lock = threading.Lock()
         self._closed = threading.Event()
+        self._stopped = threading.Event()
         self._worker = threading.Thread(target=self._run, name="mousse-actions", daemon=True)
         self._worker.start()
 
@@ -446,22 +450,23 @@ class ActionExecutor:
 
     def submit(self, spec: dict[str, Any], action_id: str | None = None,
                parent_id: str | None = None) -> dict[str, Any]:
-        if self._closed.is_set():
-            raise RuntimeError("action executor is closed")
         validated = self._validate_spec(spec)
         identifier = action_id or str(uuid.uuid4())
         control = _Control()
-        self.registry.create(identifier, validated["kind"], parent_id)
         with self._lock:
+            if self._closed.is_set():
+                raise RuntimeError("action executor is closed")
+            if self._stopped.is_set():
+                raise RuntimeError("action executor is safety-stopped")
+            self.registry.create(identifier, validated["kind"], parent_id)
             self._controls[identifier] = control
-        try:
-            self._queue.put_nowait((identifier, validated, control))
-        except queue.Full:
-            with self._lock:
+            try:
+                self._queue.put_nowait((identifier, validated, control))
+            except queue.Full:
                 self._controls.pop(identifier, None)
-            self.registry.transition(identifier, ActionState.FAILED, error_code="QUEUE_FULL",
-                                     error="action queue capacity exceeded")
-            raise RuntimeError("action queue capacity exceeded")
+                self.registry.transition(identifier, ActionState.FAILED, error_code="QUEUE_FULL",
+                                         error="action queue capacity exceeded")
+                raise RuntimeError("action queue capacity exceeded")
         return self.registry.get(identifier)
 
     def cancel(self, action_id: str) -> dict[str, Any]:
@@ -501,30 +506,70 @@ class ActionExecutor:
         control.advance.set()
         return self.registry.annotate(action_id, {"advance_requested": True}, "control")
 
-    def emergency_stop(self) -> None:
+    def request_stop(self) -> None:
+        """Publish the stop intent and wake every operation without taking a HID lock."""
+        self._stopped.set()
         with self._lock:
             controls = list(self._controls.values())
         for control in controls:
             control.cancel.set()
             control.advance.set()
             control.run_gate.set()
+
+    def emergency_stop(self) -> None:
+        self.request_stop()
         self._controller.emergency_stop()
 
     def close(self, timeout: float = 2.0) -> None:
-        if self._closed.is_set():
-            return
-        self._closed.set()
-        self.emergency_stop()
+        if timeout < 0:
+            raise ValueError("close timeout must be non-negative")
+        with self._lock:
+            if self._closed.is_set():
+                return
+            self._closed.set()
+        deadline = time.monotonic() + timeout
+        self.request_stop()
+        self._cancel_queued()
+        stop_error: Exception | None = None
         try:
-            self._queue.put_nowait(None)
-        except queue.Full:
-            pass
-        self._worker.join(timeout)
+            self._controller.emergency_stop()
+        except Exception as exc:
+            stop_error = exc
+        self._queue.put_nowait(None)
+        self._worker.join(max(0.0, deadline - time.monotonic()))
+        if self._worker.is_alive():
+            raise RuntimeError("action executor did not close within the deadline") from stop_error
+        if stop_error is not None:
+            raise RuntimeError("controller stop failed while closing action executor") from stop_error
+
+    def _cancel_queued(self) -> None:
+        while True:
+            try:
+                item = self._queue.get_nowait()
+            except queue.Empty:
+                return
+            try:
+                if item is None:
+                    continue
+                action_id, _spec, control = item
+                control.cancel.set()
+                control.advance.set()
+                control.run_gate.set()
+                if self.registry.get(action_id)["state"] == ActionState.ACCEPTED.value:
+                    self.registry.transition(
+                        action_id, ActionState.CANCELLED,
+                        error_code="EXECUTOR_CLOSED", error="cancelled before execution by close",
+                    )
+                with self._lock:
+                    self._controls.pop(action_id, None)
+            finally:
+                self._queue.task_done()
 
     def _run(self) -> None:
-        while not self._closed.is_set():
+        while True:
             item = self._queue.get()
             if item is None:
+                self._queue.task_done()
                 return
             action_id, spec, control = item
             try:
@@ -591,7 +636,12 @@ class ActionExecutor:
                 emitted = emitted or attempt_emitted
                 result["attempts"] = attempt
                 return result, confirmed, emitted
-            except ActionCancelled:
+            except ActionCancelled as exc:
+                if control.button_state_uncertain.is_set():
+                    raise ActionExecutionError(
+                        str(exc), code="BUTTON_UNCERTAIN", emitted=True,
+                        button_state_uncertain=True,
+                    ) from exc
                 raise
             except Exception as exc:
                 exc_emitted = isinstance(exc, ActionExecutionError) and exc.emitted
@@ -639,7 +689,10 @@ class ActionExecutor:
                 try:
                     self._controller.click(button, hold)
                 except Exception as exc:
-                    raise ActionExecutionError(str(exc), code="CLICK_UNCERTAIN", emitted=True) from exc
+                    raise ActionExecutionError(
+                        str(exc), code="CLICK_UNCERTAIN", emitted=True,
+                        button_state_uncertain=True,
+                    ) from exc
                 completed += 1
                 if index + 1 < count:
                     self._wait(interval, control)
@@ -650,29 +703,43 @@ class ActionExecutor:
                 buttons = (self._controller.press_buttons(mask) if kind == "press"
                            else self._controller.release_buttons(mask))
             except Exception as exc:
-                raise ActionExecutionError(str(exc), code="BUTTON_UNCERTAIN", emitted=True) from exc
+                raise ActionExecutionError(
+                    str(exc), code="BUTTON_UNCERTAIN", emitted=True,
+                    button_state_uncertain=True,
+                ) from exc
             return {"buttons_mask": buttons, "reports": 1}, False, True
         if kind == "hold":
             mask = self._button_mask(spec)
             try:
                 self._controller.press_buttons(mask)
             except Exception as exc:
-                raise ActionExecutionError(str(exc), code="BUTTON_UNCERTAIN", emitted=True) from exc
+                raise ActionExecutionError(
+                    str(exc), code="BUTTON_UNCERTAIN", emitted=True,
+                    button_state_uncertain=True,
+                ) from exc
             try:
                 self._wait(float(spec["duration_seconds"]), control)
             finally:
                 try:
                     self._controller.release_buttons(mask)
-                except RuntimeError:
+                except RuntimeError as exc:
                     if not self._controller.is_stopped():
-                        raise
+                        raise ActionExecutionError(
+                            str(exc), code="BUTTON_UNCERTAIN", emitted=True,
+                            button_state_uncertain=True,
+                        ) from exc
+                    control.button_state_uncertain.set()
             return {"held_mask": mask, "duration_seconds": float(spec["duration_seconds"]), "reports": 2}, False, True
         if kind in ("drag", "move_with_buttons"):
             mask = self._button_mask(spec)
             try:
                 self._controller.press_buttons(mask)
             except Exception as exc:
-                raise ActionExecutionError(str(exc), code="DRAG_UNCERTAIN", emitted=True) from exc
+                raise ActionExecutionError(
+                    str(exc), code="DRAG_UNCERTAIN", emitted=True,
+                    button_state_uncertain=True,
+                ) from exc
+            operation_error: Exception | None = None
             try:
                 if kind == "drag" or "x" in spec:
                     position = self._controller.move_to(
@@ -690,13 +757,26 @@ class ActionExecutor:
                     result = {"button_mask": mask, "reports": 3}
                     confirmed = False
             except Exception as exc:
-                raise ActionExecutionError(str(exc), code="DRAG_UNCERTAIN", emitted=True) from exc
+                operation_error = exc
             finally:
                 try:
                     self._controller.release_buttons(mask)
-                except RuntimeError:
+                except RuntimeError as exc:
                     if not self._controller.is_stopped():
-                        raise
+                        raise ActionExecutionError(
+                            str(exc), code="DRAG_UNCERTAIN", emitted=True,
+                            button_state_uncertain=True,
+                        ) from exc
+                    control.button_state_uncertain.set()
+            if control.button_state_uncertain.is_set():
+                raise ActionExecutionError(
+                    "button release was attempted during stop but is not physically confirmed",
+                    code="DRAG_UNCERTAIN", emitted=True, button_state_uncertain=True,
+                )
+            if operation_error is not None:
+                raise ActionExecutionError(
+                    str(operation_error), code="DRAG_UNCERTAIN", emitted=True,
+                ) from operation_error
             return result, confirmed, True
         if kind == "scroll":
             if str(spec.get("axis", "vertical")) != "vertical":
@@ -772,10 +852,20 @@ class ActionExecutor:
                     state = ActionState.UNKNOWN if emitted else ActionState.FAILED
                     code = exc.code if isinstance(exc, ActionExecutionError) else "ACTION_FAILED"
                     self.registry.transition(child_id, state, error_code=code, error=str(exc))
+                    button_state_uncertain = (
+                        isinstance(exc, ActionExecutionError) and exc.button_state_uncertain
+                    )
+                    if button_state_uncertain:
+                        self._enter_safety_stop(child_id, exc)
+                        raise ActionExecutionError(
+                            f"sequence child {index} left button state uncertain: {exc}",
+                            code="SEQUENCE_BUTTON_UNCERTAIN", emitted=True,
+                            button_state_uncertain=True,
+                        ) from exc
                     if ErrorPolicy(child["error_policy"]) == ErrorPolicy.CONTINUE:
                         continue
                     if ErrorPolicy(child["error_policy"]) == ErrorPolicy.STOP:
-                        self._controller.emergency_stop()
+                        self._enter_safety_stop(child_id, exc)
                     raise ActionExecutionError(
                         f"sequence child {index} failed: {exc}", code="SEQUENCE_CHILD_FAILED",
                         emitted=any_emitted or emitted,
@@ -826,10 +916,38 @@ class ActionExecutor:
 
     def _fail(self, action_id: str, spec: dict[str, Any], exc: Exception,
               *, emitted: bool, code: str) -> None:
-        state = ActionState.UNKNOWN if emitted and spec["kind"] in NON_IDEMPOTENT_KINDS else ActionState.FAILED
+        button_state_uncertain = (
+            isinstance(exc, ActionExecutionError) and exc.button_state_uncertain
+        )
+        state = ActionState.UNKNOWN if (
+            button_state_uncertain or emitted and spec["kind"] in NON_IDEMPOTENT_KINDS
+        ) else ActionState.FAILED
         self.registry.transition(action_id, state, error_code=code, error=str(exc))
-        if ErrorPolicy(spec["error_policy"]) == ErrorPolicy.STOP:
-            self.emergency_stop()
+        if button_state_uncertain:
+            self._enter_safety_stop(action_id, exc)
+        elif ErrorPolicy(spec["error_policy"]) == ErrorPolicy.STOP:
+            self._enter_safety_stop(action_id, exc)
+
+    def _enter_safety_stop(self, action_id: str, exc: Exception) -> None:
+        """Quarantine the executor; release is attempted but never treated as confirmation."""
+        self.request_stop()
+        try:
+            self._controller.emergency_stop()
+        except Exception as stop_error:
+            self.registry.annotate(action_id, {
+                "safety_stop": {
+                    "release_confirmed": False,
+                    "error": str(stop_error),
+                    "trigger": str(exc),
+                }
+            }, "safety")
+        else:
+            self.registry.annotate(action_id, {
+                "safety_stop": {
+                    "release_attempted": True,
+                    "release_confirmed": False,
+                }
+            }, "safety")
 
     @staticmethod
     def _checkpoint(control: _Control) -> None:

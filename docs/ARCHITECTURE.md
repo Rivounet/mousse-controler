@@ -191,3 +191,25 @@ conserve bearer, enveloppe, TTL, idempotence, débit et taille maximale. Elle ne
 crée ni port ni effet matériel. La disponibilité runtime indique explicitement
 si les sous-systèmes actions ou captures ont été injectés. La référence
 `docs/API-REFERENCE.md` est rendue de façon déterministe à partir du registre.
+
+## Durcissement R1 — sûreté fonctionnelle des actions
+
+Une erreur de livraison susceptible de laisser un bouton dans un état inconnu
+porte désormais une information de sûreté distincte de la politique métier.
+`press`, `release`, `hold`, `drag`, `move_with_buttons` et `click` convergent
+alors vers `UNKNOWN`, publient une intention d'arrêt à toutes les actions,
+tentent le relâchement via l'arrêt contrôleur et placent l'exécuteur en
+quarantaine. `continue` et `retry` ne peuvent pas contourner cette règle. La
+tentative de relâchement n'est jamais présentée comme une confirmation physique.
+
+La commande globale `stop` sépare publication et exécution : elle réveille
+d'abord l'exécuteur moderne et le `SequenceRunner` historique, puis effectue un
+unique arrêt contrôleur. Une erreur d'un composant n'empêche pas la notification
+des suivants. `SequenceRunner` protège son état `STOPPED` contre une transition
+tardive de son thread.
+
+`ActionExecutor.close()` ferme atomiquement l'admission, réveille l'action
+active, transforme chaque action encore en file en `CANCELLED`, puis termine le
+worker dans une borne. Une action bouton déjà émise et dont le relâchement n'est
+pas physiquement confirmé reste `UNKNOWN`. Ces transitions utilisent le journal
+et le registre `.ids` existants ; le contrat anti-rejeu est inchangé.
