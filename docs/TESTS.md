@@ -190,3 +190,15 @@ et registre d'identifiants, redémarrent, puis vérifient que la réémission re
 refusée. La migration d'un journal antérieur et la frontière d'expiration
 configurée sont également déterministes. La suite complète de cette révision
 est reportée dans `qualification/MC-MOUSE-ACTIONS-001/evidence/software-tests.txt`.
+
+## Qualification post-fusion MC-POST-MERGE-002
+
+Sur `main` `09fa2fe475cc70c9bdaf375fffc684195207161b`, la suite complète a
+exécuté **185/185 tests en 49,178 s : PASS** après compilation Python. Les builds
+Roslyn de l'agent et du témoin ont réussi avec warnings-as-errors. Le runtime a
+été contrôlé sans souris : authentification API/WebSocket, attente de 200 ms,
+événements `ACCEPTED → RUNNING → EXECUTED`, rejet d'une réémission du même
+identifiant, GATT abonné, boutons zéro, position fraîche et persistance
+conjointe du journal et de `.ids`. Aucun mouvement, clic, défilement, rapport
+HID ou capture réelle n'a été exécuté. Voir
+[MC-POST-MERGE-002](../qualification/MC-POST-MERGE-002/RAPPORT.md).
