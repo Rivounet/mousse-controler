@@ -106,26 +106,39 @@ class ActionRegistry:
 
     def __init__(self, max_records: int = 2048, max_subscribers: int = 16,
                  event_history: int = 4096, subscriber_queue: int = 256,
-                 journal_path: Path | None = None):
+                 journal_path: Path | None = None,
+                 action_id_retention_seconds: int = 2_592_000):
         if min(max_records, max_subscribers, event_history, subscriber_queue) < 1:
             raise ValueError("registry limits must be positive")
+        if action_id_retention_seconds < 1:
+            raise ValueError("action id retention must be positive")
         self._max_records = max_records
         self._max_subscribers = max_subscribers
         self._subscriber_queue = subscriber_queue
         self._journal_path = Path(journal_path) if journal_path else None
+        self._used_ids_path = (self._journal_path.with_suffix(
+            self._journal_path.suffix + ".ids") if self._journal_path else None)
+        self._action_id_retention_ms = int(action_id_retention_seconds) * 1000
         self._records: dict[str, ActionRecord] = {}
         self._order: deque[str] = deque()
+        self._used_ids: dict[str, int] = {}
         self._history: deque[dict[str, Any]] = deque(maxlen=event_history)
         self._subscribers: set[queue.Queue[dict[str, Any]]] = set()
         self._lock = threading.Lock()
+        self._load_used_ids()
         self._load_journal()
+
+    @property
+    def action_id_retention_seconds(self) -> int:
+        return self._action_id_retention_ms // 1000
 
     def create(self, action_id: str, kind: str, parent_id: str | None = None) -> dict[str, Any]:
         if not action_id or len(action_id) > 128:
             raise ValueError("invalid action id")
         now = _now_ms()
         with self._lock:
-            if action_id in self._records:
+            self._expire_used_ids_locked(now)
+            if action_id in self._records or action_id in self._used_ids:
                 raise ValueError("duplicate action id")
             while len(self._records) >= self._max_records:
                 oldest = self._order[0]
@@ -134,6 +147,7 @@ class ActionRegistry:
                     raise RuntimeError("action registry capacity exceeded")
                 self._order.popleft()
                 del self._records[oldest]
+            self._reserve_action_id_locked(action_id, now)
             record = ActionRecord(action_id, kind, ActionState.ACCEPTED, now, now, parent_id)
             self._records[action_id] = record
             self._order.append(action_id)
@@ -231,6 +245,7 @@ class ActionRegistry:
         if path is None or not path.exists():
             return
         latest: dict[str, dict[str, Any]] = {}
+        used_ids_changed = False
         try:
             if path.stat().st_size > 32 * 1024 * 1024:
                 raise RuntimeError("action journal exceeds safe size")
@@ -239,7 +254,14 @@ class ActionRegistry:
                     if len(line) > 65_536:
                         raise RuntimeError("action journal record exceeds safe size")
                     data = json.loads(line)
-                    latest[str(data["action_id"])] = data
+                    identifier = str(data["action_id"])
+                    if identifier in latest:
+                        del latest[identifier]
+                    latest[identifier] = data
+                    accepted_at = int(data["accepted_at_ms"])
+                    if identifier not in self._used_ids:
+                        self._used_ids[identifier] = accepted_at
+                        used_ids_changed = True
         except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
             raise RuntimeError("action journal is invalid") from exc
         for data in list(latest.values())[-self._max_records:]:
@@ -270,6 +292,9 @@ class ActionRegistry:
                 record.updated_at_ms = _now_ms()
                 record.event_sequence += 1
                 self._append_journal_unlocked(record)
+        self._expire_used_ids_locked(_now_ms())
+        if used_ids_changed and self._used_ids_path is not None:
+            self._compact_used_ids_locked()
 
     def _append_journal_locked(self, record: ActionRecord) -> None:
         if self._journal_path is None:
@@ -301,6 +326,71 @@ class ActionRegistry:
             stream.flush()
             os.fsync(stream.fileno())
         temporary.replace(self._journal_path)
+
+    def _load_used_ids(self) -> None:
+        path = self._used_ids_path
+        if path is None or not path.exists():
+            return
+        try:
+            if path.stat().st_size > 32 * 1024 * 1024:
+                raise RuntimeError("action id ledger exceeds safe size")
+            with path.open("r", encoding="utf-8") as stream:
+                for line in stream:
+                    if len(line) > 1024:
+                        raise RuntimeError("action id ledger record exceeds safe size")
+                    data = json.loads(line)
+                    identifier = str(data["action_id"])
+                    accepted_at = int(data["accepted_at_ms"])
+                    if not identifier or len(identifier) > 128:
+                        raise ValueError("invalid action id ledger entry")
+                    self._used_ids[identifier] = accepted_at
+        except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            raise RuntimeError("action id ledger is invalid") from exc
+        self._expire_used_ids_locked(_now_ms())
+
+    def _reserve_action_id_locked(self, action_id: str, accepted_at_ms: int) -> None:
+        self._used_ids[action_id] = accepted_at_ms
+        if self._used_ids_path is None:
+            return
+        encoded = json.dumps({
+            "action_id": action_id, "accepted_at_ms": accepted_at_ms,
+        }, separators=(",", ":"), ensure_ascii=False)
+        try:
+            self._used_ids_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._used_ids_path.open("a", encoding="utf-8", newline="\n") as stream:
+                stream.write(encoded + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            if self._used_ids_path.stat().st_size > 16 * 1024 * 1024:
+                self._compact_used_ids_locked()
+        except Exception:
+            # Fail closed: an identifier whose durable reservation may have
+            # partially succeeded must remain blocked in this process.
+            raise
+
+    def _expire_used_ids_locked(self, now_ms: int) -> None:
+        expired = [identifier for identifier, accepted_at in self._used_ids.items()
+                   if identifier not in self._records and
+                   now_ms >= accepted_at + self._action_id_retention_ms]
+        if not expired:
+            return
+        for identifier in expired:
+            del self._used_ids[identifier]
+        if self._used_ids_path is not None:
+            self._compact_used_ids_locked()
+
+    def _compact_used_ids_locked(self) -> None:
+        assert self._used_ids_path is not None
+        self._used_ids_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self._used_ids_path.with_suffix(self._used_ids_path.suffix + ".tmp")
+        with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+            for identifier, accepted_at in self._used_ids.items():
+                stream.write(json.dumps({
+                    "action_id": identifier, "accepted_at_ms": accepted_at,
+                }, separators=(",", ":"), ensure_ascii=False) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(self._used_ids_path)
 
 
 class ActionCancelled(RuntimeError):
@@ -339,8 +429,7 @@ class ActionExecutor:
         self._worker = threading.Thread(target=self._run, name="mousse-actions", daemon=True)
         self._worker.start()
 
-    @staticmethod
-    def capabilities() -> dict[str, Any]:
+    def capabilities(self) -> dict[str, Any]:
         return {
             "buttons": dict(BUTTONS),
             "button_combinations": True,
@@ -351,6 +440,7 @@ class ActionExecutor:
             "max_hold_seconds": 30.0,
             "max_scroll_reports": 500,
             "capture_moments": ["before", "after"],
+            "action_id_retention_seconds": self.registry.action_id_retention_seconds,
         }
 
     def submit(self, spec: dict[str, Any], action_id: str | None = None,

@@ -41,6 +41,8 @@ def serve(config_path: Path) -> int:
         max_subscribers=int(config.get("event_max_subscribers", 16)),
         journal_path=Path(config.get(
             "action_journal", str(config_path.parent / "action-journal.jsonl"))),
+        action_id_retention_seconds=int(config.get(
+            "action_id_retention_seconds", 2_592_000)),
     )
     actions = ActionExecutor(controller, registry, capture_broker,
                              max_queue=int(config.get("action_queue_size", 256)))

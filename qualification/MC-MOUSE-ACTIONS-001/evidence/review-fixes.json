@@ -1,0 +1,35 @@
+{
+  "schema": "mc-mouse-actions-review-fixes-v1",
+  "date": "2026-11-20",
+  "review_reference": "bc632ece44a6a8a69b0b8e8c905f8659744d4188",
+  "capture_deletion": {
+    "result": "PASS",
+    "verified": [
+      "deletion refusal persists DELETE_FAILED with file path and error",
+      "retained file remains included in quota accounting",
+      "controlled retry succeeds after restart",
+      "unindexed and late files are reconciled after restart",
+      "DELETED is recorded only after file absence is established"
+    ]
+  },
+  "action_replay": {
+    "result": "PASS",
+    "retention_seconds_default": 2592000,
+    "verified": [
+      "identifier remains reserved after registry saturation and eviction",
+      "identifier remains reserved after action journal and identifier ledger compaction",
+      "identifier remains reserved after restart and client re-emission",
+      "legacy journal entries migrate to the durable identifier ledger",
+      "expiration occurs only at the configured boundary after record eviction"
+    ]
+  },
+  "tests": {
+    "targeted": {"count": 17, "passed": 17, "duration_seconds": 1.105},
+    "full": {"count": 185, "passed": 185, "duration_seconds": 54.007}
+  },
+  "safety": {
+    "real_mouse_control": false,
+    "private_captures_published": false,
+    "hid_reports_emitted": 0
+  }
+}

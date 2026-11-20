@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from mousse_controler.actions import ActionExecutor, ActionRegistry, ActionState
 from mousse_controler.controller import MouseController, PositionSnapshot, PositionStore
@@ -295,6 +296,7 @@ class ActionExecutorTests(unittest.TestCase):
         capabilities = self.executor.capabilities()
         self.assertEqual(capabilities["buttons"]["forward"], 16)
         self.assertFalse(capabilities["horizontal_wheel"])
+        self.assertEqual(capabilities["action_id_retention_seconds"], 2_592_000)
 
 
 class ActionJournalTests(unittest.TestCase):
@@ -311,6 +313,55 @@ class ActionJournalTests(unittest.TestCase):
             self.assertEqual(record["error_code"], "PROCESS_RESTART")
             with self.assertRaisesRegex(ValueError, "duplicate"):
                 recovered.create("inflight", "click")
+
+    def test_evicted_id_remains_reserved_after_compaction_and_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "actions.jsonl"
+            registry = ActionRegistry(max_records=1, journal_path=path)
+            registry.create("original", "click")
+            registry.transition("original", ActionState.EXECUTED)
+            registry.create("replacement", "wait")
+            registry.transition("replacement", ActionState.EXECUTED)
+            with self.assertRaises(KeyError):
+                registry.get("original")
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                registry.create("original", "click")
+            with registry._lock:
+                registry._compact_journal_locked()
+                registry._compact_used_ids_locked()
+
+            recovered = ActionRegistry(max_records=1, journal_path=path)
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                recovered.create("original", "click")
+
+    def test_id_retention_has_explicit_expiration_boundary(self):
+        registry = ActionRegistry(max_records=1, action_id_retention_seconds=10)
+        with mock.patch("mousse_controler.actions._now_ms", return_value=1_000):
+            registry.create("reusable-after-contract", "wait")
+            registry.transition("reusable-after-contract", ActionState.EXECUTED)
+        with mock.patch("mousse_controler.actions._now_ms", return_value=5_000):
+            registry.create("replacement", "wait")
+            registry.transition("replacement", ActionState.EXECUTED)
+        with mock.patch("mousse_controler.actions._now_ms", return_value=10_999):
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                registry.create("reusable-after-contract", "wait")
+        with mock.patch("mousse_controler.actions._now_ms", return_value=11_000):
+            accepted = registry.create("reusable-after-contract", "wait")
+        self.assertEqual(accepted["action"]["state"], "ACCEPTED")
+
+    def test_action_id_ledger_migrates_legacy_journal_entries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "actions.jsonl"
+            first = ActionRegistry(journal_path=path)
+            first.create("legacy", "wait")
+            first.transition("legacy", ActionState.EXECUTED)
+            ledger = path.with_suffix(path.suffix + ".ids")
+            ledger.unlink()
+
+            migrated = ActionRegistry(journal_path=path)
+            self.assertTrue(ledger.is_file())
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                migrated.create("legacy", "wait")
 
 
 if __name__ == "__main__":

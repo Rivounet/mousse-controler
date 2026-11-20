@@ -179,3 +179,14 @@ Sur la PR #8, au SHA applicatif `92817a7d802c0d2c0d22b4502071a3dc4a994c19` :
 - **177/177 tests PASS en 44,286 s**, compilations Python et Roslyn warnings-as-errors. Pas de workflow CI GitHub configuré.
 
 **Verdict J6 : PASS_WITH_RESERVATIONS**, branche PR #8 non fusionnée. Réserves : roulette horizontale absente du descripteur HID, dossier vide de maintenance non supprimé, et toute prise de souris future soumise à accord explicite. Voir [rapport et preuves](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md).
+
+### Correctifs de revue de la PR #8
+
+Les tests ajoutés couvrent les refus de suppression, la persistance de
+`DELETE_FAILED`, la nouvelle tentative après redémarrage, la prise en compte du
+fichier conservé dans le quota et la récupération des PNG non indexés. Pour les
+actions, ils saturent le registre, évincent un ancien état, compactent journal
+et registre d'identifiants, redémarrent, puis vérifient que la réémission reste
+refusée. La migration d'un journal antérieur et la frontière d'expiration
+configurée sont également déterministes. La suite complète de cette révision
+est reportée dans `qualification/MC-MOUSE-ACTIONS-001/evidence/software-tests.txt`.

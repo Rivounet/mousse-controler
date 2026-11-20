@@ -53,6 +53,32 @@ Le script met à jour uniquement l'exécutable de la tâche connue, refuse une
 tâche témoin homonyme non conforme et ouvre la fenêtre en session console. Une
 session SSH directe reste en session 0 et n'est pas une preuve de visibilité.
 
+## Persistance et reprise
+
+Le serveur réserve un `action_id` dans `<action_journal>.ids` avant de publier
+son état `ACCEPTED`. La réservation dure 30 jours par défaut
+(`action_id_retention_seconds=2592000`) et ne peut expirer tant que l'action est
+encore présente dans le registre. Une saturation du registre, une compaction,
+une reconnexion, une réémission cliente ou un redémarrage ne raccourcissent pas
+ce contrat. Passé ce délai, un identifiant évincé peut être réutilisé : les
+clients qui exigent une unicité plus longue doivent augmenter la valeur ou ne
+jamais recycler leurs identifiants.
+
+Conserver `action-journal.jsonl` et `action-journal.jsonl.ids` ensemble. Ne pas
+réparer ou supprimer manuellement un registre invalide : arrêter le service,
+préserver les deux fichiers et diagnostiquer la cause. À la reprise, vérifier la
+capacité `action_id_retention_seconds`, puis réémettre si nécessaire la commande
+avec **le même** identifiant ; un refus `duplicate action id` confirme que la
+réservation est toujours active et interdit une seconde exécution.
+
+Les captures sont suivies par `<capture_directory>/.capture-index.json`.
+`DELETE_FAILED` signifie que le fichier est encore conservé ou que son absence
+n'a pas pu être établie. Il reste dans les quotas et dans `capture_status`
+après redémarrage. Corriger la cause du refus sans modifier les ACL pour la
+masquer, puis relancer `capture_delete` sur le même `capture_id` et n'accepter
+le nettoyage que si l'état devient `DELETED` et le chemin disparaît. Ne
+supprimer ni l'index ni un PNG à la main pendant que le service fonctionne.
+
 Avant toute émission, annoncer la durée de prise de souris et attendre l'accord
 explicite. Utiliser ensuite les bornes fraîches retournées par le témoin :
 

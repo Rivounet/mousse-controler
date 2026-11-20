@@ -7,6 +7,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 from mousse_controler.capture import CaptureBroker
 from mousse_controler.controller import PositionStore
@@ -100,6 +101,78 @@ class CaptureBrokerTests(unittest.TestCase):
         deleted = self.broker.delete(request["capture_id"])
         self.assertEqual(deleted["state"], "DELETED")
         self.assertFalse(path.exists())
+
+    def test_delete_refusal_is_persisted_and_can_be_retried_after_restart(self):
+        thread, outcome, request = self.start_request(timeout=1)
+        stored = self.broker.accept_upload(self.upload(request))
+        thread.join(1)
+        path = Path(stored["storage_path"])
+        with mock.patch.object(Path, "unlink", side_effect=PermissionError("denied")):
+            failed = self.broker.delete(request["capture_id"])
+        self.assertEqual(failed["state"], "DELETE_FAILED")
+        self.assertIn("deletion failed", failed["error"])
+        self.assertEqual(failed["storage_path"], str(path))
+        self.assertTrue(path.is_file())
+
+        recovered = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                  max_total_bytes=4096)
+        retained = recovered.get(request["capture_id"])
+        self.assertEqual(retained["state"], "DELETE_FAILED")
+        self.assertEqual(retained["storage_path"], str(path))
+        deleted = recovered.delete(request["capture_id"])
+        self.assertEqual(deleted["state"], "DELETED")
+        self.assertIsNone(deleted["storage_path"])
+        self.assertFalse(path.exists())
+
+    def test_quota_does_not_forget_file_when_deletion_is_refused(self):
+        self.broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                    max_total_bytes=len(PNG) - 1)
+        thread, outcome, request = self.start_request(timeout=1)
+        with mock.patch.object(Path, "unlink", side_effect=PermissionError("quota denied")):
+            stored = self.broker.accept_upload(self.upload(request))
+        thread.join(1)
+        self.assertEqual(stored["state"], "DELETE_FAILED")
+        self.assertTrue(Path(stored["storage_path"]).is_file())
+        self.assertEqual(self.broker.prune(), 1)
+        self.assertEqual(self.broker.get(request["capture_id"])["state"], "DELETED")
+
+    def test_restart_recovers_unindexed_capture_file_for_controlled_deletion(self):
+        orphan = Path(self.temporary.name) / "orphan.png"
+        orphan.write_bytes(PNG)
+        recovered = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                  max_total_bytes=4096)
+        records = recovered.list_for_action("__recovered__")
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["state"], "DELETE_FAILED")
+        self.assertEqual(records[0]["storage_path"], str(orphan))
+        deleted = recovered.delete(records[0]["capture_id"])
+        self.assertEqual(deleted["state"], "DELETED")
+        self.assertFalse(orphan.exists())
+
+    def test_delete_checks_expected_file_even_when_record_has_no_storage_path(self):
+        thread, outcome, request = self.start_request(timeout=0.1)
+        thread.join(1)
+        self.assertIsInstance(outcome.get("error"), TimeoutError)
+        late_file = Path(self.temporary.name) / f"{request['capture_id']}.png"
+        late_file.write_bytes(PNG)
+        deleted = self.broker.delete(request["capture_id"])
+        self.assertEqual(deleted["state"], "DELETED")
+        self.assertFalse(late_file.exists())
+
+    def test_restart_reconciles_deleted_record_with_late_file(self):
+        thread, outcome, request = self.start_request(timeout=0.1)
+        thread.join(1)
+        self.assertIsInstance(outcome.get("error"), TimeoutError)
+        self.assertEqual(self.broker.delete(request["capture_id"])["state"], "DELETED")
+        late_file = Path(self.temporary.name) / f"{request['capture_id']}.png"
+        late_file.write_bytes(PNG)
+
+        restarted = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
+                                  max_total_bytes=4096)
+        retained = restarted.get(request["capture_id"])
+        self.assertEqual(retained["state"], "DELETE_FAILED")
+        self.assertEqual(retained["storage_path"], str(late_file))
+        self.assertEqual(restarted.list_for_action("__recovered__"), [])
 
     def test_duplicate_upload_is_rejected(self):
         thread, outcome, request = self.start_request(timeout=1)

@@ -95,3 +95,29 @@ propriétaire, et ses ACL n'ont pas été modifiées.
   explicite pour ne pas interrompre l'usage humain de la souris ;
 - le dossier vide de staging de maintenance reste à supprimer par une opération
   Windows disposant déjà du droit approprié, sans changement d'ACL.
+
+## Correctifs ciblés de revue avant fusion
+
+La suppression des captures est désormais transactionnelle du point de vue du
+contrat : `DELETED` n'est affecté qu'après suppression ou constat d'absence du
+fichier. Un refus produit `DELETE_FAILED` avec chemin, taille et erreur ; ce
+fichier reste compté par la rétention et le quota. L'index atomique
+`.capture-index.json` restaure ce suivi au redémarrage et récupère aussi tout PNG
+orphelin après un arrêt entre l'écriture du fichier et celle de l'index.
+
+Le journal compactable des derniers états est complété par un registre durable
+`<action_journal>.ids`. L'identifiant est réservé et synchronisé sur disque
+avant l'état `ACCEPTED`. L'éviction des états, la saturation, la compaction, la
+reconnexion, le redémarrage et la réémission cliente ne retirent pas cette
+réservation. Le contrat vaut 30 jours par défaut à compter de l'acceptation ;
+l'expiration n'est possible qu'après ce délai et après éviction du registre
+courant. La valeur est configurable et publiée dans les capacités.
+
+Les tests ciblés déterministes simulent un `PermissionError`, vérifient la
+persistance et la nouvelle tentative après redémarrage, les quotas, la
+récupération d'un orphelin, l'éviction du registre d'actions, les deux
+compactions, la migration d'un ancien journal et la frontière exacte
+d'expiration. Cette correction logicielle n'a émis aucun rapport HID et n'a pas
+repris le contrôle de la souris réelle. La suite complète révisée exécute
+**185/185 tests en 54,007 s : PASS**. Le SHA final est celui publié en tête de
+la PR Draft #8 après livraison.

@@ -131,9 +131,13 @@ applications.
 action possède un UUID ou identifiant client, un parent éventuel, des
 horodatages, une durée, un résultat et les états `ACCEPTED`, `RUNNING`,
 `EXECUTED`, `CONFIRMED`, `FAILED`, `UNKNOWN`, `CANCELLED`. Un journal JSONL
-local hors Git conserve les identifiants : après redémarrage, toute action
-inachevée devient `UNKNOWN` et ne peut pas être resoumise. Les actions
-non-idempotentes à issue incertaine ne sont jamais retentées.
+local hors Git conserve les derniers états. Son registre compagnon `.ids`
+réserve chaque identifiant avant l'acceptation, indépendamment de l'éviction et
+de la compaction des états. La réservation vaut 30 jours par défaut et n'expire
+que lorsque ce délai est écoulé **et** que l'action n'est plus dans le registre
+courant. Après redémarrage, toute action inachevée devient `UNKNOWN` et ne peut
+pas être resoumise. Les actions non-idempotentes à issue incertaine ne sont
+jamais retentées.
 
 Le moteur couvre clic simple/double/triple/multiple, cinq boutons et leurs
 combinaisons, appui/relâchement, maintien, déplacement bouton maintenu,
@@ -158,6 +162,10 @@ le rectangle écran qui le contient (coordonnées négatives incluses), affiche
 l'indication `CAPTURE VISIBLE`, copie uniquement ce moniteur complet puis
 téléverse un PNG HMAC sur `/v1/capture` avec corrélation et horodatage. Taille,
 nombre, attente, stockage total et TTL sont bornés ; suppression explicite et
-prune automatique sont disponibles. Les images et journaux restent hors Git et
+prune automatique sont disponibles. Un index atomique `.capture-index.json`
+conserve le suivi après redémarrage. `DELETED` n'est affecté qu'après constat
+d'absence du fichier ; `DELETE_FAILED` conserve chemin, taille et erreur, reste
+compté dans le quota et peut être retenté. Les fichiers orphelins d'un arrêt
+inopiné sont récupérés dans cet état. Les images et journaux restent hors Git et
 ne sont jamais servis par HTTP. Le champ `analysis_ready` prépare une future
 analyse locale sans moteur visuel dans ce mandat.
