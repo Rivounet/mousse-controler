@@ -142,7 +142,7 @@ Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résul
 - Transfert LAN protégé, intégrité, quotas, stockage et rétention par action/séquence, absence de fuite de captures dans les logs ou GitHub.
 - Arrêt d'urgence prioritaire ; échec de capture sans répétition de l'action souris ; tests logiciels et matériels sur surface sûre.
 
-Jalon logiciel : **175/175 tests réussis en 47,857 s** avec compilation
+Jalon logiciel : **177/177 tests réussis en 44,286 s** avec compilation
 Python, puis builds réels `PositionAgent.exe` et `MouseWitness.exe` sous
 `/warnaserror+`. Les nouveaux tests couvrent notamment :
 

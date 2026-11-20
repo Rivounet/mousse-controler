@@ -30,6 +30,10 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Ne jamais publier de secrets ou d'identifiants, y compris dans les logs.
 - L'API doit rester protégée ; éviter toute exposition réseau non justifiée.
 - Ne pas émettre de clics/mouvements Bluetooth sans session de test autorisée et mécanisme d'arrêt effectif.
+- Avant toute qualification qui prend effectivement la souris de
+  `MonOrdinateur`, annoncer clairement la prise de contrôle et sa durée, puis
+  attendre l'accord explicite de l'utilisateur. Fermer le témoin et annoncer
+  « souris libre » dès la fin ou à la première demande d'interruption.
 - Préserver la possibilité de retour arrière sur mini-PC. Ne pas faire de `git reset --hard`, `git clean -fdx`, `git pull` aveugle ni écraser des modifications inconnues dans la copie distante.
 - Avant toute activation locale, vérifier SHA exact, état de la copie Git,
   permissions, espace disque et disponibilité du rollback ; relever ensuite le
@@ -37,6 +41,28 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
   maintenance distante est exceptionnellement utilisée.
 - Implémenter un mode `--dry-run`, des vérifications préalables, un verrou anti-déploiements concurrents, un contrôle de santé, une collecte de logs et un rollback sécurisé ; tester l'idempotence et les erreurs.
 - Indiquer l'état d'avancement et le temps écoulé aux étapes clés d'un travail long ; signaler les blocages.
+
+### SSH autorisé vers MonOrdinateur
+
+- Utiliser l'alias exact `MonOrdinateur` avec son fichier dédié
+  `~/.ssh/monordinateur-pv-mig.conf`. Ne pas recopier adresse, clé ou empreinte
+  dans le dépôt et ne pas accepter automatiquement une nouvelle clé d'hôte.
+- Commencer par la même commande de lecture seule dans la sandbox puis, si le
+  réseau est refusé, demander l'approbation Codex normale hors sandbox. La règle
+  persistante doit être limitée au binaire SSH, à ce fichier de configuration
+  et à cet alias ; ne jamais autoriser globalement PowerShell ou le réseau.
+- Un refus de connexion dans la sandbox suivi d'un `whoami` réussi hors sandbox
+  est un blocage réseau Codex. Une connexion SSH réussie suivie d'un code
+  Windows tel que `Access denied` est un problème de session, ACL ou jeton
+  Windows : ne pas le masquer par une élévation ou une modification d'ACL.
+- Une commande lancée directement par SSH s'exécute en session 0 et n'est pas
+  une preuve d'affichage. Utiliser uniquement une tâche interactive limitée et
+  explicitement contrôlée, puis vérifier que son processus est dans la session
+  console active.
+- Après interruption, reprendre par `whoami`, session console, identité/action
+  de la tâche, hashes du staging et état du transport. Ne jamais modifier le
+  pare-feu, les comptes, les ACL, les protections Windows ou les paramètres
+  généraux de Codex pour rétablir le canal.
 
 ## Principes de conception
 
@@ -67,6 +93,9 @@ Privilégier les composants indépendants : réception API, validation/ordonnanc
 
 - **Codex publie sur GitHub les rapports et preuves utiles de chaque mandat**, dans une branche dédiée et une PR Draft, afin que ChatGPT les consulte directement sans transfert manuel par l'utilisateur.
 - Convention : `qualification/<MANDAT>/RAPPORT.md` et `qualification/<MANDAT>/evidence/` pour les preuves sélectionnées, reproductibles et expurgées. Les scripts utiles au produit restent dans leurs dossiers techniques appropriés.
+- Toute preuve PNG conservée doit résider dans ce dossier `evidence/` du dépôt,
+  jamais dans un emplacement externe ou temporaire. Publier seulement une
+  version recadrée/expurgée explicitement contrôlée ; supprimer la capture source.
 - Avant toute publication, examiner les fichiers et **exclure** secrets, clés, empreintes d'hôte non nécessaires, comptes, chemins privés, adresses réseau privées, journaux sensibles et artefacts volumineux ou binaires inutiles. Conserver localement les preuves brutes non publiables et indiquer leur existence, sans exposer leur contenu.
 - Rapporter l'URL de PR, la branche, le SHA publié et la liste des preuves, en distinguant résultats vérifiés, déclarés et non exécutés. Ne jamais pousser directement sur `main` ni fusionner sans arbitrage.
 - Si la publication est bloquée, documenter la cause et demander une décision ; **ne pas imposer à l'utilisateur un transfert manuel de fichiers comme procédure normale**.

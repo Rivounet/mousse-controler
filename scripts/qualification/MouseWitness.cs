@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace MousseControler.Qualification
 {
-    internal sealed class WitnessForm : Form
+    internal sealed class WitnessForm : Form, IMessageFilter
     {
         private readonly StreamWriter log;
         private readonly string statePath;
@@ -34,6 +34,7 @@ namespace MousseControler.Qualification
             });
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logPath)));
             log = new StreamWriter(logPath, false, new UTF8Encoding(false)) { AutoFlush = true };
+            Application.AddMessageFilter(this);
         }
 
         protected override void OnShown(EventArgs e)
@@ -51,12 +52,15 @@ namespace MousseControler.Qualification
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             Log("CLOSED", 0);
+            Application.RemoveMessageFilter(this);
             log.Dispose();
             base.OnFormClosed(e);
         }
 
-        protected override void WndProc(ref Message message)
+        public bool PreFilterMessage(ref Message message)
         {
+            Control target = Control.FromHandle(message.HWnd);
+            if (target == null || target.FindForm() != this) return false;
             string name = null;
             int detail = 0;
             switch (message.Msg)
@@ -80,7 +84,7 @@ namespace MousseControler.Qualification
                     break;
             }
             if (name != null) Log(name, detail);
-            base.WndProc(ref message);
+            return false;
         }
 
         private void Log(string name, int detail)

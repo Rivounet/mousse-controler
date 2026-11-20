@@ -8,8 +8,8 @@
 
 **Commit applicatif initial :** `597f7401d8bc743aebf9fa018422188460dd0767`
 
-**Verdict courant :** `INCOMPLETE` — logiciel et mini-PC qualifiés ; session
-interactive cible et matrice matérielle étendue ouvertes
+**Verdict courant :** `PASS_WITH_RESERVATIONS` — logiciel, canal SSH, session
+interactive et matrice matérielle réelle qualifiés
 
 ## Réalisation
 
@@ -27,7 +27,7 @@ interactive cible et matrice matérielle étendue ouvertes
 
 ## Résultats disponibles
 
-Suite complète finale avant intégration cible : **175/175 PASS en 47,857 s**.
+Suite complète finale après intégration cible : **177/177 PASS en 44,286 s**.
 Compilation Python réussie.
 `PositionAgent.exe` et `MouseWitness.exe` compilent sous Roslyn avec
 `/warn:4 /warnaserror+`. Les tests simulés couvrent actions, séquences, états,
@@ -39,23 +39,59 @@ annonce GATT `Started`, abonnement `True`, boutons `0`, position cible fraîche
 attente de 200 ms a produit via le WebSocket réel trois événements uniques
 `ACCEPTED`, `RUNNING`, `EXECUTED`, avec état final corrélé et zéro rapport HID.
 
-Le paquet cible est transféré dans un staging temporaire borné et ses quatre
-SHA-256 concordent avec les artefacts locaux. Le compte SSH `codex-remote` est
-séparé du compte propriétaire de la tâche interactive et reçoit `Access denied`
-sur Task Scheduler/CIM. Cette séparation est conservée : aucune élévation,
-nouveau service ou baisse de protection n'a été tentée.
+## Qualification SSH et Windows
 
-## Qualification encore ouverte
+La définition `MonOrdinateur` a été trouvée dans le fichier SSH dédié, avec clé
+exclusive, mode batch, vérification stricte et magasin d'hôte dédié. La même
+commande `whoami` est refusée par la sandbox au niveau réseau puis réussit hors
+sandbox. Une règle d'approbation persistante a été limitée au binaire SSH, au
+fichier dédié et à cet alias.
 
-- exécuter l'installateur réversible dans la session visible propriétaire ;
-- confirmer agent visible, retour position et reconnexion HOGP après échange ;
-- capturer réellement avant/après, vérifier écran sélectionné et conservation ;
-- observer sur la fenêtre témoin les clics multiples/central, maintien, boutons,
-  drag/drop et roulette ;
-- répéter arrêt d'urgence et vérifier aucun événement post-arrêt ;
-- collecter uniquement un résumé expurgé, supprimer PNG et fermer le témoin.
+Le compte distant effectif correspond au principal de la tâche interactive et
+dispose d'un droit explicite sur celle-ci ; l'identité exacte est expurgée du
+dépôt. La session SSH est 0, la console active est 1 et l'agent/témoin ont été
+observés en session 1. Le lancement direct par SSH n'est donc pas retenu.
 
-Les preuves historiques du MVP démontrent déjà clics gauche/droit, roulette,
-positionnement, reconnexion et arrêt matériel, mais elles ne sont pas présentées
-comme une exécution du nouveau moteur. Aucune capture réelle, secret, adresse
-privée, identité de compte ou journal brut ne sera publié.
+Un premier staging créé par le compte de maintenance sous `C:\Windows\Temp` a
+produit `0x80070005` avec le jeton interactif limité. Aucune ACL n'a été changée :
+les mêmes artefacts, vérifiés par SHA-256, ont été transférés dans le profil du
+compte interactif. L'agent a été mis à jour avec sauvegarde de rollback et sa
+tâche persistante est restée limitée et `Running`.
+
+## Qualification matérielle réelle
+
+Après accord explicite de disponibilité de la souris, 17 actions ont été
+exécutées dans la surface sûre : position absolue confirmée, clics gauche
+simple/double/triple, droit, milieu, précédent, suivant, combinaison
+appui/relâchement, maintien, glisser confirmé, retour confirmé, roulettes
+discrète/continue et séquence composée. Tous les identifiants d'événements
+WebSocket sont uniques ; les actions positionnelles terminent `CONFIRMED`, les
+autres `EXECUTED`.
+
+Le témoin corrigé a observé 37 messages : clics gauche/droit/milieu, doubles,
+boutons X, glisser et roulette. Tous les événements d'action sont restés dans
+la surface sûre. Deux PNG réels avant/après, 1920×1080, ont été reçus. Les
+sources plein écran ont été supprimées et vérifiées absentes ; seules leurs
+versions recadrées 884×611 sur la surface témoin sont publiées dans `evidence/`
+après contrôle visuel d'absence de contenu extérieur.
+
+L'arrêt d'urgence a annulé la séquence en attente avant son clic. Le témoin a
+reçu zéro événement après l'acceptation de l'arrêt. Après redémarrage, le
+transport est revenu `Started`, `subscribed=True`, boutons `0`; le journal
+durable contient zéro action `ACCEPTED/RUNNING` et conserve l'action d'urgence
+en `CANCELLED`, sans rejeu.
+
+La tâche témoin, son processus, le staging du profil interactif et tous les PNG
+sources ont été supprimés. Les deux PNG recadrés de preuve restent uniquement
+dans le dossier du mandat. La tâche de production et le rollback de l'agent
+sont préservés. L'ancien staging de maintenance ne contient plus aucun fichier ;
+son dossier vide subsiste car Windows refuse sa suppression au compte
+propriétaire, et ses ACL n'ont pas été modifiées.
+
+## Réserves
+
+- la roulette horizontale reste indisponible par conception du descripteur HID ;
+- toute nouvelle qualification visible doit être annoncée et recevoir un accord
+  explicite pour ne pas interrompre l'usage humain de la souris ;
+- le dossier vide de staging de maintenance reste à supprimer par une opération
+  Windows disposant déjà du droit approprié, sans changement d'ACL.

@@ -3,7 +3,7 @@ Date: 2026-11-20
 Command: python -m compileall -q src tests
 Result: PASS
 Command: python -m unittest discover -v
-Result: 175 tests, 175 PASS, 0 FAIL, 0 ERROR
-Duration: 47.857 s
+Result: 177 tests, 177 PASS, 0 FAIL, 0 ERROR
+Duration: 44.286 s
 Environment note: MC_TEST_TMP used a short workspace-local path for Windows path limits.
 Effects: simulated HID only; no real mouse report emitted by this command.

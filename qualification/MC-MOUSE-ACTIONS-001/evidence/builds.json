@@ -9,10 +9,11 @@
     },
     {
       "name": "MouseWitness.exe",
-      "sha256": "1F7FAD9448C654BD19D94C18FDF56C7FFF91900E90FEB0DE7EDF2339205AC791",
+      "sha256": "5916B46CC69016B16408333FD7A71193AF07D681EA1A1A7516192515B08A5E19",
       "published_binary": false
     }
   ],
   "target_staging_hashes_match": true,
-  "contains_secrets_or_captures": false
+  "contains_secrets": false,
+  "contains_sanitized_captures": true
 }

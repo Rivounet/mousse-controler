@@ -1,0 +1,67 @@
+{
+  "scope": "sanitized-hardware-qualification",
+  "safe_surface": {
+    "action_events_inside": true,
+    "witness_session_matches_console": true
+  },
+  "actions": {
+    "submitted": 17,
+    "position_confirmed": true,
+    "drag_confirmed": true,
+    "click_counts": [1, 2, 3],
+    "buttons": ["left", "right", "middle", "back", "forward"],
+    "combination": true,
+    "hold": true,
+    "vertical_scroll_discrete": true,
+    "vertical_scroll_continuous": true,
+    "sequence": true
+  },
+  "websocket": {
+    "states_observed": ["ACCEPTED", "RUNNING", "EXECUTED", "CONFIRMED"],
+    "event_ids_unique": true
+  },
+  "witness": {
+    "event_count": 37,
+    "types": [
+      "DRAG_MOVE",
+      "LEFT_DOUBLE",
+      "LEFT_DOWN",
+      "LEFT_UP",
+      "MIDDLE_DOWN",
+      "MIDDLE_UP",
+      "READY",
+      "RIGHT_DOWN",
+      "RIGHT_UP",
+      "WHEEL_VERTICAL",
+      "XBUTTON_DOWN",
+      "XBUTTON_UP"
+    ]
+  },
+  "captures": {
+    "before_stored": true,
+    "after_stored": true,
+    "content_type": "image/png",
+    "dimensions": {"width": 1920, "height": 1080},
+    "deleted": true,
+    "files_absent": true,
+    "repository_evidence": [
+      {
+        "name": "capture-before.png",
+        "cropped_dimensions": {"width": 884, "height": 611},
+        "sha256": "62853C6A3A27A2A8E15C294DFEEBD44F69500E9534DBF18888AA562439BAA5BD"
+      },
+      {
+        "name": "capture-after.png",
+        "cropped_dimensions": {"width": 884, "height": 611},
+        "sha256": "22E76267054A421A156F379D89AEEEEB54498339E97361E27FC10EE46CEEA440"
+      }
+    ]
+  },
+  "emergency_stop": {
+    "queued_action_state": "CANCELLED",
+    "events_after_stop_acceptance": 0,
+    "buttons_after_reconnect": 0,
+    "pending_actions_after_reconnect": 0,
+    "non_replay": true
+  }
+}
