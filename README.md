@@ -68,19 +68,8 @@ elles ne décrivent pas l'état courant de la PR #6.
 
 Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
 
-## Évolution en qualification : MC-MOUSE-ACTIONS-001
+## Évolution J6 qualifiée — MC-MOUSE-ACTIONS-001 (PR #8, non fusionnée)
 
-La branche dédiée ajoute clics multiples, maintien, glisser-déposer, cinq
-boutons et combinaisons, roulette verticale bornée/continue et séquences mixtes.
-Chaque action est corrélée et journalisée ; ses états sont poussés par WebSocket
-loopback authentifié. `EXECUTED` atteste l'émission HID, tandis que `CONFIRMED`
-est réservé à la position réellement observée. L'absence d'`AC Pan` dans le
-descripteur appairé rend la roulette horizontale explicitement indisponible.
+La [PR #8](https://github.com/Rivounet/mousse-controler/pull/8) livre les actions standard d'une souris à cinq boutons, clics multiples, maintien, glisser-déposer, roulette verticale, séquences mixtes, WebSocket de résultats authentifié et captures optionnelles avant/après d'une action, limitées à l'écran entier sous le curseur. Pas de clavier, capture continue, autonome ou analyse visuelle.
 
-La capture reste **facultative avant/après une action souris configurée
-uniquement** : l'agent visible choisit au dernier moment le moniteur entier sous
-le curseur, indique la capture, transmet un PNG signé et n'accepte aucune
-commande souris. Quotas, TTL et suppression sont configurables ; aucune image
-réelle n'entre dans Git. Pas de clavier, capture continue/indépendante ou moteur
-d'analyse visuelle. Suite logicielle et WebSocket runtime qualifiés ; essais
-interactifs cible en cours. Voir roadmap, planning et rapport J6.
+**Verdict de la branche : PASS_WITH_RESERVATIONS** — 177/177 tests PASS en 44,286 s ; 17 actions sur surface sûre, 37 événements observés, deux captures réelles avant/après puis suppression des sources ; arrêt d'urgence et non-rejeu matériel qualifiés. SSH hors sandbox qualifié avec configuration dédiée et autorisation strictement bornée. Réserves : roulette horizontale indisponible sur le descripteur HOGP actuel, dossier de staging maintenance vide et autorisation explicite préalable à toute nouvelle prise de souris. **Ces fonctions J6 ne sont pas encore fusionnées dans `main`**.
