@@ -6,6 +6,11 @@ Branche : `feat/mc-api-catalog-001`
 
 Base : `main` — `97d81346304b1234b77ae5a8dfe35cb63e787ad6`
 
+SHA logiciel qualifié : `036105643e1ca267ab058ae7ffbe8d7bf01b923e`
+
+Livraison : [PR #10](https://github.com/Rivounet/mousse-controler/pull/10),
+ouverte en Draft, sans fusion.
+
 ## Résultat
 
 Le registre partagé pilote la découverte, la résolution des gestionnaires et la
