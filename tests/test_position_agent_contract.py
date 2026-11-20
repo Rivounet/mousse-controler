@@ -26,6 +26,23 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         for forbidden in ("SendInput", "mouse_event", "SetCursorPos"):
             self.assertNotIn(forbidden, source)
 
+    def test_capture_is_one_shot_visible_and_monitor_scoped(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn("CAPTURE VISIBLE", source)
+        self.assertIn("graphics.CopyFromScreen(selected.X, selected.Y", source)
+        self.assertIn("point.X >= display.X", source)
+        self.assertIn("point.Y >= display.Y", source)
+        self.assertIn('request.moment != "before" && request.moment != "after"', source)
+        self.assertNotIn("HttpListener", source)
+        self.assertNotIn("TcpListener", source)
+
+    def test_capture_upload_reuses_tls_pin_hmac_and_bounded_sequence(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('Post(seq, timestamp, "/v1/capture", body)', source)
+        self.assertIn("request.max_bytes > 16 * 1024 * 1024", source)
+        self.assertIn("ServerCertificateValidationCallback = ValidateCertificate", source)
+        self.assertIn("Interlocked.Increment(ref sequence)", source)
+
     def test_interactive_manager_supports_reconnect_only_mode(self) -> None:
         source = MANAGER.read_text(encoding="utf-8")
         self.assertIn("HogpReconnect", source)

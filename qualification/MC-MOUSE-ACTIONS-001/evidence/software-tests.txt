@@ -1,0 +1,14 @@
+MC-MOUSE-ACTIONS-001 software qualification
+Date: 2026-11-20
+Review reference: bc632ece44a6a8a69b0b8e8c905f8659744d4188
+Command: python -m compileall -q src tests scripts\qualification
+Result: PASS
+Command: python -m unittest discover -v
+Result: 185 tests, 185 PASS, 0 FAIL, 0 ERROR
+Test duration: 54.007 s
+Compile and full-suite elapsed time: 55.058 s
+Targeted command: python -m unittest tests.test_capture tests.test_actions.ActionJournalTests -v
+Targeted result: 17 tests, 17 PASS, 0 FAIL, 0 ERROR
+Targeted duration: 1.105 s
+Environment note: MC_TEST_TMP used a short workspace-local path for Windows path limits.
+Effects: simulated HID only; no real mouse report emitted by this command.

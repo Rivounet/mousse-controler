@@ -153,6 +153,30 @@ class MouseController:
             self._transport.buttons(mask)
             self._buttons = mask
 
+    def press_buttons(self, mask: int) -> int:
+        """Press one or more supported buttons while preserving held buttons."""
+        if not 1 <= mask <= 0x1F:
+            raise ValueError("button mask outside five-button range")
+        with self._lock:
+            self._ensure_running_locked()
+            self._buttons |= mask
+            self._transport.buttons(self._buttons)
+            return self._buttons
+
+    def release_buttons(self, mask: int) -> int:
+        """Release selected buttons while preserving every other held button."""
+        if not 1 <= mask <= 0x1F:
+            raise ValueError("button mask outside five-button range")
+        with self._lock:
+            self._ensure_running_locked()
+            self._buttons &= ~mask
+            self._transport.buttons(self._buttons)
+            return self._buttons
+
+    def buttons_mask(self) -> int:
+        with self._lock:
+            return self._buttons
+
     def click(self, button_bit: int, hold_seconds: float = 0.04) -> None:
         if button_bit not in (1, 2, 4, 8, 16):
             raise ValueError("invalid button")
@@ -166,6 +190,8 @@ class MouseController:
                 self._transport.buttons(self._buttons & ~button_bit)
 
     def scroll(self, delta: int) -> None:
+        if not -127 <= delta <= 127:
+            raise ValueError("wheel outside int8 bounds")
         with self._lock:
             self._ensure_running_locked()
             self._transport.scroll(delta)

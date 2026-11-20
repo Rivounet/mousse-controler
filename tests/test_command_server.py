@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import unittest
 
+from mousse_controler.actions import ActionExecutor, ActionRegistry
 from mousse_controler.command_server import CommandError, CommandGateway
 from mousse_controler.controller import MouseController, PositionStore
 from mousse_controler.controller import PositionSnapshot
@@ -19,7 +20,13 @@ class CommandGatewayTests(unittest.TestCase):
         self.transport = SimulatedHidTransport()
         self.controller = MouseController(self.transport, PositionStore())
         self.controller.start()
-        self.gateway = CommandGateway(b"token", self.controller, self.transport, ReceiverStub())
+        self.registry = ActionRegistry()
+        self.actions = ActionExecutor(self.controller, self.registry)
+        self.gateway = CommandGateway(
+            b"token", self.controller, self.transport, ReceiverStub(), self.actions)
+
+    def tearDown(self):
+        self.actions.close()
 
     def envelope(self, command="move", command_id="one", **arguments):
         return {
@@ -43,6 +50,25 @@ class CommandGatewayTests(unittest.TestCase):
         expired["issued_at_ms"] -= 2000
         with self.assertRaisesRegex(CommandError, "expired"):
             self.gateway.execute(expired)
+
+    def test_legacy_mouse_command_has_correlated_lifecycle(self):
+        result = self.gateway.execute(self.envelope("click", "legacy-click", button_bit=1))
+        self.assertEqual(result["action"]["action_id"], "legacy-click")
+        self.assertEqual(result["action"]["state"], "EXECUTED")
+
+    def test_action_submission_is_asynchronous_and_queryable(self):
+        submitted = self.gateway.execute(self.envelope(
+            "action_submit", "submit", action_id="new-action",
+            action={"kind": "click", "button": "middle", "hold_seconds": 0},
+        ))
+        self.assertEqual(submitted["action"]["action_id"], "new-action")
+        deadline = time.monotonic() + 1
+        while self.registry.get("new-action")["state"] not in {"EXECUTED", "FAILED", "UNKNOWN"}:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.005)
+        status = self.gateway.execute(self.envelope(
+            "action_status", "status-new", action_id="new-action"))
+        self.assertEqual(status["action"]["state"], "EXECUTED")
 
     def test_stop_releases_and_blocks_future_move(self):
         self.gateway.execute(self.envelope("buttons", "press", mask=1))

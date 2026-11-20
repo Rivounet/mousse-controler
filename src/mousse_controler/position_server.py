@@ -19,12 +19,14 @@ from .security import AuthenticationError, HmacVerifier
 
 
 MAX_BODY_BYTES = 4096
+MAX_CAPTURE_BODY_BYTES = 24 * 1024 * 1024
 
 
 class PositionReceiver:
-    def __init__(self, store: PositionStore, verifier: HmacVerifier):
+    def __init__(self, store: PositionStore, verifier: HmacVerifier, capture_broker: Any | None = None):
         self.store = store
         self.verifier = verifier
+        self.capture_broker = capture_broker
         self._topology: DesktopTopology | None = None
         self._lock = threading.Lock()
         self._last_received_monotonic: float | None = None
@@ -112,6 +114,23 @@ class PositionReceiver:
                 self._cursor_read_us.append(float(payload["cursor_read_us"]))
         return sequence
 
+    def next_capture_request(self) -> dict[str, Any] | None:
+        if self.capture_broker is None:
+            return None
+        return self.capture_broker.next_request()
+
+    def accept_capture(self, headers: Any, body: bytes, path: str = "/v1/capture") -> dict[str, Any]:
+        if self.capture_broker is None:
+            raise ValueError("capture receiver is disabled")
+        if len(body) > MAX_CAPTURE_BODY_BYTES:
+            raise ValueError("capture body too large")
+        key_id = headers.get("X-Agent-Key", "")
+        signature = headers.get("X-Signature", "")
+        timestamp_ms = int(headers.get("X-Timestamp", "-1"))
+        sequence = int(headers.get("X-Sequence", "-1"))
+        self.verifier.verify(key_id, signature, "POST", path, timestamp_ms, sequence, body)
+        return self.capture_broker.accept_upload(body)
+
 
 def handler_factory(receiver: PositionReceiver):
     class Handler(BaseHTTPRequestHandler):
@@ -119,16 +138,24 @@ def handler_factory(receiver: PositionReceiver):
         protocol_version = "HTTP/1.1"
 
         def do_POST(self) -> None:  # noqa: N802
-            if self.path != "/v1/position":
+            if self.path not in ("/v1/position", "/v1/capture"):
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
-                if length <= 0 or length > MAX_BODY_BYTES:
+                limit = MAX_BODY_BYTES if self.path == "/v1/position" else MAX_CAPTURE_BODY_BYTES
+                if length <= 0 or length > limit:
                     raise ValueError("invalid body length")
                 body = self.rfile.read(length)
-                accepted = receiver.accept(self.headers, body, self.path)
-                response = json.dumps({"accepted_seq": accepted}, separators=(",", ":")).encode()
+                if self.path == "/v1/position":
+                    accepted = receiver.accept(self.headers, body, self.path)
+                    response_body = {
+                        "accepted_seq": accepted,
+                        "capture_request": receiver.next_capture_request(),
+                    }
+                else:
+                    response_body = {"capture": receiver.accept_capture(self.headers, body, self.path)}
+                response = json.dumps(response_body, separators=(",", ":")).encode()
                 self.send_response(HTTPStatus.ACCEPTED)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(response)))

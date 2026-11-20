@@ -76,11 +76,20 @@ les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.
 
 ## Décisions validées — MC-MOUSE-ACTIONS-001 (20 novembre 2026)
 
-| ID | Statut | Décision |
-|---|---|---|
-| D-045 | Validé | Souris uniquement : clics multiples, maintien, glisser-déposer, roulette, boutons compatibles ; actions composables en séquences. Aucun clavier. |
-| D-046 | Validé — 1B | Capture facultative automatiquement avant/après une action configurée, jamais continue ni périodique ; écran entier contenant le curseur au moment de la capture. Pas de commande indépendante de capture. |
-| D-047 | Validé — 2C/3C | Préparer analyse visuelle locale future sans développer de moteur ; rétention des images configurable par action/séquence. |
-| D-048 | Validé — 4B | Retour automatique des résultats et états d'actions par WebSocket, identifiant stable ; distinguer émission HID et résultat réellement observé. |
-| D-049 | Validé — 5C | Politique d'échec configurable arrêt/retry/poursuite, arrêt par défaut ; aucun rejeu automatique des actions non idempotentes à issue incertaine. |
-| D-050 | Validé | Conserver Bluetooth HID pour la souris et LAN sécurisé pour retour et captures ; agent cible visible, autorisé uniquement à mesurer et capturer, jamais à commander la souris. |
+| ID | Statut | Décision | Conséquence |
+|---|---|---|---|
+| D-045 | Validé | Souris uniquement : clics multiples, maintien, glisser-déposer, roulette, boutons compatibles ; actions composables en séquences. Aucun clavier. | Les primitives existantes restent compatibles. |
+| D-046 | Validé — 1B | Capture facultative automatiquement avant/après une action configurée, jamais continue ni périodique ; écran entier contenant le curseur au moment de la capture. Pas de commande indépendante de capture. | Toute demande hors contexte d'action est rejetée. |
+| D-047 | Validé — 2C/3C | Préparer analyse visuelle locale future sans développer de moteur ; rétention des images configurable par action/séquence. | Stockage privé avec TTL/suppression et interface `analysis_ready`. |
+| D-048 | Validé — 4B | Retour automatique des résultats et états d'actions par WebSocket, identifiant stable ; distinguer émission HID et résultat réellement observé. | WebSocket loopback authentifié et événements corrélés. |
+| D-049 | Validé — 5C | Politique d'échec configurable arrêt/retry/poursuite, arrêt par défaut ; aucun rejeu automatique des actions non idempotentes à issue incertaine. | `UNKNOWN` prévaut dès qu'une émission non idempotente est ambiguë. |
+| D-050 | Validé | Conserver Bluetooth HID pour la souris et LAN sécurisé pour retour et captures ; agent cible visible, autorisé uniquement à mesurer et capturer, jamais à commander la souris. | Aucun port de commande ajouté sur la cible. |
+| D-051 | Réalisé | Conserver le descripteur HOGP appairé à cinq boutons et molette verticale ; exposer la roulette horizontale indisponible car `AC Pan` est absent. | Évite une rupture d'appairage ou une fausse émulation horizontale ; capacité interrogeable par API. |
+| D-052 | Réalisé | Remettre les demandes de capture dans la réponse HTTPS sortante de position, puis recevoir le PNG sur `/v1/capture` avec TLS épinglé, HMAC et séquence anti-rejeu. | Aucun port entrant ni service de commande sur MonOrdinateur ; demandes bornées avant/après uniquement. |
+| D-053 | Réalisé | Journaliser hors Git les identifiants et derniers états d'action ; convertir `ACCEPTED/RUNNING` en `UNKNOWN` après redémarrage. | Une reconnexion ou reprise de processus ne peut jamais rejouer une action ambiguë. |
+| D-054 | Réalisé | Réserver `CONFIRMED` à une observation indépendante de position ; clics, boutons et roulette terminent à `EXECUTED`. | L'émission HID n'est jamais présentée comme effet applicatif confirmé. |
+| D-055 | Qualification partielle | Déployer le moteur mini-PC sur SHA exact et fournir un installateur cible réversible limité à la tâche `MousseControler-PositionAgent`. | Runtime mini-PC et WebSocket réels qualifiés ; installation/capture/événements matériels cible exigent la session interactive propriétaire de la tâche. |
+| D-056 | Validé ; clôt D-055 | Utiliser le canal SSH hors sandbox strictement limité à l'alias `MonOrdinateur`, puis une tâche temporaire interactive limitée pour le témoin. | La session 0 SSH n'est jamais confondue avec la console ; aucun pare-feu, compte, ACL ou mécanisme de protection n'est modifié. |
+| D-057 | Validé avec réserves | Retenir le verdict matériel `PASS_WITH_RESERVATIONS` après qualification des 17 actions, captures avant/après, WebSocket, arrêt d'urgence, reconnexion et non-rejeu. | Toute prise de souris future exige un avertissement et un accord explicite ; roulette horizontale hors capacité et dossier de staging vide résiduel documentés. |
+| D-058 | Validé | Réserver durablement tout identifiant d'action accepté pendant 30 jours par défaut, dans un registre `.ids` distinct du journal compactable ; l'expiration exige aussi l'éviction de l'état courant. | Saturation, compaction, reconnexion, redémarrage et réémission ne permettent pas un rejeu pendant le contrat ; journal et registre sont administrés ensemble. |
+| D-059 | Validé | Déclarer une capture `DELETED` seulement après constat de l'absence du fichier ; persister `DELETE_FAILED` et récupérer les fichiers orphelins au redémarrage. | Un refus de suppression reste visible, retentable et compté dans les quotas ; l'index de capture est un état de production à conserver. |

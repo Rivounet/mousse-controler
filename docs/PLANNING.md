@@ -60,16 +60,22 @@ Sur 100 mouvements : erreur maximale 2 px, réussite 100 %, latence médiane
 l'absence de rejeu sont qualifiés ; la concurrence du contrôleur est couverte
 par des tests déterministes sur l'adaptateur simulé.
 
-## Prochain chantier — MC-MOUSE-ACTIONS-001 (J6)
+## J6 — MC-MOUSE-ACTIONS-001 : qualification achevée avec réserves
 
-**Statut : planifié, développement non commencé.** Après PR #6 et #7 fusionnées. Responsable : Codex sur mini-pc-backend, intervention contrôlée sur MonOrdinateur ; PR Draft unique.
+**Statut : En revue pour fusion.** Livraison technique qualifiée `PASS_WITH_RESERVATIONS` le 20 novembre 2026 sur la [PR #8](https://github.com/Rivounet/mousse-controler/pull/8), toujours **Draft non fusionnée**. SHA applicatif de qualification `92817a7d802c0d2c0d22b4502071a3dc4a994c19`.
 
-| Priorité | ID | Travail | État |
-|---|---|---|---|
-| 1 | MC-011 | Contrat d'actions souris et capacités HID, clics multiples, maintien, drag/drop, roulette, boutons | À faire |
-| 2 | MC-012 | Composition des actions et attentes dans les séquences ; annulation, non-rejeu, arrêt | À faire |
-| 3 | MC-013 | Identifiants et suivi d'action ; notifications WebSocket automatiques, authentifiées | À faire |
-| 4 | MC-014 | Capture optionnelle avant/après action, moniteur entier contenant le curseur ; stockage et rétention configurables | À faire |
-| 5 | MC-015 | Tests, qualification matérielle, sécurité, documentation et PR Draft | À faire |
+| ID | Travail | État |
+|---|---|---|
+| MC-011 | Actions souris cinq boutons, clics multiples, maintien, glisser, roulette verticale | Validé logiciel + matériel ; horizontale indisponible sur HID actuel |
+| MC-012 | Séquences mixtes, attentes, pause/reprise, politiques d'erreur et non-rejeu | Validé logiciel + matériel |
+| MC-013 | Journal d'actions et événements WebSocket corrélés et authentifiés | Validé logiciel + runtime |
+| MC-014 | Capture optionnelle avant/après, moniteur complet sous curseur, rétention | Validé logiciel + deux captures réelles ; sources supprimées |
+| MC-015 | Tests, qualification sur deux machines, arrêt d'urgence, nettoyage, preuves | Validé avec réserves ; 177/177 tests PASS en 44,286 s |
 
-Choix validés : 1B capture avant/après uniquement ; 2C analyse future seulement ; 3C conservation par action/séquence ; 4B WebSocket ; 5C erreur configurable, arrêt par défaut. Aucun rejeu d'action incertaine, aucun clavier, aucune capture continue.
+Preuves : 17 actions matérielles réussies, 37 événements sur surface sûre ; WebSocket réel, arrêt d'urgence sans événement postérieur, reconnexion HOGP active/boutons à zéro/sans rejeu. SSH hors sandbox via configuration dédiée qualifié, tâche interactive temporaire contrôlée sans élévation.
+
+**Réserves :** absence d'AC Pan pour la roulette horizontale ; ancien dossier de staging maintenance vide non supprimé sous Windows Temp ; nouvelle prise de souris soumise à avertissement et accord explicite. Aucune CI GitHub configurée. Le prochain jalon est la décision explicite de revue/fusion, **pas une reprise de qualification automatique**.
+
+### Contrôle de sortie J6 — correctifs de revue
+
+Sur le SHA applicatif `e7e26332e56a39cbd2ca915413c313da07c638d9`, corrections de suppression des captures et du registre anti-rejeu intégrées : refus de suppression conservé en `DELETE_FAILED`, index de fichiers persistant ; réservations d'identifiants conservées 30 jours par défaut et jusqu'à éviction des états, y compris après compaction et redémarrage. **17/17 tests ciblés PASS ; 185/185 tests complets PASS en 54,007 s**, selon les preuves publiées. Aucun nouveau test HID réel après ces correctifs. **Prochaine porte : décision explicite de fusion de la PR #8**, actuellement Draft.

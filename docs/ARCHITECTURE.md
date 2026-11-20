@@ -125,10 +125,47 @@ reconnexion restent imposés. Les scripts SSH/SFTP et releases sont des moyens
 secondaires de maintenance. Aucune garantie d'indétectabilité par les
 applications.
 
-## Extension planifiée J6 — sans implémentation actuelle
+## Extension J6 — MC-MOUSE-ACTIONS-001
 
-mini-pc-backend hébergera un moteur d'actions souris composables, un registre d'exécution avec identifiants/états et notifications WebSocket authentifiées, ainsi qu'un gestionnaire de captures et de conservation. HOGP reste le transport des commandes souris.
+`ActionExecutor` sérialise une file bornée de commandes et séquences. Chaque
+action possède un UUID ou identifiant client, un parent éventuel, des
+horodatages, une durée, un résultat et les états `ACCEPTED`, `RUNNING`,
+`EXECUTED`, `CONFIRMED`, `FAILED`, `UNKNOWN`, `CANCELLED`. Un journal JSONL
+local hors Git conserve les derniers états. Son registre compagnon `.ids`
+réserve chaque identifiant avant l'acceptation, indépendamment de l'éviction et
+de la compaction des états. La réservation vaut 30 jours par défaut et n'expire
+que lorsque ce délai est écoulé **et** que l'action n'est plus dans le registre
+courant. Après redémarrage, toute action inachevée devient `UNKNOWN` et ne peut
+pas être resoumise. Les actions non-idempotentes à issue incertaine ne sont
+jamais retentées.
 
-L'agent visible de MonOrdinateur pourra recevoir uniquement des demandes de capture strictement authentifiées et bornées, jamais des commandes souris. Au moment de la prise, il lit la position du curseur, sélectionne le moniteur correspondant et capture l'écran complet de ce moniteur seulement. Images et métadonnées transitent sur LAN sécurisé avec quotas, contrôle d'accès et conservation/suppression configurables par action/séquence. Indication visible et aucune capture continue ou périodique.
+Le moteur couvre clic simple/double/triple/multiple, cinq boutons et leurs
+combinaisons, appui/relâchement, maintien, déplacement bouton maintenu,
+glisser-déposer, roulette verticale bornée ou continue, mouvements relatifs et
+arrivées absolues confirmées par position réelle. Le descripteur HOGP appairé
+reste inchangé : cinq boutons, X/Y 16 bits et molette verticale 8 bits. Il ne
+déclare pas `AC Pan`; la roulette horizontale est donc annoncée explicitement
+indisponible plutôt que simulée.
 
-États prévus : ACCEPTED, RUNNING, EXECUTED, CONFIRMED, FAILED, UNKNOWN. EXECUTED atteste une émission HID, pas l'effet dans l'application cible. CONFIRMED nécessite une observation indépendante (par exemple la position). Les pertes de liaison ne rejouent pas une action incertaine. Analyse d'images locale : extension future non développée.
+Le WebSocket `ws://127.0.0.1:<event_port>/v1/events` utilise le même bearer DPAPI
+que l'API locale, exige une négociation RFC 6455 authentifiée, limite connexions
+et files, et pousse chaque transition avec `event_id`, `event_sequence` et
+`action_id`. Il n'expose aucun port LAN. `EXECUTED` signifie que les rapports
+HID de l'action ont été émis ; un clic reste `EXECUTED`. `CONFIRMED` est réservé
+à une observation indépendante, actuellement l'arrivée du curseur mesurée.
+
+`CaptureBroker` n'accepte aucune capture autonome. Une politique d'action ou de
+séquence peut demander `before` et/ou `after`. La demande est remise à l'agent
+dans la réponse HTTPS à son échantillon de position sortant : aucun port entrant
+n'est ajouté sur MonOrdinateur. L'agent visible relit alors le curseur, choisit
+le rectangle écran qui le contient (coordonnées négatives incluses), affiche
+l'indication `CAPTURE VISIBLE`, copie uniquement ce moniteur complet puis
+téléverse un PNG HMAC sur `/v1/capture` avec corrélation et horodatage. Taille,
+nombre, attente, stockage total et TTL sont bornés ; suppression explicite et
+prune automatique sont disponibles. Un index atomique `.capture-index.json`
+conserve le suivi après redémarrage. `DELETED` n'est affecté qu'après constat
+d'absence du fichier ; `DELETE_FAILED` conserve chemin, taille et erreur, reste
+compté dans le quota et peut être retenté. Les fichiers orphelins d'un arrêt
+inopiné sont récupérés dans cet état. Les images et journaux restent hors Git et
+ne sont jamais servis par HTTP. Le champ `analysis_ready` prépare une future
+analyse locale sans moteur visuel dans ce mandat.

@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-20",
+  "compiler_policy": "/warn:4 /warnaserror+",
+  "artifacts": [
+    {
+      "name": "PositionAgent.exe",
+      "sha256": "0562CC27694964406311C62E963B5F1BA6913B49EE2A3D6B0605F9088FEDF73F",
+      "published_binary": false
+    },
+    {
+      "name": "MouseWitness.exe",
+      "sha256": "5916B46CC69016B16408333FD7A71193AF07D681EA1A1A7516192515B08A5E19",
+      "published_binary": false
+    }
+  ],
+  "target_staging_hashes_match": true,
+  "contains_secrets": false,
+  "contains_sanitized_captures": true
+}

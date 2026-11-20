@@ -1,0 +1,19 @@
+{
+  "alias": "MonOrdinateur",
+  "dedicated_config": true,
+  "key_authentication": true,
+  "strict_host_checking": true,
+  "sandbox_result": "network_denied",
+  "outside_sandbox_result": "connected",
+  "remote_identity_matches_interactive_task_principal": true,
+  "ssh_session_id": 0,
+  "console_session_id": 1,
+  "interactive_process_session_id": 1,
+  "persistent_approval_scope": [
+    "ssh executable",
+    "dedicated config",
+    "MonOrdinateur alias"
+  ],
+  "security_settings_changed": false,
+  "accounts_or_acls_changed": false
+}

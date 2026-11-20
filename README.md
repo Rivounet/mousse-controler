@@ -68,6 +68,8 @@ elles ne décrivent pas l'état courant de la PR #6.
 
 Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
 
-## Évolution planifiée : MC-MOUSE-ACTIONS-001
+## Évolution J6 qualifiée — MC-MOUSE-ACTIONS-001 (PR #8, non fusionnée)
 
-Après le MVP fusionné, ajouter toutes les actions d'une souris standard (clics multiples, maintien, glisser-déposer, roulette et boutons compatibles), intégrées aux séquences, avec résultats et états d'action diffusés automatiquement par WebSocket. Capture d'écran **facultative avant/après action configurée uniquement**, de l'écran entier contenant le curseur au moment de la capture ; transmission LAN sécurisée et rétention configurable par action/séquence. Préparer l'analyse locale future sans développer de moteur visuel dans cette étape. Pas de clavier ni de capture continue. **Fonctions planifiées, non encore livrées.** Voir roadmap et planning.
+La [PR #8](https://github.com/Rivounet/mousse-controler/pull/8) livre les actions standard d'une souris à cinq boutons, clics multiples, maintien, glisser-déposer, roulette verticale, séquences mixtes, WebSocket de résultats authentifié et captures optionnelles avant/après d'une action, limitées à l'écran entier sous le curseur. Pas de clavier, capture continue, autonome ou analyse visuelle.
+
+**Verdict de la branche : PASS_WITH_RESERVATIONS** — 177/177 tests PASS en 44,286 s ; 17 actions sur surface sûre, 37 événements observés, deux captures réelles avant/après puis suppression des sources ; arrêt d'urgence et non-rejeu matériel qualifiés. SSH hors sandbox qualifié avec configuration dédiée et autorisation strictement bornée. Réserves : roulette horizontale indisponible sur le descripteur HOGP actuel, dossier de staging maintenance vide et autorisation explicite préalable à toute nouvelle prise de souris. **Ces fonctions J6 ne sont pas encore fusionnées dans `main`**.

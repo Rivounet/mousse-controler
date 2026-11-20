@@ -87,6 +87,38 @@ SYSTEM, et ne contient que des blobs DPAPI. L'arrêt est `Ctrl+C` ou la commande
 locale authentifiée `stop`, qui libère les boutons, arrête la publicité et ferme
 les serveurs.
 
+MC-MOUSE-ACTIONS-001 ajoute des valeurs optionnelles sans casser les anciennes
+configurations : `event_port` (8767, loopback uniquement), `capture_directory`
+(par défaut à côté de la configuration), quotas `capture_max_*`,
+`action_queue_size`, `action_max_records`, `event_max_subscribers` et
+`action_journal`. `action_id_retention_seconds` vaut 2 592 000 (30 jours) par
+défaut et doit rester strictement positif. Le jeton WebSocket est le bearer de
+commande déjà protégé par DPAPI. Le journal, son registre anti-rejeu compagnon
+`<action_journal>.ids`, l'index `<capture_directory>/.capture-index.json` et les
+PNG restent hors Git ; le serveur ne fournit aucun endpoint de téléchargement
+d'image.
+
+Le journal et son fichier `.ids` forment un même état persistant : sauvegarde,
+restauration, déplacement ou suppression doivent les traiter ensemble. La
+garantie anti-rejeu s'applique pendant la rétention configurée à compter de la
+première acceptation et au-delà tant que l'action demeure dans le registre. Un
+fichier manquant après acceptation réduit cette garantie ; un fichier présent
+mais invalide bloque le démarrage plutôt que d'autoriser un rejeu.
+
+De même, ne pas effacer manuellement `.capture-index.json`. Une suppression
+refusée apparaît en `DELETE_FAILED`; le fichier reste compté dans le quota et
+identifiable par `capture_status`/`capture_list`, puis `capture_delete` permet
+une nouvelle tentative contrôlée. Au redémarrage, les PNG non indexés sont
+récupérés au lieu d'être considérés supprimés.
+
+La cible est mise à jour dans sa session interactive avec
+`scripts/target/Update-InteractivePositionAgent.ps1`. `Plan` ne mute rien ;
+`Install` vérifie la tâche exacte, les SHA-256, arrête l'agent avec délai borné,
+conserve un seul binaire `.mc-mouse-actions.previous`, remplace atomiquement et
+redémarre ; `Rollback` restaure ce binaire. Le script refuse toute tâche dont
+l'action n'est pas `PositionAgent.exe` et ne touche ni au fichier `agent.json`,
+ni à DPAPI, au pare-feu, aux certificats ou à l'appairage.
+
 Restauration : arrêter le contrôleur, désenregistrer les tâches temporaires
 cible, retirer la règle pare-feu privée dédiée, restaurer chaque radio à son état
 initial, supprimer le paquet `Rivounet.MousseControler.Hogp` et retirer uniquement

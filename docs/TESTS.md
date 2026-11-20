@@ -133,7 +133,7 @@ La branche documentaire post-fusion a ensuite exécuté la même suite :
 
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.
 
-## Critères de qualification futurs — MC-MOUSE-ACTIONS-001
+## Qualification MC-MOUSE-ACTIONS-001
 
 - Clics simple/double/triple, maintien, glisser-déposer, boutons et roulette verticale/horizontale selon HID ; relâchement sur arrêt.
 - Composition en séquences, attente, pause/reprise, erreur configurable, absence de rejeu après reconnexion.
@@ -142,4 +142,51 @@ Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résul
 - Transfert LAN protégé, intégrité, quotas, stockage et rétention par action/séquence, absence de fuite de captures dans les logs ou GitHub.
 - Arrêt d'urgence prioritaire ; échec de capture sans répétition de l'action souris ; tests logiciels et matériels sur surface sûre.
 
-Ces critères sont planifiés, pas encore qualifiés. Référence MVP avant J6 : 136 tests réussis, 100/100 mouvements réels.
+Jalon logiciel : **177/177 tests réussis en 44,286 s** avec compilation
+Python, puis builds réels `PositionAgent.exe` et `MouseWitness.exe` sous
+`/warnaserror+`. Les nouveaux tests couvrent notamment :
+
+- simple/double/triple/multiple, boutons gauche/droit/central/back/forward,
+  combinaisons, maintien, drag, mouvement bouton maintenu et libération ;
+- molette verticale découpée selon l'int8 HID, mode continu borné/interrompu et
+  rejet explicite de l'horizontale absente du descripteur ;
+- séquences mixtes, attente temporisée/commandée, pause/reprise/annulation,
+  politiques arrêt/retry/poursuite et absence de HID après arrêt ;
+- cycles `ACCEPTED/RUNNING/EXECUTED/CONFIRMED/FAILED/UNKNOWN/CANCELLED`,
+  corrélation parent/enfant, journal de reprise et blocage des doublons ;
+- WebSocket RFC 6455 loopback, bearer constant-time, événements uniques,
+  quotas de connexions/files et refus d'une écoute non-loopback ;
+- captures avant/après seulement, coordonnées négatives, moniteur contenant le
+  curseur, HMAC anti-rejeu, PNG/taille/quota/TTL/suppression et aucune répétition
+  de l'action après échec de capture ;
+- agent sans `SendInput`, `mouse_event` ou `SetCursorPos`, capture visible et
+  absence de listener entrant ; installateur cible borné, hashé et réversible.
+
+Qualification runtime mini-PC sans émission HID : tâche active sur le contenu
+du commit `597f740`, annonce `Started`, `subscribed=True`, boutons `0`, position
+fraîche 47 ms. Le WebSocket réel a diffusé `ACCEPTED → RUNNING → EXECUTED` pour
+une attente de 200 ms, identifiants d'événements uniques, zéro rapport HID.
+
+### Qualification cible réelle clôturée le 20 novembre 2026
+
+Sur la PR #8, au SHA applicatif `92817a7d802c0d2c0d22b4502071a3dc4a994c19` :
+
+- **17 actions souris** réussies sur surface dédiée et **37 événements** témoins, tous dans les bornes sûres ; cinq boutons, clics simple/double/triple, combinaison, maintien, drag/drop, roulettes discrète/continue et séquence.
+- Événements WebSocket corrélés, IDs uniques ; positions marquées `CONFIRMED` uniquement si observées, autres actions `EXECUTED`.
+- **Deux captures réelles avant/après de 1920×1080**, sources supprimées et absentes ; seuls deux recadrages témoins 884×611 publiés dans `qualification/MC-MOUSE-ACTIONS-001/evidence/`.
+- Arrêt d'urgence : action en attente `CANCELLED`, aucun événement témoin après acceptation ; reconnexion GATT `Started`, `subscribed=True`, boutons 0, aucune action active ni rejeu.
+- SSH hors sandbox vérifié avec identité d'hôte stricte, compte et tâche interactifs identifiés, session SSH 0 et console/témoin 1, sans élévation ou changement de protections.
+- **177/177 tests PASS en 44,286 s**, compilations Python et Roslyn warnings-as-errors. Pas de workflow CI GitHub configuré.
+
+**Verdict J6 : PASS_WITH_RESERVATIONS**, branche PR #8 non fusionnée. Réserves : roulette horizontale absente du descripteur HID, dossier vide de maintenance non supprimé, et toute prise de souris future soumise à accord explicite. Voir [rapport et preuves](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md).
+
+### Correctifs de revue de la PR #8
+
+Les tests ajoutés couvrent les refus de suppression, la persistance de
+`DELETE_FAILED`, la nouvelle tentative après redémarrage, la prise en compte du
+fichier conservé dans le quota et la récupération des PNG non indexés. Pour les
+actions, ils saturent le registre, évincent un ancien état, compactent journal
+et registre d'identifiants, redémarrent, puis vérifient que la réémission reste
+refusée. La migration d'un journal antérieur et la frontière d'expiration
+configurée sont également déterministes. La suite complète de cette révision
+est reportée dans `qualification/MC-MOUSE-ACTIONS-001/evidence/software-tests.txt`.

@@ -10,9 +10,12 @@ import sys
 import threading
 import time
 
+from .actions import ActionExecutor, ActionRegistry
+from .capture import CaptureBroker
 from .command_server import CommandGateway, make_command_server
 from .controller import MouseController, PositionStore
 from .dpapi import protect, unprotect
+from .event_server import make_event_server
 from .position_server import PositionReceiver, make_https_server
 from .security import HmacVerifier
 from .transport import NativeHogpTransport
@@ -22,24 +25,46 @@ def serve(config_path: Path) -> int:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     store = PositionStore()
     keys = {key_id: unprotect(value) for key_id, value in config["agent_keys_dpapi"].items()}
-    receiver = PositionReceiver(store, HmacVerifier(keys))
+    capture_broker = CaptureBroker(
+        Path(config.get("capture_directory", str(config_path.parent / "captures"))),
+        max_pending=int(config.get("capture_max_pending", 64)),
+        max_records=int(config.get("capture_max_records", 2048)),
+        max_bytes=int(config.get("capture_max_bytes", 16 * 1024 * 1024)),
+        max_total_bytes=int(config.get("capture_max_total_bytes", 512 * 1024 * 1024)),
+    )
+    receiver = PositionReceiver(store, HmacVerifier(keys), capture_broker)
     transport = NativeHogpTransport(Path(config["hogp_executable"]))
     controller = MouseController(transport, store)
+    command_token = unprotect(config["command_token_dpapi"])
+    registry = ActionRegistry(
+        max_records=int(config.get("action_max_records", 2048)),
+        max_subscribers=int(config.get("event_max_subscribers", 16)),
+        journal_path=Path(config.get(
+            "action_journal", str(config_path.parent / "action-journal.jsonl"))),
+        action_id_retention_seconds=int(config.get(
+            "action_id_retention_seconds", 2_592_000)),
+    )
+    actions = ActionExecutor(controller, registry, capture_broker,
+                             max_queue=int(config.get("action_queue_size", 256)))
+    event_server = None
     try:
         controller.start()
         transport.advertise()
-        gateway = CommandGateway(unprotect(config["command_token_dpapi"]), controller, transport, receiver)
+        gateway = CommandGateway(command_token, controller, transport, receiver, actions, capture_broker)
         position_server = make_https_server(
             config["position_bind"], int(config["position_port"]), receiver,
             config["tls_certificate"], config["tls_private_key"],
         )
         command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
+        event_server = make_event_server(int(config.get("event_port", 8767)), command_token, registry)
     except Exception:
+        actions.close()
         controller.emergency_stop()
         raise
     threads = [
         threading.Thread(target=position_server.serve_forever, name="position-https", daemon=True),
         threading.Thread(target=command_server.serve_forever, name="command-loopback", daemon=True),
+        threading.Thread(target=event_server.serve_forever, name="events-websocket", daemon=True),
     ]
     for thread in threads:
         thread.start()
@@ -76,6 +101,7 @@ def serve(config_path: Path) -> int:
     print("Mousse controller ready; GATT advertising active.", flush=True)
     print(f"Position HTTPS: {config['position_bind']}:{config['position_port']}", flush=True)
     print(f"Command API: 127.0.0.1:{config.get('command_port', 8766)}", flush=True)
+    print(f"Action events: ws://127.0.0.1:{config.get('event_port', 8767)}/v1/events", flush=True)
     try:
         stopped.wait()
     finally:
@@ -83,7 +109,10 @@ def serve(config_path: Path) -> int:
         maintenance.join(timeout=6)
         position_server.shutdown()
         command_server.shutdown()
+        event_server.shutdown()
+        actions.close()
         controller.emergency_stop()
+        command_token = b"\0" * len(command_token)
         for secret in keys.values():
             if isinstance(secret, bytearray):
                 secret[:] = b"\0" * len(secret)

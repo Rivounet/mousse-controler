@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -27,6 +28,50 @@ namespace MousseControler.PositionAgent
         public int IntervalMilliseconds { get; set; }
         public int RequestTimeoutMilliseconds { get; set; }
         public string HogpDeviceName { get; set; }
+    }
+
+    internal sealed class CaptureRequest
+    {
+        public string capture_id { get; set; }
+        public string action_id { get; set; }
+        public string moment { get; set; }
+        public long expires_at_ms { get; set; }
+        public int max_bytes { get; set; }
+        public string format { get; set; }
+    }
+
+    internal sealed class PositionResponse
+    {
+        public long accepted_seq { get; set; }
+        public CaptureRequest capture_request { get; set; }
+    }
+
+    internal sealed class CapturePoint
+    {
+        public int x { get; set; }
+        public int y { get; set; }
+    }
+
+    internal sealed class CaptureMonitor
+    {
+        public int x { get; set; }
+        public int y { get; set; }
+        public int width { get; set; }
+        public int height { get; set; }
+        public bool primary { get; set; }
+    }
+
+    internal sealed class CaptureUpload
+    {
+        public string capture_id { get; set; }
+        public string action_id { get; set; }
+        public string moment { get; set; }
+        public string state { get; set; }
+        public long captured_at_ms { get; set; }
+        public CapturePoint cursor { get; set; }
+        public CaptureMonitor monitor { get; set; }
+        public string image_base64 { get; set; }
+        public string error { get; set; }
     }
 
     internal sealed class HogpReconnectMonitor : IDisposable
@@ -280,7 +325,12 @@ namespace MousseControler.PositionAgent
                     long seq = Interlocked.Increment(ref sequence);
                     long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     string body = BuildBody(point, session, topology, displays, timestamp, cursorReadMicroseconds);
-                    Post(seq, timestamp, Encoding.UTF8.GetBytes(body));
+                    string response = Post(seq, timestamp, "/v1/position", Encoding.UTF8.GetBytes(body));
+                    PositionResponse accepted = new JavaScriptSerializer().Deserialize<PositionResponse>(response);
+                    if (accepted == null || accepted.accepted_seq != seq)
+                        throw new InvalidDataException("position response correlation mismatch");
+                    if (accepted.capture_request != null)
+                        HandleCapture(accepted.capture_request);
                 }
                 catch (Exception ex)
                 {
@@ -350,9 +400,110 @@ namespace MousseControler.PositionAgent
             return json.Append("]}").ToString();
         }
 
-        private void Post(long seq, long timestamp, byte[] body)
+        private void HandleCapture(CaptureRequest request)
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(config.Endpoint);
+            Guid captureGuid;
+            if (request == null || !Guid.TryParse(request.capture_id, out captureGuid) ||
+                string.IsNullOrWhiteSpace(request.action_id) || request.action_id.Length > 128 ||
+                (request.moment != "before" && request.moment != "after") ||
+                request.format != "png" || request.max_bytes < 1024 || request.max_bytes > 16 * 1024 * 1024)
+                throw new InvalidDataException("capture request is invalid or outside bounds");
+            if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() > request.expires_at_ms)
+                throw new InvalidDataException("capture request expired");
+
+            NativeMethods.Point point;
+            if (!NativeMethods.GetPhysicalCursorPos(out point))
+                throw new InvalidOperationException("GetPhysicalCursorPos failed before capture");
+            List<DisplayInfo> displays = ReadDisplays();
+            DisplayInfo selected = null;
+            foreach (DisplayInfo display in displays)
+            {
+                if (point.X >= display.X && point.X < display.X + display.Width &&
+                    point.Y >= display.Y && point.Y < display.Y + display.Height)
+                {
+                    selected = display;
+                    break;
+                }
+            }
+            if (selected == null) throw new InvalidOperationException("cursor is outside every enumerated monitor");
+
+            string previousTitle = null;
+            try
+            {
+                try { previousTitle = Console.Title; Console.Title = "Mousse — CAPTURE VISIBLE"; }
+                catch (IOException) { }
+                Console.WriteLine("[{0:O}] CAPTURE VISIBLE: {1} action={2} monitor={3}x{4} at ({5},{6})",
+                    DateTimeOffset.Now, request.moment, request.action_id, selected.Width, selected.Height,
+                    selected.X, selected.Y);
+                byte[] image;
+                using (Bitmap bitmap = new Bitmap(selected.Width, selected.Height, PixelFormat.Format24bppRgb))
+                {
+                    using (Graphics graphics = Graphics.FromImage(bitmap))
+                        graphics.CopyFromScreen(selected.X, selected.Y, 0, 0,
+                            new Size(selected.Width, selected.Height), CopyPixelOperation.SourceCopy);
+                    using (MemoryStream stream = new MemoryStream())
+                    {
+                        bitmap.Save(stream, ImageFormat.Png);
+                        image = stream.ToArray();
+                    }
+                }
+                if (image.Length > request.max_bytes)
+                    throw new InvalidDataException("captured monitor exceeds configured byte limit");
+                CaptureUpload upload = new CaptureUpload {
+                    capture_id = request.capture_id,
+                    action_id = request.action_id,
+                    moment = request.moment,
+                    state = "CAPTURED",
+                    captured_at_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    cursor = new CapturePoint { x = point.X, y = point.Y },
+                    monitor = new CaptureMonitor {
+                        x = selected.X, y = selected.Y, width = selected.Width, height = selected.Height,
+                        primary = selected.Primary,
+                    },
+                    image_base64 = Convert.ToBase64String(image),
+                };
+                Array.Clear(image, 0, image.Length);
+                PostCapture(upload);
+                Console.WriteLine("[{0:O}] Capture uploaded: {1}", DateTimeOffset.Now, request.capture_id);
+            }
+            catch (Exception ex)
+            {
+                CaptureUpload failed = new CaptureUpload {
+                    capture_id = request.capture_id,
+                    action_id = request.action_id,
+                    moment = request.moment,
+                    state = "FAILED",
+                    captured_at_ms = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    error = ex.Message,
+                };
+                try { PostCapture(failed); }
+                catch (Exception reportError)
+                {
+                    Console.Error.WriteLine("[{0:O}] Capture failure could not be reported: {1}",
+                        DateTimeOffset.Now, reportError.Message);
+                }
+                throw;
+            }
+            finally
+            {
+                if (previousTitle != null) try { Console.Title = previousTitle; } catch (IOException) { }
+            }
+        }
+
+        private void PostCapture(CaptureUpload upload)
+        {
+            JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            byte[] body = Encoding.UTF8.GetBytes(serializer.Serialize(upload));
+            if (body.Length > 24 * 1024 * 1024) throw new InvalidDataException("capture envelope exceeds limit");
+            long seq = Interlocked.Increment(ref sequence);
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            Post(seq, timestamp, "/v1/capture", body);
+        }
+
+        private string Post(long seq, long timestamp, string path, byte[] body)
+        {
+            Uri endpoint = new Uri(new Uri(config.Endpoint), path);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.ContentLength = body.Length;
@@ -362,13 +513,16 @@ namespace MousseControler.PositionAgent
             request.Headers["X-Agent-Key"] = config.KeyId;
             request.Headers["X-Timestamp"] = timestamp.ToString(CultureInfo.InvariantCulture);
             request.Headers["X-Sequence"] = seq.ToString(CultureInfo.InvariantCulture);
-            request.Headers["X-Signature"] = Sign(seq, timestamp, body);
+            request.Headers["X-Signature"] = Sign(seq, timestamp, path, body);
             request.ServerCertificateValidationCallback = ValidateCertificate;
             using (Stream stream = request.GetRequestStream()) stream.Write(body, 0, body.Length);
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
                 if (response.StatusCode != HttpStatusCode.Accepted)
-                    throw new WebException("position receiver returned " + (int)response.StatusCode);
+                    throw new WebException("agent receiver returned " + (int)response.StatusCode);
+                using (Stream stream = response.GetResponseStream())
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                    return reader.ReadToEnd();
             }
         }
 
@@ -379,12 +533,12 @@ namespace MousseControler.PositionAgent
                 return FixedEquals(certificatePin, Hex(sha.ComputeHash(certificate.GetRawCertData())));
         }
 
-        private string Sign(long seq, long timestamp, byte[] body)
+        private string Sign(long seq, long timestamp, string path, byte[] body)
         {
             string bodyHash;
             using (SHA256 sha = SHA256.Create()) bodyHash = Hex(sha.ComputeHash(body));
             string canonical = string.Format(CultureInfo.InvariantCulture,
-                "POST\n/v1/position\n{0}\n{1}\n{2}", timestamp, seq, bodyHash.ToLowerInvariant());
+                "POST\n{0}\n{1}\n{2}\n{3}", path, timestamp, seq, bodyHash.ToLowerInvariant());
             using (HMACSHA256 hmac = new HMACSHA256(secret))
                 return Hex(hmac.ComputeHash(Encoding.ASCII.GetBytes(canonical))).ToLowerInvariant();
         }

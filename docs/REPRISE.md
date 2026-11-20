@@ -189,3 +189,30 @@ D-021 : mandats dans le chat. D-022 : pas de revue exhaustive systématique. D-0
 Souris uniquement, sans clavier : clics multiples, maintien, glisser-déposer, boutons compatibles, roulette, actions composables. Résultats d'action corrélés par identifiant et transmis automatiquement par WebSocket (4B). Capture optionnelle avant/après action si activée (1B), jamais continue : écran entier contenant le curseur au moment de la capture. Conservation configurable par action/séquence (3C). Analyse locale future préparée, non implémentée (2C). Erreurs configurables arrêt/retry/poursuite, arrêt par défaut (5C), sans rejeu automatique d'action incertaine.
 
 Conserver Bluetooth HID pour les commandes et LAN sécurisé pour retour et captures. Agent cible visible limité aux mesures/captures, sans exécution de commandes souris. Codex sur mini-pc-backend développe dans une seule PR Draft, sans fusion automatique. Voir roadmap/planning ; mandat intégral dans le chat.
+
+### État final du chantier — qualification du 20 novembre 2026
+
+**Verdict : PASS_WITH_RESERVATIONS, PR #8 Draft non fusionnée.** Branche `feat/mc-mouse-actions-001`, SHA technique qualifié initialement `92817a7d802c0d2c0d22b4502071a3dc4a994c19`; base `main` `4b5e80450931a19adb88312d6f6a3b0ff8e4fd81`. Les modifications documentaires de consolidation ultérieures ne constituent pas une nouvelle qualification exécutable.
+
+- Logiciel : **177/177 tests PASS en 44,286 s**, compilation Python et builds Roslyn C# avec warnings-as-errors.
+- Matériel réel : **17 actions souris réussies** dans la surface témoin sûre ; cinq boutons, clics multiples, combinaison, maintien, glisser confirmé, mouvements, roulette verticale et séquence. Témoin : **37 événements** dans la surface sûre.
+- Suivi : événements WebSocket corrélés et identifiants uniques. `CONFIRMED` réservé aux positions observées, `EXECUTED` aux clics/boutons/roulette.
+- Captures ponctuelles avant/après : deux PNG réels **1920×1080**, seuls des recadrages de preuve **884×611** conservés dans `qualification/MC-MOUSE-ACTIONS-001/evidence/`. Captures sources plein écran supprimées. Aucun flux continu ni analyse visuelle.
+- Sécurité : arrêt d'urgence annule l'action en attente (`CANCELLED`), **zéro événement post-arrêt** ; après reconnexion, HOGP `Started`, `subscribed=True`, boutons 0, aucun rejeu et aucune action en cours.
+- SSH : connexion via l'alias **exact `MonOrdinateur`** et le fichier dédié `~/.ssh/monordinateur-pv-mig.conf`, refus réseau en sandbox et réussite hors sandbox avec une approbation persistante strictement limitée. SSH session 0 ; console/agent/témoin session 1. Tâche temporaire interactive contrôlée, sans changements d'ACL, compte, pare-feu ou protection.
+- Nettoyage : témoin/tâche/staging interactif supprimés, production `Running` en session 1, souris libérée. Dossier de staging de maintenance **vide** encore présent sous Windows Temp (suppression refusée, aucune élévation réalisée).
+- **Réserves** : roulette horizontale indisponible car `AC Pan` absent du descripteur HID déjà appairé ; dossier vide résiduel ; toute nouvelle prise de souris pour qualification exige annonce préalable et accord explicite. Réserves historiques du MVP : mesure LAN aller simple absolue et reprise GATT transitoire.
+- Preuves : [rapport J6](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md), `evidence/hardware-summary.json` et `evidence/ssh-summary.json`. Pas de CI GitHub configurée ; tests exécutés sur les machines, pas dans un workflow distant.
+
+**Prochaine porte :** suivi documentaire et décision explicite de revue/fusion de la [PR #8](https://github.com/Rivounet/mousse-controler/pull/8). Ne pas annoncer le code J6 comme intégré à `main` avant fusion. Codex reste responsable de l'exécution ; ChatGPT maintient la documentation et pilote l'arbitrage GitHub. Les mandats complets restent dans le chat.
+
+### Clôture de revue ciblée — correctifs de sûreté (20 novembre 2026)
+
+**SHA logiciel revu :** `e7e26332e56a39cbd2ca915413c313da07c638d9`, PR #8 toujours Draft, non fusionnée. Deux anomalies identifiées pendant la revue ont reçu des correctifs :
+
+- Capture : `DELETED` exige la disparition constatée du fichier ; `DELETE_FAILED` est conservé par index persistant, les fichiers sont comptabilisés dans les quotas, le redémarrage réconcilie les orphelins et une suppression refusée est retentable.
+- Actions : registre durable `<action_journal>.ids` ; les identifiants demeurent réservés malgré éviction, saturation, compaction, redémarrage et reconnexion ; rétention anti-rejeu **30 jours par défaut**, configurable, avec expiration seulement après éviction de l'état. Le journal et le fichier `.ids` doivent être sauvegardés/restaurés ensemble.
+
+**Validation Codex déclarée et publiée :** 17/17 tests ciblés PASS et 185/185 tests complets PASS en 54,007 s. Aucune nouvelle prise de souris, émission HID ni capture réelle. Les preuves matérielles qualifiées au SHA précédent restent valides pour les composants non retouchés ; le correctif logiciel récent n'a pas été requalifié sur la souris réelle. Pas de CI GitHub configurée.
+
+**État de pilotage :** revue ciblée favorable sur les deux corrections ; aucune fusion sans autorisation explicite. Après fusion autorisée, mettre à jour planning/roadmap/reprise sur `main` et qualifier la synchronisation locale sans prise de souris non approuvée.
