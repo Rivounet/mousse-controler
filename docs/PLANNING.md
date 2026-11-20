@@ -59,3 +59,17 @@ Sur 100 mouvements : erreur maximale 2 px, réussite 100 %, latence médiane
 670,483 ms et P95 983,052 ms. L'arrêt matériel, la libération des boutons et
 l'absence de rejeu sont qualifiés ; la concurrence du contrôleur est couverte
 par des tests déterministes sur l'adaptateur simulé.
+
+## Prochain chantier — MC-MOUSE-ACTIONS-001 (J6)
+
+**Statut : planifié, développement non commencé.** Après PR #6 et #7 fusionnées. Responsable : Codex sur mini-pc-backend, intervention contrôlée sur MonOrdinateur ; PR Draft unique.
+
+| Priorité | ID | Travail | État |
+|---|---|---|---|
+| 1 | MC-011 | Contrat d'actions souris et capacités HID, clics multiples, maintien, drag/drop, roulette, boutons | À faire |
+| 2 | MC-012 | Composition des actions et attentes dans les séquences ; annulation, non-rejeu, arrêt | À faire |
+| 3 | MC-013 | Identifiants et suivi d'action ; notifications WebSocket automatiques, authentifiées | À faire |
+| 4 | MC-014 | Capture optionnelle avant/après action, moniteur entier contenant le curseur ; stockage et rétention configurables | À faire |
+| 5 | MC-015 | Tests, qualification matérielle, sécurité, documentation et PR Draft | À faire |
+
+Choix validés : 1B capture avant/après uniquement ; 2C analyse future seulement ; 3C conservation par action/séquence ; 4B WebSocket ; 5C erreur configurable, arrêt par défaut. Aucun rejeu d'action incertaine, aucun clavier, aucune capture continue.
