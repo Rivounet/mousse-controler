@@ -28,8 +28,11 @@ from mousse_controler.actions import ActionExecutor, ActionRegistry
 from mousse_controler.capture import CaptureBroker
 from mousse_controler.command_server import CommandGateway
 from mousse_controler.controller import MouseController, PositionStore
-from mousse_controler.position_server import handler_factory
-from mousse_controler.transport import NativeHogpTransport, SimulatedHidTransport, TransportError
+from mousse_controler.position_server import BoundedThreadingHTTPServer, handler_factory
+from mousse_controler.transport import (
+    NativeHogpTransport, SimulatedHidTransport, TransportError,
+    TransportTimeoutError,
+)
 
 from tests.r0_doubles import (
     ActionsDouble,
@@ -59,57 +62,48 @@ def wait_for_record(registry: ActionRegistry, action_id: str, timeout: float = 1
 
 
 class TransportCharacterizationTests(unittest.TestCase):
-    def test_T01_current_defect_alive_silent_engine_ignores_startup_timeout(self):
+    def test_T01_alive_silent_engine_honours_startup_timeout(self):
         stream = BlockingLineStream()
         process = ProcessDouble(stream)
-        transport = NativeHogpTransport(Path("engine.exe"), startup_timeout=0.01)
-        outcome: dict[str, object] = {}
-
-        def start() -> None:
-            try:
-                transport.start()
-            except Exception as exc:  # pragma: no cover - diagnostic capture
-                outcome["error"] = exc
-
+        transport = NativeHogpTransport(
+            Path("engine.exe"), startup_timeout=0.02, termination_timeout=0.1,
+        )
+        started = time.monotonic()
         with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
-            thread = threading.Thread(target=start)
-            thread.start()
-            self.assertTrue(stream.entered.wait(0.5))
-            time.sleep(0.05)
-            self.assertTrue(thread.is_alive(), "the configured startup deadline is currently unused")
-            stream.release.set()
-            thread.join(1)
-        self.assertFalse(thread.is_alive())
-        self.assertNotIn("error", outcome)
+            with self.assertRaisesRegex(TransportTimeoutError, "startup timed out"):
+                transport.start()
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(transport.recovery_status()["channel_state"], "invalid")
+        self.assertGreaterEqual(process.terminate_calls, 1)
 
     def test_T02_incomplete_engine_response_fails_closed(self):
-        transport = NativeHogpTransport(Path("engine.exe"))
-        transport._process = ProcessDouble(io.StringIO('{"ok":'))
-        with self.assertRaisesRegex(TransportError, "invalid HOGP engine response"):
-            transport._command("status")
+        process = ProcessDouble(io.StringIO('{"ok":\n'))
+        transport = NativeHogpTransport(Path("engine.exe"), termination_timeout=0.1)
+        with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
+            with self.assertRaisesRegex(TransportError, "invalid HOGP engine response"):
+                transport.start()
+        self.assertEqual(transport.recovery_status()["channel_state"], "invalid")
 
     def test_T03_interrupted_engine_reports_exit_code(self):
-        transport = NativeHogpTransport(Path("engine.exe"))
-        transport._process = ProcessDouble(io.StringIO(""), return_code=23)
-        with self.assertRaisesRegex(TransportError, "exit=23"):
-            transport._read_result()
+        process = ProcessDouble(io.StringIO(""), return_code=23)
+        transport = NativeHogpTransport(Path("engine.exe"), termination_timeout=0.1)
+        with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
+            with self.assertRaisesRegex(TransportError, "exit=23"):
+                transport.start()
 
-    def test_T04_current_defect_saturated_stderr_is_never_drained(self):
-        stdout = BlockingLineStream()
+    def test_T04_saturated_stderr_is_drained(self):
+        stdout = io.StringIO('{"ok":true,"event":"prepared"}\n')
         stderr = SaturatingStderr()
         process = ProcessDouble(stdout, stderr=stderr)
-        transport = NativeHogpTransport(Path("engine.exe"), startup_timeout=0.01)
+        transport = NativeHogpTransport(
+            Path("engine.exe"), command_timeout=0.02, termination_timeout=0.1,
+        )
         with mock.patch("mousse_controler.transport.subprocess.Popen", return_value=process):
-            thread = threading.Thread(target=transport.start)
-            thread.start()
-            self.assertTrue(stderr.blocked.wait(0.5))
-            self.assertTrue(stdout.entered.wait(0.5))
-            self.assertEqual(stderr.read_calls, 0)
-            self.assertTrue(thread.is_alive())
-            stderr.unblock()
-            stdout.release.set()
-            thread.join(1)
-        self.assertFalse(thread.is_alive())
+            transport.start()
+        self.assertTrue(stderr.finished.wait(0.5))
+        self.assertGreaterEqual(stderr.read_calls, 2)
+        with self.assertRaises(TransportError):
+            transport.stop()
 
 
 class ActionCharacterizationTests(unittest.TestCase):
@@ -226,15 +220,17 @@ class ReceiverDouble:
 
 class NetworkCharacterizationTests(unittest.TestCase):
     def start_server(self, receiver: ReceiverDouble):
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_factory(receiver))
-        server.daemon_threads = True
+        server = BoundedThreadingHTTPServer(
+            ("127.0.0.1", 0), handler_factory(receiver), max_connections=2,
+            header_timeout=0.1, body_timeout=0.1, write_timeout=0.1,
+        )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         return server
 
-    def test_N01_current_defect_slow_client_has_no_read_deadline(self):
+    def test_N01_slow_client_is_bounded_and_healthy_client_recovers(self):
         receiver = ReceiverDouble()
         server = self.start_server(receiver)
         client = socket.create_connection(server.server_address, timeout=1)
@@ -243,15 +239,17 @@ class NetworkCharacterizationTests(unittest.TestCase):
             b"POST /v1/position HTTP/1.1\r\nHost: localhost\r\n"
             b"Content-Length: 10\r\nConnection: close\r\n\r\nx"
         )
-        client.settimeout(0.08)
-        with self.assertRaises(socket.timeout):
-            client.recv(1)
+        client.settimeout(1)
+        response = client.recv(4096)
+        self.assertTrue(not response or b" 408 " in response.split(b"\r\n", 1)[0])
         self.assertEqual(receiver.bodies, [])
-        client.sendall(b"123456789")
-        while client.recv(4096):
-            pass
+        connection = http.client.HTTPConnection(*server.server_address, timeout=1)
+        connection.request("POST", "/v1/position", body=b"x",
+                           headers={"Content-Length": "1", "Connection": "close"})
+        self.assertEqual(connection.getresponse().status, 202)
+        connection.close()
 
-    def test_N02_current_defect_incomplete_body_is_accepted_by_handler(self):
+    def test_N02_incomplete_body_is_rejected_before_receiver(self):
         receiver = ReceiverDouble()
         server = self.start_server(receiver)
         client = socket.create_connection(server.server_address, timeout=1)
@@ -267,10 +265,10 @@ class NetworkCharacterizationTests(unittest.TestCase):
                 break
             response += part
         client.close()
-        self.assertIn(b" 202 ", response.split(b"\r\n", 1)[0])
-        self.assertEqual(receiver.bodies, [b"abc"])
+        self.assertIn(b" 400 ", response.split(b"\r\n", 1)[0])
+        self.assertEqual(receiver.bodies, [])
 
-    def test_N03_threaded_handler_accepts_simultaneous_connections(self):
+    def test_N03_connection_limit_is_enforced_and_recovers(self):
         receiver = ReceiverDouble(block=True)
         server = self.start_server(receiver)
         outcomes: list[int] = []
@@ -281,20 +279,32 @@ class NetworkCharacterizationTests(unittest.TestCase):
                 connection.request("POST", "/v1/position", body=b"x",
                                    headers={"Content-Length": "1", "Connection": "close"})
                 outcomes.append(connection.getresponse().status)
+            except (OSError, http.client.HTTPException):
+                outcomes.append(0)
             finally:
                 connection.close()
 
-        clients = [threading.Thread(target=post) for _ in range(4)]
+        clients = [threading.Thread(target=post) for _ in range(2)]
         for client in clients:
             client.start()
         deadline = time.monotonic() + 1
-        while receiver.max_active < 3 and time.monotonic() < deadline:
+        while receiver.max_active < 2 and time.monotonic() < deadline:
+            time.sleep(0.005)
+        excess = threading.Thread(target=post)
+        excess.start()
+        while (server.limits_status()["rejected_connections"] < 1 and
+               time.monotonic() < deadline):
             time.sleep(0.005)
         receiver.release.set()
-        for client in clients:
+        for client in [*clients, excess]:
             client.join(2)
-        self.assertGreaterEqual(receiver.max_active, 3)
-        self.assertEqual(outcomes, [202] * 4)
+        self.assertLessEqual(receiver.max_active, 2)
+        self.assertGreaterEqual(server.limits_status()["rejected_connections"], 1)
+        connection = http.client.HTTPConnection(*server.server_address, timeout=1)
+        connection.request("POST", "/v1/position", body=b"x",
+                           headers={"Content-Length": "1", "Connection": "close"})
+        self.assertEqual(connection.getresponse().status, 202)
+        connection.close()
 
 
 class StorageCharacterizationTests(unittest.TestCase):
@@ -397,8 +407,9 @@ class ImmediateEvent:
 
 
 class RuntimeTransport:
-    def __init__(self, path) -> None:
+    def __init__(self, path, **kwargs) -> None:
         self.path = path
+        self.limits = kwargs
 
     def advertise(self) -> None:
         return

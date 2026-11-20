@@ -33,7 +33,13 @@ def serve(config_path: Path) -> int:
         max_total_bytes=int(config.get("capture_max_total_bytes", 512 * 1024 * 1024)),
     )
     receiver = PositionReceiver(store, HmacVerifier(keys), capture_broker)
-    transport = NativeHogpTransport(Path(config["hogp_executable"]))
+    transport = NativeHogpTransport(
+        Path(config["hogp_executable"]),
+        startup_timeout=float(config.get("hogp_startup_timeout_seconds", 15.0)),
+        command_timeout=float(config.get("hogp_command_timeout_seconds", 3.0)),
+        stop_timeout=float(config.get("hogp_stop_timeout_seconds", 3.0)),
+        termination_timeout=float(config.get("hogp_termination_timeout_seconds", 2.0)),
+    )
     controller = MouseController(transport, store)
     command_token = unprotect(config["command_token_dpapi"])
     registry = ActionRegistry(
@@ -54,6 +60,19 @@ def serve(config_path: Path) -> int:
         position_server = make_https_server(
             config["position_bind"], int(config["position_port"]), receiver,
             config["tls_certificate"], config["tls_private_key"],
+            max_connections=int(config.get("position_max_connections", 8)),
+            request_queue_size=int(config.get("position_request_queue_size", 8)),
+            tls_handshake_timeout=float(config.get(
+                "position_tls_handshake_timeout_seconds", 3.0)),
+            header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
+            header_total_timeout=float(config.get(
+                "position_header_total_timeout_seconds", 5.0)),
+            body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+            body_total_timeout=float(config.get(
+                "position_body_total_timeout_seconds", 10.0)),
+            capture_body_total_timeout=float(config.get(
+                "position_capture_body_total_timeout_seconds", 120.0)),
+            write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
         )
         command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
         event_server = make_event_server(int(config.get("event_port", 8767)), command_token, registry)
@@ -127,6 +146,19 @@ def serve_position_only(config_path: Path) -> int:
     server = make_https_server(
         config["position_bind"], int(config["position_port"]), receiver,
         config["tls_certificate"], config["tls_private_key"],
+        max_connections=int(config.get("position_max_connections", 8)),
+        request_queue_size=int(config.get("position_request_queue_size", 8)),
+        tls_handshake_timeout=float(config.get(
+            "position_tls_handshake_timeout_seconds", 3.0)),
+        header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
+        header_total_timeout=float(config.get(
+            "position_header_total_timeout_seconds", 5.0)),
+        body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+        body_total_timeout=float(config.get(
+            "position_body_total_timeout_seconds", 10.0)),
+        capture_body_total_timeout=float(config.get(
+            "position_capture_body_total_timeout_seconds", 120.0)),
+        write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
     )
     proof_emitted = threading.Event()
 
