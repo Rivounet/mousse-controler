@@ -75,3 +75,7 @@ par des tests déterministes sur l'adaptateur simulé.
 Preuves : 17 actions matérielles réussies, 37 événements sur surface sûre ; WebSocket réel, arrêt d'urgence sans événement postérieur, reconnexion HOGP active/boutons à zéro/sans rejeu. SSH hors sandbox via configuration dédiée qualifié, tâche interactive temporaire contrôlée sans élévation.
 
 **Réserves :** absence d'AC Pan pour la roulette horizontale ; ancien dossier de staging maintenance vide non supprimé sous Windows Temp ; nouvelle prise de souris soumise à avertissement et accord explicite. Aucune CI GitHub configurée. Le prochain jalon est la décision explicite de revue/fusion, **pas une reprise de qualification automatique**.
+
+### Contrôle de sortie J6 — correctifs de revue
+
+Sur le SHA applicatif `e7e26332e56a39cbd2ca915413c313da07c638d9`, corrections de suppression des captures et du registre anti-rejeu intégrées : refus de suppression conservé en `DELETE_FAILED`, index de fichiers persistant ; réservations d'identifiants conservées 30 jours par défaut et jusqu'à éviction des états, y compris après compaction et redémarrage. **17/17 tests ciblés PASS ; 185/185 tests complets PASS en 54,007 s**, selon les preuves publiées. Aucun nouveau test HID réel après ces correctifs. **Prochaine porte : décision explicite de fusion de la PR #8**, actuellement Draft.
