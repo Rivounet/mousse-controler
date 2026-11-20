@@ -124,3 +124,11 @@ ouvre une nouvelle époque. TTL, limites de débit et absence de rejeu après
 reconnexion restent imposés. Les scripts SSH/SFTP et releases sont des moyens
 secondaires de maintenance. Aucune garantie d'indétectabilité par les
 applications.
+
+## Extension planifiée J6 — sans implémentation actuelle
+
+mini-pc-backend hébergera un moteur d'actions souris composables, un registre d'exécution avec identifiants/états et notifications WebSocket authentifiées, ainsi qu'un gestionnaire de captures et de conservation. HOGP reste le transport des commandes souris.
+
+L'agent visible de MonOrdinateur pourra recevoir uniquement des demandes de capture strictement authentifiées et bornées, jamais des commandes souris. Au moment de la prise, il lit la position du curseur, sélectionne le moniteur correspondant et capture l'écran complet de ce moniteur seulement. Images et métadonnées transitent sur LAN sécurisé avec quotas, contrôle d'accès et conservation/suppression configurables par action/séquence. Indication visible et aucune capture continue ou périodique.
+
+États prévus : ACCEPTED, RUNNING, EXECUTED, CONFIRMED, FAILED, UNKNOWN. EXECUTED atteste une émission HID, pas l'effet dans l'application cible. CONFIRMED nécessite une observation indépendante (par exemple la position). Les pertes de liaison ne rejouent pas une action incertaine. Analyse d'images locale : extension future non développée.
