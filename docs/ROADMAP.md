@@ -62,3 +62,7 @@ Toute modification de périmètre, de jalon ou de critère de sortie est documen
 SSH hors sandbox vers `MonOrdinateur` qualifié via fichier dédié, autorisation persistante restreinte et tâche interactive temporaire contrôlée. Aucune modification d'ACL, compte, pare-feu ou protection. Réserves : roulette horizontale HID indisponible, dossier de staging maintenance vide résiduel, accord préalable pour toute future prise de souris.
 
 **Prochaine porte :** vérification des preuves puis arbitrage explicite de fusion de la PR #8. Pas de fusion implicite. Hors périmètre : clavier, capture continue ou autonome, moteur d'analyse visuelle.
+
+### Clôture du jalon J6 dans GitHub
+
+PR #8 **fusionnée dans `main`** le 20 novembre 2026, commit `e0658142a65d8b494f109efa3318c6ea21feac3d`. **J6 : validé avec réserves**, 185 tests logiciels réussis selon les preuves publiées et 17 actions matérielles vérifiées avant les correctifs finaux. Aucune qualification post-fusion des processus installés n'est revendiquée. Réserves et contraintes de prise de souris maintenues.
