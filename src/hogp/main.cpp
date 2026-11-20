@@ -156,6 +156,51 @@ public:
             hid_provider_, L"00002a4d-0000-1000-8000-00805f9b34fb", report_parameters,
             "Input Report");
 
+        control_write_token_ = control_point_.WriteRequested(
+            [this](GattLocalCharacteristic const&, GattWriteRequestedEventArgs const& args) {
+                try {
+                    auto request = args.GetRequestAsync().get();
+                    if (!request) {
+                        emit("control-point", false, "request unavailable");
+                        return;
+                    }
+                    auto reader = DataReader::FromBuffer(request.Value());
+                    if (reader.UnconsumedBufferLength() != 1) {
+                        if (request.Option() == GattWriteOption::WriteWithResponse)
+                            request.RespondWithProtocolError(GattProtocolError::InvalidAttributeValueLength());
+                        emit("control-point", false, "invalid length");
+                        return;
+                    }
+                    auto const value = reader.ReadByte();
+                    if (value > 1) {
+                        if (request.Option() == GattWriteOption::WriteWithResponse)
+                            request.RespondWithProtocolError(GattProtocolError::InvalidPdu());
+                        emit("control-point", false, "invalid value");
+                        return;
+                    }
+                    if (request.Option() == GattWriteOption::WriteWithResponse)
+                        request.Respond();
+                    emit("control-point", true, value == 0 ? "suspend" : "exit-suspend");
+                } catch (hresult_error const& ex) {
+                    emit("control-point", false, narrow(ex.message()));
+                }
+            });
+        report_read_token_ = input_report_.ReadRequested(
+            [this](GattLocalCharacteristic const&, GattReadRequestedEventArgs const& args) {
+                try {
+                    auto request = args.GetRequestAsync().get();
+                    if (!request) {
+                        emit("report-read", false, "request unavailable");
+                        return;
+                    }
+                    std::scoped_lock event_lock{mutex_};
+                    request.RespondWithValue(report_buffer(buttons_, 0, 0, 0));
+                    emit("report-read", true);
+                } catch (hresult_error const& ex) {
+                    emit("report-read", false, narrow(ex.message()));
+                }
+            });
+
         GattLocalDescriptorParameters descriptor_parameters;
         descriptor_parameters.ReadProtectionLevel(GattProtectionLevel::EncryptionRequired);
         descriptor_parameters.StaticValue(buffer(std::array<std::uint8_t, 2>{0x00, 0x01}));
@@ -263,6 +308,8 @@ public:
         buttons_ = 0;
         stop_advertising_locked();
         if (input_report_ && clients_token_) input_report_.SubscribedClientsChanged(std::exchange(clients_token_, {}));
+        if (input_report_ && report_read_token_) input_report_.ReadRequested(std::exchange(report_read_token_, {}));
+        if (control_point_ && control_write_token_) control_point_.WriteRequested(std::exchange(control_write_token_, {}));
         if (hid_provider_ && advertisement_token_) hid_provider_.AdvertisementStatusChanged(std::exchange(advertisement_token_, {}));
         input_report_ = nullptr;
         battery_provider_ = nullptr;
@@ -291,20 +338,24 @@ private:
             subscribed_ = false;
             throw std::runtime_error("no subscribed HID host");
         }
-        std::array<std::uint8_t, 6> report{
-            buttons,
-            static_cast<std::uint8_t>(dx & 0xFF),
-            static_cast<std::uint8_t>((static_cast<std::uint16_t>(dx) >> 8) & 0xFF),
-            static_cast<std::uint8_t>(dy & 0xFF),
-            static_cast<std::uint8_t>((static_cast<std::uint16_t>(dy) >> 8) & 0xFF),
-            static_cast<std::uint8_t>(wheel)};
-        auto results = input_report_.NotifyValueAsync(buffer(report)).get();
+        auto results = input_report_.NotifyValueAsync(report_buffer(buttons, dx, dy, wheel)).get();
         if (results.Size() == 0) throw std::runtime_error("notification reached no clients");
         for (auto const& result : results) {
             if (result.Status() != GattCommunicationStatus::Success)
                 throw std::runtime_error("notification status: " + enum_value(result.Status()));
         }
         emit("report", true);
+    }
+
+    static IBuffer report_buffer(
+        std::uint8_t buttons, std::int16_t dx, std::int16_t dy, std::int8_t wheel) {
+        return buffer(std::array<std::uint8_t, 6>{
+            buttons,
+            static_cast<std::uint8_t>(dx & 0xFF),
+            static_cast<std::uint8_t>((static_cast<std::uint16_t>(dx) >> 8) & 0xFF),
+            static_cast<std::uint8_t>(dy & 0xFF),
+            static_cast<std::uint8_t>((static_cast<std::uint16_t>(dy) >> 8) & 0xFF),
+            static_cast<std::uint8_t>(wheel)});
     }
 
     void stop_advertising_locked() noexcept {
@@ -328,6 +379,8 @@ private:
     GattLocalCharacteristic input_report_{nullptr};
     GattLocalCharacteristic battery_level_{nullptr};
     event_token clients_token_{};
+    event_token control_write_token_{};
+    event_token report_read_token_{};
     event_token advertisement_token_{};
 };
 

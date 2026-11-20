@@ -3,16 +3,19 @@
 ## Construire
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build\Build-PositionAgent.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build\Build-HogpPackage.ps1
+powershell.exe -NoProfile -File .\scripts\build\Build-PositionAgent.ps1
+powershell.exe -NoProfile -File .\scripts\build\Build-HogpPackage.ps1 `
+  -CertificateThumbprint <EMPREINTE_VERIFIEE>
 python -m unittest discover -v
 ```
 
-Le MSIX requiert une signature de confiance. Pour une qualification locale,
-utiliser un certificat de développement à durée courte et limité à l'utilisateur
-courant. Faire approuver cette opération par l'utilisateur ; ne pas installer un
-paquet exécutable non signé pour tous les utilisateurs et ne pas activer le mode
-développeur.
+Le MSIX requiert une signature vérifiée. Pour la qualification conditionnelle,
+le certificat public exact est importé temporairement dans
+`LocalMachine\TrustedPeople`, jamais dans un magasin `Root`. Smart App Control
+n'accordant pas son niveau d'exécution au binaire C++ auto-signé, le paquet
+héberge le script WinRT par le `powershell.exe` Microsoft-signé dont la signature
+est contrôlée à la construction. Ne désactiver ni politique d'exécution, ni mode
+développeur, ni protection Windows.
 
 ## Cible
 

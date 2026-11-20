@@ -74,7 +74,8 @@ de matériel nécessite une décision explicite ; aucune installation implicite.
 
 La réalisation sépare quatre responsabilités :
 
-- `HogpTransport` : processus C++20/C++/WinRT, services HID `0x1812` et Battery
+- `HogpTransport` : processus PowerShell/WinRT sous identité MSIX, hébergé par le
+  binaire Windows Microsoft-signé, services HID `0x1812` et Battery
   `0x180F`, rapports relatifs de six octets, chiffrement obligatoire et aucune
   émission sans abonnement du Host ;
 - `PositionController` : sérialisation des commandes, mesures fraîches de moins
@@ -90,11 +91,13 @@ d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 épinglé, HMAC-SHA-256, séquence et horodatage. L'API de commande reste sur
 `127.0.0.1`, avec bearer DPAPI, TTL, idempotence et limite de débit.
 
-La base GATT se crée dans un exécutable Win32, mais Windows place sa publicité
-en `Aborted` tant que le processus n'a pas une identité de package déclarant la
-capacité `bluetooth`. Le paquet MSIX et son lanceur sont construits ; son
-installation de développement reste suspendue à l'approbation humaine du
-certificat utilisateur. Aucun rapport HID n'a donc été émis à ce stade.
+La base GATT exige une identité de package déclarant la capacité `bluetooth`.
+Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
+public exact est dans `LocalMachine\TrustedPeople`. Le paquet utilise donc une
+copie Authenticode-valide de `powershell.exe`, signée Microsoft, pour héberger le
+script WinRT catalogué dans le MSIX. `CreateAsync`, la création des services et
+la publicité `Started` ont été démontrés sans désactiver de protection. La
+reconnaissance HID et les rapports réels restent à qualifier sur la cible.
 
 Le processus de qualification reste au premier plan ; l'agent cible est visible
 et à démarrage manuel. L'arrêt d'urgence purge les commandes et relâche les

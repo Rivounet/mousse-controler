@@ -24,7 +24,7 @@ La PR #4 a livré 72 tests réussis selon MC-REPRISE-001. La PR #5 a déclaré *
 | Niveau | Vérifications | Statut |
 |---|---|---|
 | T0 | cohérence Git, syntaxe et documentation | exécuté dans MC-REPRISE-001 |
-| T1 | Unités, géométrie, trajectoires, séquences, sécurité et adaptateurs simulés | 103 PASS |
+| T1 | Unités, géométrie, trajectoires, séquences, sécurité et adaptateurs simulés | 105 PASS |
 | T2 | Séquences A→B→C, modes temporisé/commandé, pause/reprise/étape suivante/arrêt, état et non-rejeu | PASS simulé ; réel à faire |
 | T3 | HOGP GATT, publicité, pairing, chiffrement, pilote HID natif, mouvement/clic/scroll et relâchement boutons | GATT non diffusé qualifié en PR #5 ; reste à faire |
 | T4 | Agent GetCursorPos, topologie/DPI/session, HTTPS épinglé/HMAC, anti-rejeu, mesures fraîches, coupures LAN | Agent réel et échantillon signé qualifiés ; coupures à faire |
@@ -87,6 +87,12 @@ Preuves réelles déjà obtenues : agent session console 1, deux écrans, échan
 HTTPS signé accepté, radio cible activée et publicité nominalement détectée lors
 des premières tentatives. Non qualifiés : appairage final, pilote HID, rapports
 souris, précision, P95, reconnexion et arrêt matériel. Le statut demeure donc
-`INCOMPLETE`, indépendamment des 103 PASS.
+`INCOMPLETE`, indépendamment des tests logiciels réussis.
+
+Après ajout de l'hôte MSIX compatible Smart App Control et de son routage par le
+transport Python, la suite a exécuté **105 tests en 52,869 s : 105 PASS**, puis
+une revalidation complète **105/105 en 80,412 s**. Les
+deux tests supplémentaires vérifient la commande de l'alias packagé et la
+compatibilité du contrat historique direct.
 
 Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.

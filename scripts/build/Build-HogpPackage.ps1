@@ -3,31 +3,28 @@ param([string]$CertificateThumbprint)
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-$msbuild = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\amd64\MSBuild.exe'
 $makeAppx = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe'
 $signTool = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
 $stage = Join-Path $root 'out\HogpPackage\stage'
 $package = Join-Path $root 'out\HogpPackage\MousseControler.Hogp.msix'
+$outRoot = [IO.Path]::GetFullPath((Join-Path $root 'out')) + [IO.Path]::DirectorySeparatorChar
+$stage = [IO.Path]::GetFullPath($stage)
+if (-not $stage.StartsWith($outRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to clear package stage outside the repository output directory: $stage"
+}
+if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'Assets') | Out-Null
 
-& $msbuild (Join-Path $root 'src\hogp\MousseHogp.vcxproj') /t:Rebuild /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
-if ($LASTEXITCODE -ne 0) { throw 'HOGP engine build failed' }
-& $msbuild (Join-Path $root 'src\hogp-launcher\MousseHogpLauncher.vcxproj') /t:Rebuild /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal
-if ($LASTEXITCODE -ne 0) { throw 'HOGP launcher build failed' }
-
-if ($CertificateThumbprint) {
-    foreach ($binary in @(
-        (Join-Path $root 'src\hogp\out\Release\mousse-hogp.exe'),
-        (Join-Path $root 'src\hogp-launcher\out\Release\mousse-hogp.exe')
-    )) {
-        & $signTool sign /sha1 $CertificateThumbprint /s My /fd SHA256 $binary
-        if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed: $binary" }
-    }
+$powerShell = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+$powerShellSignature = Get-AuthenticodeSignature -LiteralPath $powerShell
+if ($powerShellSignature.Status -ne [Management.Automation.SignatureStatus]::Valid -or
+    $powerShellSignature.SignerCertificate.Subject -notmatch '^CN=Microsoft Windows,') {
+    throw 'The package host must be the valid Microsoft-signed Windows PowerShell binary.'
 }
 
-Copy-Item (Join-Path $root 'src\hogp\out\Release\mousse-hogp.exe') (Join-Path $stage 'mousse-hogp-packaged.exe') -Force
+Copy-Item -LiteralPath $powerShell -Destination (Join-Path $stage 'powershell.exe') -Force
+Copy-Item (Join-Path $root 'src\hogp-powershell\hogp.ps1') (Join-Path $stage 'hogp.ps1') -Force
 Copy-Item (Join-Path $root 'packaging\hogp\AppxManifest.xml') (Join-Path $stage 'AppxManifest.xml') -Force
-Copy-Item (Join-Path $root 'src\hogp-launcher\out\Release\mousse-hogp.exe') (Join-Path $root 'out\Release\mousse-hogp.exe') -Force
 
 Add-Type -AssemblyName System.Drawing
 foreach ($asset in @(

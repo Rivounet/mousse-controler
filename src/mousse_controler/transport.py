@@ -81,13 +81,29 @@ class SimulatedHidTransport(HidTransport):
 
 
 class NativeHogpTransport(HidTransport):
-    """Serialized line protocol for the foreground C++/WinRT engine."""
+    """Serialized line protocol for the foreground packaged WinRT engine."""
 
     def __init__(self, executable: Path, startup_timeout: float = 15.0):
         self._executable = Path(executable)
         self._startup_timeout = startup_timeout
         self._process: subprocess.Popen[str] | None = None
         self._lock = threading.Lock()
+
+    def _engine_command(self) -> list[str]:
+        if self._executable.name.lower() != "mousse-hogp-packaged.exe":
+            return [str(self._executable), "--stdio"]
+        package_script = (
+            "$p=[Windows.ApplicationModel.Package,Windows,ContentType=WindowsRuntime]::"
+            "Current.InstalledLocation.Path; & (Join-Path $p 'hogp.ps1') -Stdio"
+        )
+        return [
+            str(self._executable),
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            package_script,
+        ]
 
     def _read_result(self) -> dict[str, Any]:
         assert self._process and self._process.stdout
@@ -119,7 +135,7 @@ class NativeHogpTransport(HidTransport):
         if self._process and self._process.poll() is None:
             return
         self._process = subprocess.Popen(
-            [str(self._executable), "--stdio"],
+            self._engine_command(),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

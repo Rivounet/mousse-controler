@@ -4,6 +4,39 @@
 **Branche :** `feat/mc-hid-exec-001`  
 **Verdict provisoire :** `INCOMPLETE`
 
+## Reprise révisée — alternative de confirmation et Smart App Control
+
+Le défaut de « fenêtre invisible » a été séparé de l'appairage : la confirmation
+est désormais prise en charge explicitement par `PairingTool` avec la cérémonie
+WinRT `ConfirmOnly`, et son résultat est écrit dans un JSON expurgé. La sélection
+ne repose plus sur un endpoint mis en cache : un `DeviceWatcher` actif exige le
+nom exact, `IsPresent=true`, `IsConnectable=true` et `CanPair=true` avant
+`PairAsync(ConfirmOnly, Encryption)`. Une fenêtre graphique n'est donc plus une
+dépendance de qualification.
+
+Un second blocage a été prouvé avant l'appairage : Smart App Control, politique
+`VerifiedAndReputableDesktop`, a refusé le nouveau moteur C++ pourtant signé et
+installé. Les événements Code Integrity indiquent niveau demandé 2, niveau
+validé 1 et `VerificationError=18`. Aucune protection n'a été désactivée et aucun
+certificat n'a été ajouté à un magasin `Root`.
+
+Une alternative conforme a été réalisée : le script PowerShell/WinRT catalogué
+dans le MSIX s'exécute sous la copie intacte de `powershell.exe` signée Microsoft
+et conserve l'identité `Rivounet.MousseControler.Hogp`. Les preuves locales sont
+positives : `CreateAsync=Success`, services HID et Battery créés, publicité
+`Started`, puis cycle du transport Python `start → advertise → stop` réussi. Le
+MSIX final signé et vérifié a le SHA-256
+`1A358251E8F267361D9F5A9319022C625C70F4C70307F66937A43DB6002A75E7`.
+
+La qualification matérielle n'a pas pu reprendre : le nom DNS de la cible ne se
+résout plus et aucun voisin SSH déjà connu ne correspond à sa clé hôte. Une
+recherche élargie du réseau a été refusée afin de ne pas sonder des machines hors
+périmètre. La dernière observation autorisée de la radio cible était `On`; son
+état final n'est donc pas encore vérifié. Aucune nouvelle tentative d'appairage,
+aucun abonnement et aucun rapport HID n'ont eu lieu dans ce cycle. Le paquet et
+le certificat temporaire restent installés sur le mini-PC, sans processus ni
+publicité actifs, uniquement pour reprendre dès que la cible redevient joignable.
+
 ## Résultat
 
 Le logiciel complet a été réalisé : moteur HOGP natif, contrôleur Python,
@@ -54,6 +87,10 @@ aucun rapport HID n'ont été produits.
 revalidation après intégration de `main` : **103/103 PASS en 54,453 s** avec le
 répertoire temporaire court prévu ; après correction de la course publicitaire :
 **103/103 PASS en 45,994 s**.
+
+Après intégration de l'alternative Smart App Control et des tests de commande de
+l'alias packagé : **105/105 PASS en 52,869 s**, puis revalidation complète
+**105/105 PASS en 80,412 s**.
 
 Les tests simulés ne sont pas utilisés comme preuve de fonctionnement HID.
 Sont encore requis : reconnaissance souris native, mouvement, clic, scroll,

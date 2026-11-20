@@ -112,7 +112,7 @@ HID n'est implicite.
 - accès cible : OpenSSH existant à clé et host key stricte, jamais RustDesk ;
 - agent cible visible qualifié en session 1, deux écrans et premier échantillon
   accepté ; tâche ensuite arrêtée et supprimée ;
-- tests : 103/103 PASS ;
+- tests : 105/105 PASS ;
 - radios finales : mini-PC `On` (état initial), cible restaurée `Off` ;
 - HOGP packagé : certificat, signature, Publisher et SHA vérifiés ; import public
   temporaire dans `LocalMachine\TrustedPeople`, MSIX installé, identité

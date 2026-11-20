@@ -19,12 +19,12 @@
   </Dependencies>
   <Resources><Resource Language="fr-fr" /></Resources>
   <Applications>
-    <Application Id="Hogp" Executable="mousse-hogp-packaged.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="Hogp" Executable="powershell.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements DisplayName="Mousse Controler HOGP" Description="Foreground Bluetooth HID engine"
         BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
-        <uap3:Extension Category="windows.appExecutionAlias" Executable="mousse-hogp-packaged.exe" EntryPoint="Windows.FullTrustApplication">
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="powershell.exe" EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias><desktop:ExecutionAlias Alias="mousse-hogp-packaged.exe" /></uap3:AppExecutionAlias>
         </uap3:Extension>
       </Extensions>

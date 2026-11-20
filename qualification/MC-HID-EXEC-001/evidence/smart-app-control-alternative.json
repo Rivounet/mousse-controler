@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "redacted": true,
+  "blocked_native_engine": {
+    "policy_name": "VerifiedAndReputableDesktop",
+    "policy_id": "{0283ac0f-fff1-49ae-ada1-8a933130cad6}",
+    "requested_signing_level": 2,
+    "validated_signing_level": 1,
+    "verification_error": 18,
+    "authenticode_status": "Valid",
+    "certificate_thumbprint": "F4D17F09181DE18154C429C0ED762AD66A762C54",
+    "root_store_modified": false,
+    "windows_protection_disabled": false
+  },
+  "compatible_host": {
+    "file": "powershell.exe",
+    "authenticode_status": "Valid",
+    "signer_subject": "CN=Microsoft Windows",
+    "signer_thumbprint": "667BBA1E1F478221AA65DE4F75187A751B03A453",
+    "package_identity": "Rivounet.MousseControler.Hogp"
+  },
+  "final_msix": {
+    "sha256": "1A358251E8F267361D9F5A9319022C625C70F4C70307F66937A43DB6002A75E7",
+    "signature_verified": true,
+    "publisher_matches_manifest": true
+  },
+  "local_qualification": {
+    "gatt_create_async": "Success",
+    "hid_service_created": true,
+    "battery_service_created": true,
+    "advertisement_status": "Started",
+    "python_transport_start_advertise_stop": "PASS",
+    "hid_report_emitted": false
+  },
+  "target": {
+    "ssh_host_key_verification_required": true,
+    "dns_resolution": "Unavailable",
+    "pairing_attempted_in_this_cycle": false,
+    "last_observed_radio": "On",
+    "final_radio_state_verified": false,
+    "blocker": "Target unavailable on the authorized OpenSSH channel"
+  },
+  "temporary_state_pending_target_return": {
+    "mini_bluetooth": "On",
+    "hogp_processes": 0,
+    "advertising": false,
+    "msix_installed": true,
+    "local_machine_trusted_people_exact_certificate": true,
+    "current_user_root_exact_certificate": false,
+    "local_machine_root_exact_certificate": false
+  }
+}

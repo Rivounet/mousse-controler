@@ -8,7 +8,7 @@
 - PR #5 Draft : MC-HID-AUDIT-001/002, radio On temporaire et GATT local réussis ; tests **79 PASS déclarés** sur sa branche, non réexécutés sur main.
 - Audit USB réalisé sur MonOrdinateur : Logitech MR0085 / Nano 046D:C534 non Bluetooth ; retour GetCursorPos local et deux écrans observés.
 - Aucun appairage HOGP, mouvement souris depuis mini-PC ni retour LAN intégré démontré.
-- MC-HID-EXEC-001 : 103 PASS, agent réel et retour HTTPS/HMAC qualifiés ; publicité packagée et HID réel bloqués par l'approbation du certificat MSIX.
+- MC-HID-EXEC-001 : 105 PASS, agent réel et retour HTTPS/HMAC qualifiés ; MSIX et publicité packagée fonctionnels via l'hôte Microsoft-signé, qualification HID réelle suspendue à la remise en ligne de la cible.
 
 ## Travaux structurants
 

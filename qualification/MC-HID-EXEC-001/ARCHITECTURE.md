@@ -7,7 +7,7 @@ API HTTP loopback + bearer DPAPI
 CommandGateway ── SequenceRunner ── TrajectoryEngine
               │                         (pur, seedé)
               ▼
-PositionController ── HogpTransport ── C++/WinRT GATT/HOGP
+PositionController ── HogpTransport ── PowerShell/WinRT GATT/HOGP
        ▲                                      │ BLE HID
        │ HTTPS TLS épinglé + HMAC              ▼
 PositionAgent .NET 4.8 ─────────────── MonOrdinateur / pilote HID natif
@@ -21,7 +21,8 @@ PositionAgent .NET 4.8 ─────────────── MonOrdinate
   HMAC-SHA-256, séquence monotone et fenêtre temporelle ;
 - pare-feu : réseau privé, programme/port/hôte source exacts ;
 - agent cible visible, sans listener, sans service et sans API d'entrée ;
-- HOGP : propriétés chiffrées, aucun rapport sans client abonné, bornes int16 /
+- HOGP : identité MSIX, hôte Microsoft-signé compatible Smart App Control,
+  propriétés chiffrées, aucun rapport sans client abonné, bornes int16 /
   int8, libération des boutons et arrêt de publicité.
 
 ## Séquences
