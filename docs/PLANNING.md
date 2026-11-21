@@ -139,3 +139,19 @@ la branche `test/mc-robustness-r4-001`; sa PR doit rester Draft.
 **Porte suivante :** revue de la PR Draft R4. Une fusion, une synchronisation,
 un déploiement ou une qualification matérielle restent des décisions séparées.
 Ne pas commencer R5 dans ce mandat.
+
+## J8 / R5 — Corrections minimales ciblées
+
+**État courant :** branche `refactor/mc-robustness-r5-001`, base exacte
+`c5d8ef6…`, livraison en PR Draft sans fusion.
+
+| Sujet | État | Porte |
+|---|---|---|
+| C-13 polygones extrêmes | Corrigé et tests ciblés PASS | `full-local` puis revue |
+| C-14 doublons catalogue | Corrigé avant insertion pour 3 registres | référence API et découverte inchangées |
+| C-09 historique HOGP | Inventorié, conservation avec réserve | confirmer usages manuels avant archivage |
+| C-11 séquenceurs | Analysé, convergence différée | bénéfice net et tests R1 requis |
+| C-12/C-17 responsabilités/duplications | Mesuré, extractions différées | PR indépendantes à faible risque |
+
+Aucun déploiement, HID/capture réelle, modification de tâche ou CI externe.
+Les travaux différés ne sont pas comptés comme réalisés.

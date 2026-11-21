@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from http.client import HTTPConnection
 import json
 from pathlib import Path
@@ -7,6 +8,7 @@ import threading
 import time
 import unittest
 
+from mousse_controler import api_catalog
 from mousse_controler.api_catalog import (
     ACTION_CONTRACTS,
     COMMAND_CONTRACTS,
@@ -148,6 +150,20 @@ class ApiCatalogTests(unittest.TestCase):
             self.request(include=["not_a_section"])
         with self.assertRaisesRegex(ValueError, "duplicate"):
             self.request(include=["commands", "commands"])
+
+    def test_duplicate_contracts_are_rejected_before_insertion(self):
+        cases = (
+            (api_catalog._add, COMMAND_CONTRACTS, "move"),
+            (api_catalog._add_action, ACTION_CONTRACTS, "click"),
+            (api_catalog._add_event, WEBSOCKET_EVENT_CONTRACTS, "state"),
+        )
+        for insert, registry, name in cases:
+            original = registry[name]
+            duplicate = copy.deepcopy(original)
+            duplicate["description"] = "must not replace the registered contract"
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                insert(duplicate)
+            self.assertIs(registry[name], original)
 
     def test_catalog_has_no_hid_or_capture_effect(self):
         before = list(self.transport.events)

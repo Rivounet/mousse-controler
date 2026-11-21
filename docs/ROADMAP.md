@@ -90,3 +90,14 @@ sans matériel, découverte contrôlée de la chaîne Windows et preuves de buil
 Le code `72546bd…` obtient 269/269 tests et un build PositionAgent local PASS.
 La publication R4 reste une PR Draft ; fusion, synchronisation, déploiement,
 qualification matérielle et R5 restent non commencés.
+
+### Mise à jour R5 — 21 novembre 2026
+
+R4 est fusionné dans `main` au SHA `c5d8ef6…`. R5 traite uniquement les deux
+anomalies reproductibles indépendantes : échantillonnage de polygones extrêmes
+et écrasement des identifiants du catalogue. L'inventaire HOGP démontre le
+chemin PowerShell/MSIX actif mais pas l'inutilité absolue des sources C++ ; elles
+restent donc conservées. La convergence des séquenceurs et les extractions de
+`actions.py`, `PositionAgent.cs`, des persistances et utilitaires sont différées
+faute de gain net à faible risque. Porte suivante : qualification locale puis
+PR Draft, sans fusion ni déploiement.

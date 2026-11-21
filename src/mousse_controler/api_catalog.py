@@ -100,8 +100,17 @@ BUTTON_NAMES = ["left", "right", "middle", "back", "forward"]
 COMMAND_CONTRACTS: dict[str, dict[str, Any]] = {}
 
 
+def _insert_unique(
+    registry: dict[str, dict[str, Any]], contract: dict[str, Any], resource: str,
+) -> None:
+    name = contract["name"]
+    if name in registry:
+        raise ValueError(f"duplicate {resource} contract: {name}")
+    registry[name] = contract
+
+
 def _add(contract: dict[str, Any]) -> None:
-    COMMAND_CONTRACTS[contract["name"]] = contract
+    _insert_unique(COMMAND_CONTRACTS, contract, "command")
 
 
 _add(_command(
@@ -415,7 +424,7 @@ ACTION_CONTRACTS: dict[str, dict[str, Any]] = {}
 
 
 def _add_action(contract: dict[str, Any]) -> None:
-    ACTION_CONTRACTS[contract["name"]] = contract
+    _insert_unique(ACTION_CONTRACTS, contract, "action")
 
 
 _add_action(_action("move_relative", "Déplacement relatif.", {
@@ -497,15 +506,22 @@ _add_action(_action("sequence", "Exécute une liste ordonnée d'actions avancée
     errors=["SEQUENCE_CHILD_FAILED", "INVALID_ACTION"]))
 
 
-WEBSOCKET_EVENT_CONTRACTS: dict[str, dict[str, Any]] = {
-    "connected": {
+WEBSOCKET_EVENT_CONTRACTS: dict[str, dict[str, Any]] = {}
+
+
+def _add_event(contract: dict[str, Any]) -> None:
+    _insert_unique(WEBSOCKET_EVENT_CONTRACTS, contract, "WebSocket event")
+
+
+_EVENT_CONTRACTS = [
+    {
         "resource_type": "websocket_event", "name": "connected",
         "description": "Message initial confirmant la connexion authentifiée.",
         "payload": {"event_type": "connected", "emitted_at_ms": 1_700_000_000_000,
                     "protocol": "mousse.actions.v1"},
         "produced_by": ["WebSocket handshake"], "effects": [], "contract_version": CONTRACT_VERSION,
     },
-    "state": {
+    {
         "resource_type": "websocket_event", "name": "state",
         "description": "Transition d'état d'une action.",
         "payload": {"event_id": "uuid", "event_type": "state", "emitted_at_ms": 0,
@@ -513,35 +529,35 @@ WEBSOCKET_EVENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "produced_by": ["legacy commands", "action_submit", "action_cancel", "action execution"],
         "effects": [], "contract_version": CONTRACT_VERSION,
     },
-    "control": {
+    {
         "resource_type": "websocket_event", "name": "control",
         "description": "Pause, reprise ou demande de continuation.",
         "payload": {"event_id": "uuid", "event_type": "control", "action": {}},
         "produced_by": ["action_pause", "action_resume", "action_continue"],
         "effects": [], "contract_version": CONTRACT_VERSION,
     },
-    "retry": {
+    {
         "resource_type": "websocket_event", "name": "retry",
         "description": "Tentative supplémentaire d'une action rejouable.",
         "payload": {"event_id": "uuid", "event_type": "retry", "action": {}},
         "produced_by": ["action executor"], "effects": [], "contract_version": CONTRACT_VERSION,
     },
-    "capture": {
+    {
         "resource_type": "websocket_event", "name": "capture",
         "description": "État d'une capture liée à une action.",
         "payload": {"event_id": "uuid", "event_type": "capture", "action": {}},
         "produced_by": ["action executor", "capture subsystem"],
         "effects": [], "contract_version": CONTRACT_VERSION,
     },
-    "result": {
+    {
         "resource_type": "websocket_event", "name": "result",
         "description": "Annotation de résultat sans transition d'état.",
         "payload": {"event_id": "uuid", "event_type": "result", "action": {}},
         "produced_by": ["action registry"], "effects": [], "contract_version": CONTRACT_VERSION,
     },
-}
+]
 
-for _event_contract in WEBSOCKET_EVENT_CONTRACTS.values():
+for _event_contract in _EVENT_CONTRACTS:
     _event_contract.update({
         "category": "websocket_event",
         "parameters": {},
@@ -555,6 +571,7 @@ for _event_contract in WEBSOCKET_EVENT_CONTRACTS.values():
         "response": {"type": "websocket_event",
                      "example": copy.deepcopy(_event_contract["payload"])},
     })
+    _add_event(_event_contract)
 
 
 def command_contract(name: str) -> dict[str, Any] | None:
