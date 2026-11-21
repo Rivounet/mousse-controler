@@ -103,6 +103,26 @@ class QualificationOutcomeTests(unittest.TestCase):
             self.assertFalse((output / ".temporary").exists())
             self.assertTrue((output / "summary.json").is_file())
 
+    def test_pycache_prefix_uses_short_worktree_local_directory_and_is_cleaned(self):
+        observed: dict[str, Path] = {}
+
+        def capture_environment(command, **kwargs):
+            observed["pycache"] = Path(kwargs["env"]["PYTHONPYCACHEPREFIX"])
+            return subprocess.CompletedProcess(command, 0, stdout="ok\n")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "deep" / "qualification" / "result"
+            code, summary = qualify.run_qualification(
+                "software", output, command_runner=capture_environment,
+                git_sha=lambda: "d" * 40,
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(summary["verdict"], "PASS")
+            self.assertEqual(observed["pycache"].parent,
+                             qualify.ROOT.parent / "t")
+            self.assertFalse(observed["pycache"].exists())
+            self.assertFalse((output / ".temporary").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
