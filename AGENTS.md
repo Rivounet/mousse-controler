@@ -42,6 +42,14 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
   `MonOrdinateur`, annoncer clairement la prise de contrôle et sa durée, puis
   attendre l'accord explicite de l'utilisateur. Fermer le témoin et annoncer
   « souris libre » dès la fin ou à la première demande d'interruption.
+- Une position observée immédiatement après un rapport HID brut n'est pas une
+  preuve d'absence de mouvement : attendre une fenêtre passive bornée et une
+  mesure PositionAgent stabilisée. Ne jamais rejouer une action dont l'effet
+  reste incertain ; employer un nouvel identifiant pour toute récupération
+  explicitement autorisée.
+- Une preuve de capture publiée doit être recadrée/expurgée et son empreinte
+  calculée dans le contexte réellement exécuté. Supprimer les sources brutes
+  après contrôle ; un échec d'export ne permet jamais leur publication.
 - Préserver la possibilité de retour arrière sur mini-PC. Ne pas faire de `git reset --hard`, `git clean -fdx`, `git pull` aveugle ni écraser des modifications inconnues dans la copie distante.
 - Avant toute activation locale, vérifier SHA exact, état de la copie Git,
   permissions, espace disque et disponibilité du rollback ; relever ensuite le

@@ -9,6 +9,26 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Get-Sha256Hex {
+    param([Parameter(Mandatory)][string]$LiteralPath)
+
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = $algorithm.ComputeHash($stream)
+            return ([BitConverter]::ToString($hash)).Replace('-', '')
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 $source = [IO.Path]::GetFullPath($SourcePath)
 $destination = [IO.Path]::GetFullPath($DestinationPath)
 if ([IO.Path]::GetExtension($source) -ine '.png' -or
@@ -43,7 +63,7 @@ finally {
 }
 
 [ordered]@{
-    sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash
+    sha256 = Get-Sha256Hex -LiteralPath $destination
     width = $Width
     height = $Height
 } | ConvertTo-Json -Compress

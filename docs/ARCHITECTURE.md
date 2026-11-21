@@ -347,3 +347,17 @@ Une mesure initiale absente ou périmée ne produit aucun rapport. Après une
 incertaine et interdit le rejeu automatique. Les métriques exposent la cible,
 l'erreur finale, les corrections et le mouvement commandé, sans transformer une
 tentative de compensation en preuve matérielle.
+
+## Validation matérielle finale
+
+`MC-FINAL-VALIDATION-001` confirme sur la chaîne réelle la séparation des deux
+contrats : un rapport brut de valeur 10 a produit 7 pixels après stabilisation,
+alors que les déplacements confirmés ont atteint exactement les cibles X/Y,
+absolues et relatives, puis la position initiale. Une mesure PositionAgent
+fraîche et stabilisée clôt chaque action confirmée.
+
+L'arrêt global annule d'abord l'ordonnanceur et tente ensuite la libération et
+l'arrêt HOGP avec des délais bornés. Si l'arrêt protocolaire HOGP expire, la
+séquence reste `CANCELLED`, mais le runtime est considéré non réutilisable et la
+procédure qualifiée redémarre la tâche. Le registre anti-rejeu persiste ce
+redémarrage et refuse l'ancien identifiant.

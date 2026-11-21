@@ -156,3 +156,17 @@ Après qualification du SHA exact et autorisation opérationnelle distincte :
 Rollback : arrêter le candidat, repointer la tâche vers le worktree précédent,
 redémarrer et répéter les mêmes contrôles de santé. Aucun rollback de MSIX,
 certificat, appairage ou PositionAgent n'est requis pour ce changement.
+
+## État après MC-FINAL-VALIDATION-001
+
+Le contrôleur de la PR #26 est actif via la tâche qualifiée ; le MSIX 1.0.0.3
+et PositionAgent sont inchangés. Avant activation, la configuration, le journal
+et son registre `.ids`, l'index/captures et la définition de tâche ont été
+sauvegardés ensemble. Le rollback contrôleur repointe vers le worktree
+`fc88e330…` et ne modifie ni MSIX, ni certificat, ni appairage, ni agent cible.
+
+Après un arrêt global dont le canal HOGP n'acquitte pas la fermeture dans le
+délai, ne pas réutiliser le processus : exécuter le gestionnaire de tâche
+qualifié, vérifier `Running`, une seule instance, les trois ports, position
+fraîche, `subscribed=True`, `buttons=0` et zéro action active. Vérifier ensuite
+que l'identifiant annulé est toujours refusé comme doublon.

@@ -28,3 +28,11 @@ l'utilisateur devant MonOrdinateur.
 
 Toute anomalie produit `MATERIAL_FAIL`. Aucun rattrapage manuel, troisième
 mouvement ou capture supplémentaire n'est permis sans nouveau mandat.
+
+## Exécution finale du 21 novembre 2026
+
+Cette porte a ensuite été couverte par le mandat plus large
+`MC-FINAL-VALIDATION-001`, après consentement immédiat de l'utilisateur. Les
+deux déplacements confirmés ont atteint exactement -10 puis +10 pixels avec
+retour exact, événements corrélés, boutons à zéro et aucune action résiduelle.
+Le `MATERIAL_FAIL` antérieur reste conservé comme preuve du contrat HID brut.

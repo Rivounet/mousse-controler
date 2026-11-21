@@ -31,6 +31,8 @@ autorisation explicite.
 | R3 | `5955889c…` | 263/263 PASS après correctifs | B1/B2/B3 relus, tests non réexécutés |
 | R4 | `cf5f7731…` | 269/269 PASS, `full-local` final | commentaire de qualification final ; revue statique distincte |
 | R5 | `8c15c82f…` | 271/271 PASS, `full-local` final | C-13/C-14 relus ; qualification finale commentée séparément |
+| PR #26 précision | `aa53504a…` | 301/301 PASS, 175,531 s | correction logicielle publiée, matériel encore distinct à ce SHA |
+| MC-FINAL-VALIDATION-001 | commit portant le rapport | 302/302 PASS lors de la consolidation, 125,109 s | matériel réel, récupération et preuves expurgées documentés séparément |
 
 Les détails, durées, artefacts et exclusions sont dans les rapports R0–R5 et
 les commentaires des PR #13–#18. La matrice des défauts est dans
@@ -53,6 +55,13 @@ périmètres et avant R1–R5, l'appairage HOGP, le HID natif, le retour de posi
 les actions souris, les captures autorisées, l'arrêt et la reconnexion. Leurs
 rapports restent les sources historiques ; les réserves LAN/GATT, roulette
 horizontale et consentement opérationnel demeurent.
+
+Le rapport [MC-FINAL-VALIDATION-001](../qualification/MC-FINAL-VALIDATION-001/RAPPORT.md)
+distingue les preuves matérielles des scénarios simulés. Il conserve le premier
+`MATERIAL_FAIL`, puis documente les déplacements confirmés exacts, les actions
+souris, une capture avant/après supprimée après empreinte, l'arrêt d'urgence,
+le redémarrage et le refus de rejeu. Le test de l'exporteur exécute réellement
+Windows PowerShell et compare son SHA-256 au calcul Python.
 
 ## Compte rendu obligatoire
 

@@ -189,3 +189,17 @@ stagnation, oscillation et absence de progrès sont bornés. Une émission dont 
 résultat devient incertain n'est jamais rejouée. La correction logicielle doit
 être qualifiée avant un unique scénario matériel séparément autorisé ; elle ne
 change ni HOGP, ni PositionAgent, ni l'installation active.
+
+## D-069 — Clôture opérationnelle et preuve stabilisée (21 novembre 2026)
+
+**Décision :** retenir PositionAgent comme observation indépendante après une
+fenêtre passive bornée ; conserver `move_relative` en unités HID et employer la
+boucle fermée pour tout contrat en pixels. Une observation immédiate ne permet
+ni de conclure à l'absence d'effet ni de rejouer une action incertaine.
+
+**Conséquence :** la validation finale couvre les fonctions souris, la
+précision confirmée, les communications, une capture privée et la récupération.
+Un arrêt HOGP non acquitté impose un redémarrage qualifié avant reprise. Les
+captures brutes restent privées et sont supprimées après empreinte ; l'export
+expurgé calcule son SHA-256 via .NET pour rester compatible avec le contexte
+Windows PowerShell réellement exécuté.
