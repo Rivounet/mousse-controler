@@ -1,0 +1,60 @@
+{
+  "contract": "MC-CODEX-ENVIRONMENT-001/evidence-v1",
+  "observed_at": "2026-11-21",
+  "reference_git_sha": "44c1350e304559a1bb1d477936d9705404c2dedf",
+  "environment": {
+    "status": "READY",
+    "python": "3.12.10",
+    "powershell": "7.6.9",
+    "windows_powershell": "5.1.26100.10068",
+    "effective_sandbox_network_restricted": true
+  },
+  "persistent_approvals": {
+    "ssh_exact_rule": "PASS_REUSED",
+    "local_task_exact_rule": "PASS_REUSED",
+    "general_ssh_or_powershell_rule": false
+  },
+  "local_runtime": {
+    "status": "PASS_REUSED",
+    "task_enabled": true,
+    "task_state": "Ready",
+    "logon_type": "InteractiveToken",
+    "run_level": "LeastPrivilege",
+    "last_result": 1,
+    "matching_process_count": 0,
+    "command_port_open": false,
+    "effects": "read-only"
+  },
+  "remote_target": {
+    "status": "PASS_REUSED",
+    "strict_host_identity": true,
+    "task_enabled": true,
+    "task_state": "Running",
+    "last_result": 267009,
+    "program_leaf": "PositionAgent.exe",
+    "program_sha256": "0562CC27694964406311C62E963B5F1BA6913B49EE2A3D6B0605F9088FEDF73F",
+    "process_session": 2,
+    "process_hash_matches_program": true,
+    "effects": "read-only"
+  },
+  "signing": {
+    "create": "PASS",
+    "idempotent_create": "PASS",
+    "restore": "PASS",
+    "storage_acl_restricted": true,
+    "dpapi_current_user": true,
+    "package_version": "1.0.0.3",
+    "package_sha256": "54BBC9F547E3A4F12125A55585B9EA0AB4947F4CAF403E663043E90367CC6336",
+    "embedded_signature": true,
+    "signer_matches_key": true,
+    "identity_compatible": true,
+    "new_certificate_trusted": false,
+    "trust_store_modified": false,
+    "package_installed": false
+  },
+  "software_prequalification": {
+    "status": "PASS",
+    "tests_passed": 279,
+    "material_diagnostics_excluded": 7
+  }
+}
