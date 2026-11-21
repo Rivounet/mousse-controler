@@ -59,6 +59,20 @@ class OperationalProcedureContractTests(unittest.TestCase):
         self.assertIn("CN=MousseControler", source)
         self.assertIn("trust_store_modified = $false", source)
 
+    def test_local_process_inspection_failure_is_not_zero_processes(self) -> None:
+        source = (OPERATIONS / 'Inspect-LocalRuntime.ps1').read_text(encoding='utf-8')
+        self.assertIn("$processInspection = 'BLOCKED'", source)
+        self.assertIn("matching_process_count = if ($processInspection -eq 'PASS')", source)
+        self.assertIn("if ($processInspection -ne 'PASS') { exit 2 }", source)
+        self.assertNotIn('} catch {\n        $matchingProcesses = @()\n    }', source)
+
+    def test_deployment_evidence_must_match_exact_package(self) -> None:
+        source = (OPERATIONS / 'Prepare-Deployment.ps1').read_text(encoding='utf-8')
+        self.assertIn('$signing.package.sha256 -eq $package.sha256', source)
+        self.assertIn("$signing.package.identity_name -eq 'Rivounet.MousseControler.Hogp'", source)
+        self.assertIn("$signing.package.publisher -eq 'CN=MousseControler'", source)
+        self.assertIn("[version]$signing.package.version -ge [version]'1.0.0.3'", source)
+
     def test_each_entry_point_has_versioned_contract_and_interrupt_code(self) -> None:
         for path in sorted(OPERATIONS.glob("*.ps1")):
             with self.subTest(path=path.name):
