@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -188,11 +189,21 @@ def run_qualification(
         return 2, summary
     temporary_parent = output_dir / ".temporary"
     temporary_parent.mkdir(exist_ok=True)
+    # compileall mirrors each absolute source path below PYTHONPYCACHEPREFIX.
+    # Keeping that prefix below the (possibly deep) qualification output can
+    # exceed the classic Windows path limit before a single file is compiled.
+    # Use the same short, worktree-local parent as the software test harness.
+    short_temporary_parent = ROOT.parent / "t"
+    short_temporary_parent.mkdir(exist_ok=True)
     try:
-        with tempfile.TemporaryDirectory(prefix="r4-", dir=temporary_parent) as temporary:
+        with ExitStack() as stack:
+            temporary = stack.enter_context(tempfile.TemporaryDirectory(
+                prefix="r4-", dir=temporary_parent))
+            pycache = stack.enter_context(tempfile.TemporaryDirectory(
+                prefix="pyc-", dir=short_temporary_parent))
             environment = os.environ.copy()
             environment["MC_QUALIFICATION_TEMP"] = temporary
-            environment["PYTHONPYCACHEPREFIX"] = str(Path(temporary) / "pycache")
+            environment["PYTHONPYCACHEPREFIX"] = pycache
             for phase in phases_for(profile, output_dir):
                 phase_started = time.monotonic()
                 log_path = output_dir / f"{phase.name}.log"
