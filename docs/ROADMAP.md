@@ -81,3 +81,12 @@ Draft documentée, revue puis décision explicite ; aucune fusion automatique.
 **État courant :** J7 MC-API-CATALOG-001 **MERGED** via [PR #10](https://github.com/Rivounet/mousse-controler/pull/10), commit `d19db664bc1e7d83ab1d289f89373f9e327a482b`. Les anciennes mentions Draft ci-dessus sont historiques et ne sont plus le statut courant. Audit indépendant Codex [PR #11](https://github.com/Rivounet/mousse-controler/pull/11) **Draft, non fusionnée** ; audit ChatGPT archivé sur branche isolée.
 
 **Verdict consolidé :** `MAINTENABLE_WITH_MAJOR_RESERVATIONS`. [Comparaison et plan global](../audits/2026-11-20-consolidation/REPORT.md). R0, R1 et R2 sont fusionnés ; R3 est qualifié en logiciel sur branche dédiée et doit rester en PR Draft jusqu'à revue. C-03 impose désormais le quota capture dur, C-07 ferme toutes les ressources en best-effort et C-08 restaure l'agent précédent ou publie `RECOVERY_REQUIRED`. R4 tests/builds, R5 refactoring minimal et R6 documentation restent distincts. Aucun déploiement R3, HID réel ou capture réelle n'a été effectué ; fusion et essais matériels exigent toujours un accord explicite.
+
+### Mise à jour R4 — 21 novembre 2026
+
+R3 est désormais fusionné via la PR #16 au SHA `54c24aa…`. R4 traite C-10 et
+C-15 sur une branche distincte : trois niveaux séparés, un orchestrateur local
+sans matériel, découverte contrôlée de la chaîne Windows et preuves de build.
+Le code `72546bd…` obtient 269/269 tests et un build PositionAgent local PASS.
+La publication R4 reste une PR Draft ; fusion, synchronisation, déploiement,
+qualification matérielle et R5 restent non commencés.

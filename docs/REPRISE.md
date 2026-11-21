@@ -276,3 +276,21 @@ joindre le rapport expurgé, ne pas fusionner et ne pas modifier la production.
   radio, déploiement ou modification de production.
 - **Prochaine porte :** publier et faire revoir la PR Draft R3. Ne pas commencer
   R4/R5, déployer ou fusionner sans mandat distinct.
+
+### État de reprise actuel — 21 novembre 2026 : R4 qualifié localement
+
+- **Base :** `main` `54c24aa197e2075709b71311fa7e5c1b621077a0`, fusion
+  de la PR #16 R3. Le paragraphe R3 précédent est historique.
+- **Branche :** `test/mc-robustness-r4-001`, PR Draft à publier.
+- **Commande :** `python -B scripts/qualification/qualify.py --profile
+  full-local`; profils séparés `software` et `build` disponibles.
+- **SHA qualifié :** `72546bdd22ccbd269cacf112ffb3a82d30d38b64` ;
+  269/269 tests PASS, quatre phases de build PASS, total 131,750 s.
+- **Build :** PositionAgent compilé localement avec Roslyn 4.14 et SDK Windows
+  10.0.26100.0 découverts ; artefacts mesurés et non installés.
+- **Exclusions :** sept diagnostics matériels, Bluetooth, HID, capture réelle,
+  SSH, cible, installation et déploiement. Aucun workflow CI distant.
+- **Statuts :** code développé, tests et build qualifiés ; PR non fusionnée,
+  machines non synchronisées, rien déployé, matériel non requalifié.
+- **Prochaine porte :** revue de la PR Draft R4. Ne pas fusionner, déployer ou
+  commencer R5 sans mandat distinct.
