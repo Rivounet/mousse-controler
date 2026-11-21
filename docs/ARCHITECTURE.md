@@ -286,3 +286,18 @@ remplacement atomique. Si la version restaurée ne peut pas être validée, la
 copie préservée est compensée en deux essais maximum ; sinon les éléments de
 récupération restent accompagnés de `RECOVERY_REQUIRED`. Le mode d'injection de panne est réservé au harness
 isolé par une variable d'environnement ; il ne touche aucune tâche réelle.
+
+## Qualification locale R4
+
+`scripts/qualification/qualify.py` est l'unique point d'entrée des profils
+locaux. Il orchestre une liste fermée de phases et écrit pour chacune un log,
+une durée et un statut, puis un `summary.json` contenant SHA Git, versions,
+exclusions et artefacts. `full-local` enchaîne strictement `software` puis
+`build`; il n'existe aucune transition vers un diagnostic matériel.
+
+La chaîne build Windows découvre Roslyn avec `vswhere`, le SDK avec
+`KitsRoot10`, puis valide les métadonnées et contrats WinRT avant compilation.
+L'analyse PowerShell appelle uniquement l'analyseur syntaxique 5.1 sur les
+fichiers ; elle ne les exécute pas. Les fichiers temporaires et caches Python
+sont isolés puis supprimés. Les logs et artefacts restent sous `out/`, sans
+installation ni activation.

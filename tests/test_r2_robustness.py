@@ -151,9 +151,13 @@ def wait_terminal(registry: ActionRegistry, action_id: str, timeout: float = 2.0
 
 
 class HogpDeadlineTests(unittest.TestCase):
-    def make_transport(self, mode: str, log_path: Path) -> FakeEngineTransport:
+    def make_transport(self, mode: str, log_path: Path, *,
+                       startup_timeout: float = 1.5) -> FakeEngineTransport:
+        # Process creation is not the behavior under test in command/recovery
+        # cases. Leave enough budget for a loaded Windows host; the dedicated
+        # startup-deadline test below keeps the strict 300 ms contract.
         return FakeEngineTransport(
-            mode, log_path, startup_timeout=0.3, command_timeout=0.15,
+            mode, log_path, startup_timeout=startup_timeout, command_timeout=0.15,
             stop_timeout=0.2, termination_timeout=0.3,
         )
 
@@ -165,7 +169,8 @@ class HogpDeadlineTests(unittest.TestCase):
                 ("interrupted", TransportError),
             ):
                 with self.subTest(mode=mode):
-                    transport = self.make_transport(mode, Path(directory) / f"{mode}.log")
+                    transport = self.make_transport(
+                        mode, Path(directory) / f"{mode}.log", startup_timeout=0.3)
                     started = time.monotonic()
                     with self.assertRaises(error):
                         transport.start()

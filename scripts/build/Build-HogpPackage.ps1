@@ -3,8 +3,8 @@ param([string]$CertificateThumbprint)
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-$makeAppx = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe'
-$signTool = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
+. (Join-Path $PSScriptRoot 'Resolve-BuildTools.ps1')
+$tools = Resolve-MousseBuildTools -RequirePackagingTools
 $stage = Join-Path $root 'out\HogpPackage\stage'
 $package = Join-Path $root 'out\HogpPackage\MousseControler.Hogp.msix'
 $outRoot = [IO.Path]::GetFullPath((Join-Path $root 'out')) + [IO.Path]::DirectorySeparatorChar
@@ -15,7 +15,7 @@ if (-not $stage.StartsWith($outRoot, [StringComparison]::OrdinalIgnoreCase)) {
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'Assets') | Out-Null
 
-$powerShell = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+$powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $powerShellSignature = Get-AuthenticodeSignature -LiteralPath $powerShell
 if ($powerShellSignature.Status -ne [Management.Automation.SignatureStatus]::Valid -or
     $powerShellSignature.SignerCertificate.Subject -notmatch '^CN=Microsoft Windows,') {
@@ -38,10 +38,10 @@ foreach ($asset in @(
     $bitmap.Save((Join-Path $stage ('Assets\' + $asset.Name)), [Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose(); $bitmap.Dispose()
 }
-& $makeAppx pack /d $stage /p $package /o
+& $tools.MakeAppx pack /d $stage /p $package /o
 if ($LASTEXITCODE -ne 0) { throw 'MSIX packaging failed' }
 if ($CertificateThumbprint) {
-    & $signTool sign /sha1 $CertificateThumbprint /s My /fd SHA256 $package
+    & $tools.SignTool sign /sha1 $CertificateThumbprint /s My /fd SHA256 $package
     if ($LASTEXITCODE -ne 0) { throw 'MSIX signing failed' }
 }
 Get-FileHash -Algorithm SHA256 -LiteralPath $package | Select-Object Algorithm, Hash, Path

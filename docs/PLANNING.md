@@ -107,8 +107,8 @@ J7 / PR #10 est **fusionnée** dans `main` au SHA `d19db664bc1e7d83ab1d289f89373
 | R0 | Baseline, tests simulés, non-régression et consentement matériel | Prérequis | Validé — PR #13 fusionnée, `d8b412f` | Scénarios reproductibles sans HID |
 | R1 | Boutons incertains, arrêt global des séquenceurs, file d'actions | P1/P2 | Validé logiciel — PR #14 fusionnée, `5b158a6` | Aucune poursuite ambiguë, états cohérents |
 | R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | Validé logiciel — PR #15 fusionnée, `a938b74` | Attentes bornées, aucune reprise ambiguë |
-| R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | Qualifié logiciel sur branche dédiée — PR Draft à publier | Quota strict, ressources fermées, restauration testée |
-| R4 | Tests comportementaux, opt-in matériel, compilation C#, builds reproductibles | P2 | En accompagnement R1–R3 | Suite logicielle reproductible |
+| R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | Validé — PR #16 fusionnée, `54c24aa` | Quota strict, ressources fermées, restauration testée |
+| R4 | Tests comportementaux, séparation matérielle, compilation C#, builds reproductibles | P2 | Qualifié localement — PR Draft à publier | 269 tests PASS, build local observé, matériel exclu |
 | R5 | Séquenceurs, validations, historique HOGP, refactoring ciblé | P2/P3 | Différé | Aucun changement de contrat, gain démontré |
 | R6 | Documentation, roadmap, planning, reprise et suivi des preuves | Transversal | En cours | Statuts courants cohérents |
 
@@ -120,3 +120,22 @@ best-effort de toutes les ressources, puis transaction PositionAgent avec
 restauration bornée et état `RECOVERY_REQUIRED`. Les scénarios sont exécutés
 uniquement dans des répertoires temporaires et avec des doubles ; la production
 reste inchangée. Prochaine porte : revue de la PR Draft R3, sans fusion implicite.
+
+## J8 / R4 — Qualification locale et reproductibilité
+
+**État courant :** R3 est fusionné dans `main` au SHA
+`54c24aa197e2075709b71311fa7e5c1b621077a0`. R4 est développé et qualifié sur
+la branche `test/mc-robustness-r4-001`; sa PR doit rester Draft.
+
+| Lot | État | Preuve |
+|---|---|---|
+| Séparation logiciel/build/matériel | Réalisée | profils fermés ; 6 tests de sûreté PASS |
+| Suite logicielle | Qualifiée | 269/269 PASS sur `72546bd…` |
+| Build Windows | Qualifié localement | Python, API, 22 scripts PowerShell, PositionAgent PASS |
+| Découverte SDK/Build Tools | Réalisée | `vswhere`, registre SDK et validation des contrats |
+| Publication | À faire | PR Draft vers `main`, sans fusion |
+| Synchronisation/déploiement/matériel | Non réalisé | hors périmètre R4 |
+
+**Porte suivante :** revue de la PR Draft R4. Une fusion, une synchronisation,
+un déploiement ou une qualification matérielle restent des décisions séparées.
+Ne pas commencer R5 dans ce mandat.

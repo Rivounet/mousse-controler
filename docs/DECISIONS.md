@@ -118,3 +118,17 @@ panne post-remplacement restaure la sauvegarde en deux tentatives maximum ou
 laisse un marqueur durable `RECOVERY_REQUIRED` qui interdit toute nouvelle
 installation ambiguë. La qualification R3 reste logicielle et n'autorise ni
 déploiement, ni tâche cible, ni HID/capture réelle.
+
+## D-064 — Qualification locale Windows et profils fermés (21 novembre 2026)
+
+**Décision :** la qualification de Mousse-controler est exécutée localement
+sous Windows. GitHub sert au versionnement, aux PR et à la conservation des
+preuves. GitHub Actions et les services CI externes sont exclus.
+
+**Conséquence :** les profils `software`, `build` et `full-local` sont des
+listes fermées et ne peuvent lancer ni diagnostic matériel, ni installation,
+ni déploiement, ni accès distant. Les diagnostics matériels restent hors de
+l'orchestrateur et exigent une autorisation explicite distincte. Un outil
+absent, une interruption ou un test en échec produit un verdict non favorable
+et une sortie non nulle. Le build découvre Roslyn et le SDK Windows de manière
+contrôlée, sans changer la cible .NET Framework ni les contrats des artefacts.
