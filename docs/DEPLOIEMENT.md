@@ -134,3 +134,39 @@ L'utilisateur a autorisé la transition opérationnelle sur `mini-pc-backend` et
 Exécuter la séquence documentée dans `scripts/operations/README.md` et `qualification/MC-OPERATIONAL-FINALIZATION-001/PROCEDURE-MISE-EN-SERVICE.md`. Vérifier les sauvegardes, les persistances par ensembles (journal + `.ids`, index + PNG), les états de tâche/processus, les SHA, le verrou d'installation et la disponibilité du rollback. L'installation du **certificat public** dans un magasin de confiance doit rester distincte du stockage de la **clé privée** de signature. Vérifier la chaîne et le signataire exact du MSIX réellement installé, pas seulement du package de staging.
 
 Le résultat final doit prouver les versions actives, tâches, processus, sessions, API/WebSocket, authentification, communication et récupération sans HID ni capture. `OPERATIONAL_PASS` désigne uniquement ce périmètre non matériel ; l'acceptation HID/captures exige un accord ultérieur au moment des essais. Une opération ambiguë impose arrêt contrôlé et restauration ou `RECOVERY_REQUIRED`.
+
+## Déploiement de MC-HID-PRECISION-001
+
+Ce correctif modifie uniquement le contrôleur Python, le catalogue et leur
+documentation. Le MSIX HOGP, son identité/version/signature et
+`PositionAgent.exe` ne changent pas. Une publication Git ou une qualification
+`full-local` n'active donc rien dans le processus en service.
+
+Après qualification du SHA exact et autorisation opérationnelle distincte :
+
+1. conserver le worktree actif et les persistences (`action_journal`, `.ids`,
+   index de captures et configuration DPAPI) comme point de retour ;
+2. préparer un worktree immuable au SHA qualifié et vérifier arbre propre,
+   configuration référencée par la tâche et unicité du processus ;
+3. arrêter le contrôleur par la procédure qualifiée, repointer uniquement sa
+   tâche vers ce worktree, puis redémarrer et contrôler position fraîche,
+   `subscribed=True`, `buttons=0` et aucune action active ;
+4. ne lancer le scénario matériel minimal qu'après un nouvel accord explicite.
+
+Rollback : arrêter le candidat, repointer la tâche vers le worktree précédent,
+redémarrer et répéter les mêmes contrôles de santé. Aucun rollback de MSIX,
+certificat, appairage ou PositionAgent n'est requis pour ce changement.
+
+## État après MC-FINAL-VALIDATION-001
+
+Le contrôleur de la PR #26 est actif via la tâche qualifiée ; le MSIX 1.0.0.3
+et PositionAgent sont inchangés. Avant activation, la configuration, le journal
+et son registre `.ids`, l'index/captures et la définition de tâche ont été
+sauvegardés ensemble. Le rollback contrôleur repointe vers le worktree
+`fc88e330…` et ne modifie ni MSIX, ni certificat, ni appairage, ni agent cible.
+
+Après un arrêt global dont le canal HOGP n'acquitte pas la fermeture dans le
+délai, ne pas réutiliser le processus : exécuter le gestionnaire de tâche
+qualifié, vérifier `Running`, une seule instance, les trois ports, position
+fraîche, `subscribed=True`, `buttons=0` et zéro action active. Vérifier ensuite
+que l'identifiant annulé est toujours refusé comme doublon.

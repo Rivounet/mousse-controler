@@ -13,7 +13,10 @@ powershell.exe -NoProfile -File .\scripts\build\Build-MouseWitness.ps1
 
 `action_submit` reçoit `action_id` facultatif et `action`. Exemples de `kind` :
 `click`, `press`, `release`, `hold`, `drag`, `move_with_buttons`, `scroll`,
-`move_relative`, `move_to`, `wait`, `wait_command`, `sequence`. `click.count`
+`move_relative`, `move_relative_confirmed`, `move_to`, `wait`, `wait_command`,
+`sequence`. `move_relative` exprime des unités HID brutes ; seul
+`move_relative_confirmed` exprime un delta en pixels écran et attend une mesure
+PositionAgent indépendante. `click.count`
 vaut 1–20 ; les boutons sont `left/right/middle/back/forward` ou un masque 1–31.
 La roulette continue exige durée ≤ 30 s et au plus 500 rapports. Les commandes
 de contrôle sont `action_status/list/cancel/pause/resume/continue/events`.

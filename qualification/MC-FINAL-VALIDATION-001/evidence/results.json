@@ -1,0 +1,40 @@
+{
+  "contract": "MC-FINAL-VALIDATION-001",
+  "privacy": "redacted-no-coordinates-no-images-no-private-paths",
+  "software": {
+    "prequalification_verdict": "PASS",
+    "tests_passed": 302,
+    "tests_failed": 0,
+    "duration_seconds": 125.109,
+    "powershell_scripts_parsed": 28,
+    "material_diagnostics_excluded": 7
+  },
+  "precision": {
+    "horizontal_confirmed_pixels": [-10, 10],
+    "horizontal_return_error_pixels": 0,
+    "vertical_confirmed_pixels": [10, -10],
+    "vertical_return_error_pixels": 0,
+    "configured_tolerance_pixels": 2,
+    "observed_tolerance_error_pixels": 1.414,
+    "movement_limit_error": "POSITION_MOVEMENT_LIMIT",
+    "movement_limit_hid_reports": 0,
+    "raw_requested_units_x": -10,
+    "raw_observed_pixels_x_after_settle": -7
+  },
+  "capture": {
+    "bytes": 283093,
+    "sha256": "939B8DBFFC0059D65BDC01767E17D7AF2B0017D7169FC9762B269EDA8A5CEAF5",
+    "final_state": "DELETED",
+    "raw_image_published": false
+  },
+  "recovery": {
+    "emergency_sequence_final_state": "CANCELLED",
+    "click_executed": false,
+    "buttons_after_recovery": 0,
+    "active_actions_after_recovery": 0,
+    "transport_subscribed_after_recovery": true,
+    "duplicate_id_rejected_after_restart": true,
+    "unauthorized_http_status": 401
+  },
+  "verdict": "FULL_VALIDATION_PASS"
+}

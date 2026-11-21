@@ -16,7 +16,7 @@ import uuid
 from typing import Any, Callable
 
 from .api_catalog import validate_action_contract
-from .controller import MouseController, PositionError
+from .controller import MouseController, PositionError, PositioningError
 
 
 class ActionState(str, Enum):
@@ -52,12 +52,12 @@ BUTTONS = {
 }
 
 NON_IDEMPOTENT_KINDS = {
-    "move_relative", "click", "press", "release", "hold", "drag",
+    "move_relative", "move_relative_confirmed", "click", "press", "release", "hold", "drag",
     "move_with_buttons", "scroll",
 }
-RETRY_SAFE_KINDS = {"move_to", "wait", "wait_command"}
+RETRY_SAFE_KINDS = {"move_relative_confirmed", "move_to", "wait", "wait_command"}
 MOUSE_ACTION_KINDS = {
-    "move_relative", "move_to", "click", "press", "release", "hold", "drag",
+    "move_relative", "move_relative_confirmed", "move_to", "click", "press", "release", "hold", "drag",
     "move_with_buttons", "scroll",
 }
 
@@ -666,18 +666,40 @@ class ActionExecutor:
             except Exception as exc:
                 raise ActionExecutionError(str(exc), code="MOVE_UNCERTAIN", emitted=True) from exc
             return {"reports": 1}, False, True
-        if kind == "move_to":
-            position = self._controller.move_to(
-                int(spec["x"]), int(spec["y"]),
-                tolerance_px=int(spec.get("tolerance_px", 2)),
-                timeout=float(spec.get("timeout_seconds", 5.0)),
-                pause_gate=control.run_gate,
-                cancel_event=control.cancel,
+        if kind in {"move_relative_confirmed", "move_to"}:
+            options = self._positioning_options(
+                spec, control,
+                tolerance_default=0 if kind == "move_relative_confirmed" else 2,
             )
-            return {
+            try:
+                if kind == "move_relative_confirmed":
+                    initial, position = self._controller.move_relative_confirmed(
+                        int(spec["dx"]), int(spec["dy"]), **options,
+                    )
+                else:
+                    initial = None
+                    position = self._controller.move_to(
+                        int(spec["x"]), int(spec["y"]), **options,
+                    )
+            except PositioningError as exc:
+                raise ActionExecutionError(
+                    str(exc), code=exc.code, emitted=exc.emitted,
+                ) from exc
+            result = {
                 "position": {"x": position.x, "y": position.y, "sequence": position.sequence},
                 "positioning": self._controller.positioning_metrics(),
-            }, True, True
+            }
+            if initial is not None:
+                result["initial_position"] = {
+                    "x": initial.x, "y": initial.y, "sequence": initial.sequence,
+                }
+                result["target_position"] = {
+                    "x": initial.x + int(spec["dx"]),
+                    "y": initial.y + int(spec["dy"]),
+                }
+            return {
+                **result,
+            }, True, bool(self._controller.positioning_metrics().get("corrections", 0))
         if kind == "click":
             button = self._button(spec)
             count = int(spec.get("count", 1))
@@ -877,6 +899,27 @@ class ActionExecutor:
                     ) from exc
             return {"children": children}, False, any_emitted
         raise ActionExecutionError("unsupported action kind", code="INVALID_ACTION")
+
+    @staticmethod
+    def _positioning_options(
+        spec: dict[str, Any], control: _Control, *, tolerance_default: int,
+    ) -> dict[str, Any]:
+        options: dict[str, Any] = {
+            "tolerance_px": int(spec.get("tolerance_px", tolerance_default)),
+            "timeout": float(spec.get("timeout_seconds", 5.0)),
+            "max_step": int(spec.get("max_step", 48)),
+            "feedback_timeout": float(spec.get("feedback_timeout_seconds", 0.25)),
+            "max_age_ms": int(spec.get("max_age_ms", 150)),
+            "max_iterations": int(spec.get("max_iterations", 64)),
+            "stagnation_limit": int(spec.get("stagnation_limit", 3)),
+            "oscillation_limit": int(spec.get("oscillation_limit", 3)),
+            "no_progress_limit": int(spec.get("no_progress_limit", 8)),
+            "pause_gate": control.run_gate,
+            "cancel_event": control.cancel,
+        }
+        if "max_total_movement" in spec:
+            options["max_total_movement"] = float(spec["max_total_movement"])
+        return options
 
     def _scroll(self, spec: dict[str, Any], control: _Control) -> int:
         reports = 0

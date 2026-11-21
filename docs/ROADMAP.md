@@ -1,20 +1,31 @@
 # Roadmap — Mousse-controler
 
-## État au 21 novembre 2026
+## État au 21 novembre 2026 — validation finale
 
 - Robustesse R0–R5 intégrée ; R6 documentaire consolidé.
 - PR #22–#24 fusionnées : préparation opérationnelle, signature MSIX v2 et procédures Codex qualifiées. `main` de référence : `e5553f2ff3342b16546128e4a351b57f2e2801dc`.
 - Qualification locale Windows `full-local` : 286/286 PASS sur le SHA logiciel final de la PR #24, selon Codex. Sept diagnostics matériels exclus.
-- La mise en service sur les deux machines est **autorisée mais non encore attestée** ; ne pas la déclarer achevée sur la seule base du dépôt.
+- La mise en service non matérielle est attestée par `OPERATIONAL_PASS` dans la
+  PR #26. Le contrôleur corrigé a ensuite été déployé de façon réversible et la
+  validation matérielle complète a été exécutée avec consentement immédiat.
 
-## Priorité immédiate — mise en service opérationnelle
+## Validation opérationnelle réalisée
 
-1. Préflight et sauvegarde des états réels des deux machines.
-2. Confiance limitée du certificat public MSIX v2 vérifié et installation du MSIX 1.0.0.3 signé.
-3. Mise à jour transactionnelle de PositionAgent, synchronisation du contrôleur, configuration et tâches Mousse-controler.
-4. Activation progressive et qualification de santé/API/WebSocket/communication **sans HID ni capture** ; preuve des SHA réellement actifs.
-5. Verdict `OPERATIONAL_PASS` seulement si les contrôles autorisés sont réellement réussis ; sinon `PARTIAL` ou `ROLLBACK_REQUIRED`.
-6. Qualification matérielle distincte après consentement explicite, avec arrêt d'urgence, mouvements HID et captures uniquement dans ce cadre.
+1. MSIX 1.0.0.3 signé et PositionAgent qualifié conservés ; contrôleur de la
+   PR #26 activé avec sauvegarde préalable et rollback vers `fc88e330…`.
+2. API authentifiée, WebSocket, télémétrie, persistance et anti-rejeu vérifiés.
+3. Actions souris, déplacements confirmés, capture privée, arrêt d'urgence et
+   redémarrage contrôlé vérifiés sur les deux machines.
+4. Le rapport consolidé est
+   [MC-FINAL-VALIDATION-001](../qualification/MC-FINAL-VALIDATION-001/RAPPORT.md).
+
+## Précision HID — PR #26
+
+Le scénario matériel initial conserve son verdict historique `MATERIAL_FAIL` : un rapport
+relatif de 10 unités HID a produit 9 pixels écran. La priorité est de publier et
+qualifier logiciellement la boucle fermée. La validation finale démontre ensuite
+que `move_relative_confirmed` atteint exactement ses cibles et retourne au point
+initial ; elle ne réinterprète pas l'unité HID brute comme un pixel.
 
 ## Après mise en service
 

@@ -93,8 +93,9 @@ class ApiCatalogTests(unittest.TestCase):
 
     def test_action_types_and_websocket_events_are_complete(self):
         self.assertEqual(action_names(), {
-            "move_relative", "move_to", "click", "press", "release", "hold", "drag",
-            "move_with_buttons", "scroll", "wait", "wait_command", "sequence",
+            "move_relative", "move_relative_confirmed", "move_to", "click", "press",
+            "release", "hold", "drag", "move_with_buttons", "scroll", "wait",
+            "wait_command", "sequence",
         })
         self.assertEqual(set(WEBSOCKET_EVENT_CONTRACTS), {
             "connected", "state", "control", "retry", "capture", "result",
@@ -113,7 +114,7 @@ class ApiCatalogTests(unittest.TestCase):
     def test_full_catalog_and_runtime_availability(self):
         result = self.request()
         self.assertEqual(result["counts"], {
-            "commands": 28, "action_types": 12, "websocket_events": 6,
+            "commands": 28, "action_types": 13, "websocket_events": 6,
         })
         self.assertEqual(result["totals"], result["counts"])
         by_name = {item["name"]: item for item in result["commands"]}
@@ -139,7 +140,30 @@ class ApiCatalogTests(unittest.TestCase):
                          {"capture_status", "capture_delete"})
         actions = self.request(include=["action_types"])
         self.assertNotIn("commands", actions)
-        self.assertEqual(actions["counts"]["action_types"], 12)
+        self.assertEqual(actions["counts"]["action_types"], 13)
+
+    def test_relative_contracts_distinguish_hid_units_from_screen_pixels(self):
+        raw = ACTION_CONTRACTS["move_relative"]
+        confirmed = ACTION_CONTRACTS["move_relative_confirmed"]
+
+        self.assertIn("unités HID", raw["description"])
+        self.assertIn("pas des pixels", raw["effects"][0])
+        self.assertIn("pixels", confirmed["description"])
+        self.assertEqual(confirmed["parameters"]["tolerance_px"]["default"], 0)
+        self.assertIn("max_total_movement", confirmed["parameters"])
+        self.assertIn("PositionAgent", confirmed["dynamic_constraints"][0])
+
+    def test_confirmed_relative_guard_values_are_validated(self):
+        with self.assertRaisesRegex(ValueError, "below its minimum"):
+            validate_action_contract({
+                "kind": "move_relative_confirmed", "dx": 10, "dy": 0,
+                "max_iterations": 0,
+            })
+        with self.assertRaisesRegex(ValueError, "below its exclusive minimum"):
+            validate_action_contract({
+                "kind": "move_relative_confirmed", "dx": 10, "dy": 0,
+                "max_total_movement": 0,
+            })
 
     def test_invalid_filters_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "unknown catalog command"):

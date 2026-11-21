@@ -169,3 +169,37 @@ logicielle officielle ; GitHub Actions et toute CI externe restent exclus.
 **Limites :** aucun mouvement/clic HID réel, aucune prise de souris ni capture sans accord matériel spécifique ultérieur. Aucun affaiblissement de Defender/Smart App Control, aucune permission générale SSH/ACL/administrateur, aucun changement hors composants Mousse-controler. Cette décision ne vaut pas fusion automatique d'une nouvelle PR.
 
 **État :** autorisation accordée, **exécution et qualification opérationnelle non encore attestées**. Le dernier `main` qualifié pour la préparation est `e5553f2ff3342b16546128e4a351b57f2e2801dc` (PR #24 fusionnée) ; `OPERATIONAL_PASS` exige des preuves sur les binaires et processus réellement actifs. La qualification matérielle demeure une porte distincte.
+
+## D-068 — Déplacement relatif confirmé en pixels (21 novembre 2026)
+
+**Décision :** conserver `move_relative` comme primitive brute en unités HID et
+ajouter `move_relative_confirmed` pour le contrat fonctionnel en pixels écran.
+Cette dernière action calcule une cible depuis une mesure PositionAgent fraîche
+et utilise une boucle fermée strictement bornée. La configuration Windows du
+pointeur n'est ni modifiée ni contournée.
+
+**Motivation :** l'essai matériel de la PR #26 a observé 9 pixels pour un
+rapport relatif de 10 unités avec l'accélération Windows active, puis un retour
+exact par positionnement confirmé. L'hypothèse « une unité HID égale un pixel »
+est donc invalide ; l'accélération est un contributeur observé, sans être
+présentée comme cause mécanique unique.
+
+**Conséquence :** fraîcheur, durée, amplitude, mouvement cumulé, itérations,
+stagnation, oscillation et absence de progrès sont bornés. Une émission dont le
+résultat devient incertain n'est jamais rejouée. La correction logicielle doit
+être qualifiée avant un unique scénario matériel séparément autorisé ; elle ne
+change ni HOGP, ni PositionAgent, ni l'installation active.
+
+## D-069 — Clôture opérationnelle et preuve stabilisée (21 novembre 2026)
+
+**Décision :** retenir PositionAgent comme observation indépendante après une
+fenêtre passive bornée ; conserver `move_relative` en unités HID et employer la
+boucle fermée pour tout contrat en pixels. Une observation immédiate ne permet
+ni de conclure à l'absence d'effet ni de rejouer une action incertaine.
+
+**Conséquence :** la validation finale couvre les fonctions souris, la
+précision confirmée, les communications, une capture privée et la récupération.
+Un arrêt HOGP non acquitté impose un redémarrage qualifié avant reprise. Les
+captures brutes restent privées et sont supprimées après empreinte ; l'export
+expurgé calcule son SHA-256 via .NET pour rester compatible avec le contexte
+Windows PowerShell réellement exécuté.

@@ -1,4 +1,10 @@
+import base64
+import hashlib
+import json
+import os
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 
@@ -51,7 +57,31 @@ class TargetUpdateContractTests(unittest.TestCase):
                     "Export-CaptureEvidence.ps1").read_text(encoding="utf-8")
         self.assertIn("Capture evidence crop exceeds source image bounds", exporter)
         self.assertIn("[Drawing.Rectangle]::new", exporter)
+        self.assertIn("[Security.Cryptography.SHA256]::Create()", exporter)
+        self.assertNotIn("Get-FileHash", exporter)
         self.assertNotIn("Remove-Item -Recurse", exporter)
+
+    @unittest.skipUnless(os.name == "nt", "PowerShell capture exporter is Windows-only")
+    def test_capture_evidence_export_computes_sha_without_get_file_hash(self):
+        one_pixel_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+        exporter = ROOT / "scripts" / "qualification" / "Export-CaptureEvidence.ps1"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.png"
+            destination = Path(directory) / "evidence.png"
+            source.write_bytes(one_pixel_png)
+            completed = subprocess.run([
+                "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", str(exporter),
+                "-SourcePath", str(source),
+                "-DestinationPath", str(destination),
+                "-X", "0", "-Y", "0", "-Width", "1", "-Height", "1",
+            ], check=True, capture_output=True, text=True)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["width"], 1)
+            self.assertEqual(result["height"], 1)
+            self.assertEqual(
+                result["sha256"], hashlib.sha256(destination.read_bytes()).hexdigest().upper())
 
 
 if __name__ == "__main__":

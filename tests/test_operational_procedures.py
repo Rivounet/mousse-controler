@@ -39,6 +39,51 @@ def parse_json_output(completed: subprocess.CompletedProcess[str]) -> dict[str, 
 
 
 class OperationalProcedureContractTests(unittest.TestCase):
+    def test_controller_task_stop_continues_after_emergency_stop_error(self) -> None:
+        manager = ROOT / "scripts" / "runtime" / "Manage-MousseControllerTask.ps1"
+        with tempfile.TemporaryDirectory(prefix="mc-task-stop-") as temporary:
+            config = Path(temporary) / "controller.json"
+            config.write_text("{}", encoding="utf-8")
+            script = str(manager).replace("'", "''")
+            fixture = str(config).replace("'", "''")
+            command = rf"""
+. '{script}' -LibraryOnly
+$script:events = [Collections.Generic.List[string]]::new()
+function Stop-ScheduledTask {{
+    [CmdletBinding()] param([string]$TaskName)
+    $script:events.Add('task-stop')
+}}
+function Start-Sleep {{
+    [CmdletBinding()] param([int]$Milliseconds)
+    $script:events.Add('bounded-wait')
+}}
+function Get-CimInstance {{
+    [CmdletBinding()] param([string]$ClassName, [string]$Filter)
+    @()
+}}
+function Unregister-ScheduledTask {{
+    [CmdletBinding(SupportsShouldProcess = $true)] param([string]$TaskName)
+    $script:events.Add('task-unregister')
+}}
+$arguments = '-File "' + $launcher + '" -ConfigPath "{fixture}" -PythonPath "python.exe"'
+$task = [pscustomobject]@{{
+    Actions = @([pscustomobject]@{{ Execute = 'powershell.exe'; Arguments = $arguments }})
+}}
+Stop-ManagedRuntime $task -EmergencyStopCommand {{
+    param($Python, $Config)
+    $script:events.Add('emergency-stop')
+    throw 'simulated command failure'
+}}
+[ordered]@{{ events = @($script:events) }} | ConvertTo-Json -Compress
+"""
+            completed = run_powershell(command)
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        payload = parse_json_output(completed)
+        self.assertEqual(
+            ["emergency-stop", "task-stop", "bounded-wait", "task-unregister"],
+            payload["events"],
+        )
+
     def test_complete_procedure_set_is_present(self) -> None:
         expected = {
             "Check-CodexEnvironment.ps1",
