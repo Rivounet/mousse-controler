@@ -1,4 +1,8 @@
-# Architecture technique — cible MC-HID-EXEC-001
+# Architecture technique — état courant
+
+L'état de robustesse, les preuves et les réserves sont centralisés dans
+[ROBUSTESSE.md](ROBUSTESSE.md). Les sections datées ci-dessous décrivent les
+étapes qui ont construit l'architecture ; elles ne remplacent pas cet état.
 
 ## Deux machines, deux canaux
 
@@ -8,12 +12,12 @@ mini-pc-backend
     → SequenceEngine (zones, modes d'attente, pause/reprise/arrêt)
     → TrajectoryEngine (chemin courbe, vitesse, variations bornées)
     → PositionController (mesure fraîche, correction, limites)
-    → IHogpTransport / WindowsHogpEngine (C++20/C++/WinRT)
+    → IHogpTransport / moteur PowerShell/WinRT packagé MSIX
            │ Bluetooth LE HOGP
            ▼
 MonOrdinateur : pile Bluetooth et souris HID natives Windows
   PositionAgent visible (C# .NET Framework 4.8, session utilisateur)
-           │ GetCursorPos / écrans / session / horodatage
+           │ GetCursorPos / écrans / session / capture explicitement demandée
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
 ```
 
@@ -32,7 +36,9 @@ de position s'exécute séparément dans la session interactive.
   modifiée, écart concurrent anormal ou timeout. Ne jamais présenter une
   estimation comme une mesure.
 - **IHogpTransport** : start/stop/state/send_relative/release_all ; HOGP conforme, pairing volontaire, chiffrement, notifications, relâchement boutons, aucun rejeu après reconnexion. Doubles simulés pour tests.
-- **Agent cible** : lit seulement curseur, topologie, DPI et état de session ; publie les mesures, sans entrée de commandes souris, sans capture d'écran, sans service caché.
+- **Agent cible** : lit curseur, topologie, DPI et état de session ; publie les
+  mesures et réalise seulement les captures avant/après explicitement liées à
+  une action. Il ne reçoit aucune commande souris et n'est pas un service caché.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu, séquence, horodatage, secrets protégés, aucun port entrant sur MonOrdinateur.
 
 ## Priorités et alternatives
@@ -48,6 +54,9 @@ pilote/souris HID natifs, mouvements, clics, défilement, retour HTTPS/HMAC,
 zones, trajectoires, séquences, reconnexion et tâches `AtLogOn` sur les deux
 machines. La série stable de 100 mouvements atteint 100 % de réussite, une
 médiane de 670,483 ms, un P95 de 983,052 ms et une erreur maximale de 2 px.
+Ces preuves matérielles sont antérieures aux correctifs R1–R5 : elles ne valent
+pas requalification matérielle de ces correctifs ni constat de la version
+actuellement installée.
 
 ## Exploitation et sécurité
 
