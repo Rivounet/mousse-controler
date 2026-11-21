@@ -23,6 +23,9 @@ capture d'écran, radio, déploiement ou configuration de production n'a eu lieu
   conservés ;
 - vérification séparée de l'espace disque libre ;
 - téléversements concurrents sérialisés jusqu'au commit de l'index ;
+- temporaire d'index unique, sans soustraction anticipée d'un fichier existant ;
+- instrumentation de chaque étape et assertion du plafond sur l'occupation
+  physique réellement mesurée ;
 - refus explicite `CaptureQuotaError`, demande `FAILED` et aucun PNG créé ;
 - réconciliation au redémarrage des PNG et temporaires non indexés en
   `DELETE_FAILED`, sans suppression automatique ;
@@ -58,6 +61,21 @@ capture d'écran, radio, déploiement ou configuration de production n'a eu lieu
   remplacée ;
 - injection de panne accessible uniquement au harness isolé lorsque
   `MC_POSITION_AGENT_TRANSACTION_TEST=1`.
+
+## Correctif de revue B1/B2/B3
+
+- **B1 :** les quatre états physiques sont formalisés et observés : image
+  temporaire avec index courant, image finale avec index courant, image finale
+  avec index courant et index temporaire, puis image finale avec nouvel index.
+  Aucun octet existant n'est retranché avant un remplacement atomique effectif.
+- **B2 :** l'état initial de tâche et le nombre de processus sont persistés. Une
+  panne de préparation après arrêt redémarre et valide l'ancien agent s'il était
+  actif ; une reprise non démontrée garde `RECOVERY_REQUIRED` et bloque Install.
+- **B3 :** le rollback préserve d'abord la version courante et prépare la
+  sauvegarde dans un staging vérifié. Les pannes avant mutation remettent l'état
+  initial en service ; les pannes après mutation compensent depuis la copie
+  préservée en deux essais, ou conservent tous les éléments avec
+  `RECOVERY_REQUIRED`.
 
 ## Compatibilité et périmètre
 

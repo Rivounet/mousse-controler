@@ -42,3 +42,31 @@ Date : 21 novembre 2026, Europe/Paris.
 - cycle de vie : serveurs et threads doubles, aucun port de production ;
 - Bluetooth/HID, capture d'écran, SSH, `MonOrdinateur`, tâches réelles et
   production : non sollicités.
+
+## Correctif de revue B1/B2/B3
+
+- SHA revu : `3d5a9397abda829df88b367b0dd096cbb83a0b3c` ;
+- trois commentaires inline et revue globale lus avant modification ;
+- stockage R3 + captures existantes : **20/20 PASS**, 3,521 s ;
+- transactions PositionAgent ciblées : **9/9 PASS**, 70,633 s ;
+- ciblés B1/B2/B3, R3, caractérisations R0 et non-régressions R1/R2 :
+  **95/95 PASS**, 97,608 s, avertissements Python traités comme erreurs ;
+- cœur applicatif, R0, R1, R2 et R3 : **189/189 PASS**, 107,081 s ;
+- simulations remote/déploiement : **69/69 PASS**, 47,376 s ;
+- contrats de sécurité non matériels : **5/5 PASS**, 0,017 s ;
+- runner logiciel agrégé : **263/263 PASS**, zéro échec attendu ;
+- diagnostics matériels exclus : **7** ;
+- compilation Python, analyse syntaxique PowerShell, référence API et
+  `git diff --check` : **PASS** ;
+- durée cumulée des commandes de qualification finale : environ **4 min 16 s**.
+
+Instrumentation B1 : le pic maximal observé atteint exactement le quota au
+stade `index_temporary_written`, avec coexistence du PNG final, de l'ancien
+index et du nouvel index temporaire. Toutes les observations satisfont
+`used_bytes <= max_total_bytes`, y compris avec orphelin et temporaire
+préexistants. Aucun fichier non géré n'est supprimé.
+
+Le harness B2/B3 enregistre après chaque invocation l'état de tâche, le nombre
+de processus, le SHA-256 du binaire et les compteurs start/stop. Il exécute le
+script réel sur des binaires factices et remplace uniquement les cmdlets de
+tâche/processus ; aucune tâche Windows réelle n'est touchée.

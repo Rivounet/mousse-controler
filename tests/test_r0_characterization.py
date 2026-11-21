@@ -536,6 +536,7 @@ class LifecycleCharacterizationTests(unittest.TestCase):
             artifact = artifact_dir / "PositionAgent.exe"
             target.write_bytes(b"old-agent")
             artifact.write_bytes(b"new-agent")
+            state_output = root / "runtime-state.json"
             environment = dict(os.environ)
             environment["MC_POSITION_AGENT_TRANSACTION_TEST"] = "1"
             result = subprocess.run([
@@ -545,6 +546,7 @@ class LifecycleCharacterizationTests(unittest.TestCase):
                                  "Update-InteractivePositionAgent.ps1"),
                 "-Target", str(target), "-Artifact", str(artifact),
                 "-Action", "Install", "-Phase", "Installation",
+                "-StateOutput", str(state_output),
             ], capture_output=True, text=True, timeout=15, env=environment)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("previous version was restored", result.stderr)

@@ -9,6 +9,7 @@ python -B -m unittest tests.test_r3_robustness -v
 Couverture C-03 :
 
 - quota presque atteint et dépassement refusé avant écriture ;
+- quota exactement à la limite, avec mesure à chaque coexistence physique ;
 - espace disque libre insuffisant ;
 - deux téléversements concurrents, un seul admis sous le plafond ;
 - index absent, JSON invalide et enregistrement incomplet ;
@@ -27,8 +28,14 @@ Couverture C-07 :
 Couverture C-08 :
 
 - installation et rollback explicite réussis ;
-- pannes injectées en préparation, sauvegarde, remplacement, installation,
+- pannes injectées en préparation, arrêt, sauvegarde, staging, remplacement, installation,
   démarrage, vérification et confirmation ;
+- reprise pré-remplacement, y compris échec du redémarrage ou de sa validation ;
+- état initial actif et inactif de la tâche ;
+- neuf pannes du rollback explicite : avant mutation, après préservation,
+  copie, copie partielle, avant/pendant validation, après mutation, démarrage
+  et vérification ;
+- panne répétée de la compensation du rollback explicite ;
 - panne de restauration répétée et bornée ;
 - panne de redémarrage après restauration ;
 - blocage d'une nouvelle installation après `RECOVERY_REQUIRED`.

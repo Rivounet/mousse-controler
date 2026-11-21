@@ -253,8 +253,11 @@ Le quota de `CaptureBroker` est un plafond dur vérifié avant chaque écriture.
 L'admission compte tous les fichiers du répertoire privé, y compris index
 courant, index temporaire atomique, PNG, fichiers temporaires, index invalides
 préservés et orphelins. Elle contrôle aussi l'espace disque libre. Les
-téléversements concurrents sont sérialisés pendant admission et commit : le pic
-transactionnel ne peut pas dépasser `capture_total_bytes`. Un refus passe la
+téléversements concurrents sont sérialisés pendant admission et commit. Chaque
+index atomique emploie un temporaire unique : l'ancien index, le PNG final et le
+nouvel index temporaire sont comptés simultanément, sans soustraire un fichier
+avant sa disparition physique. Un observateur optionnel mesure chaque étape et
+vérifie `used_bytes <= capture_total_bytes`. Un refus passe la
 demande à `FAILED` sans créer de PNG. Au démarrage, un index absent ou invalide
 ne provoque aucune suppression : l'index invalide est conservé sous un nom
 distinct et les fichiers non indexés deviennent `DELETE_FAILED`, donc visibles,
@@ -275,5 +278,11 @@ conjointe de son état `Running` et du processus attendu. Tout échec après
 remplacement tente au plus deux restaurations de la sauvegarde, avec vérification
 d'empreinte et redémarrage. Un échec de restauration conserve
 `RECOVERY_REQUIRED` et bloque une nouvelle installation ambiguë jusqu'à une
-récupération explicite. Le mode d'injection de panne est réservé au harness
+récupération explicite. Une panne avant remplacement restaure aussi l'état
+initial de la tâche : un agent auparavant actif est redémarré et contrôlé avant
+suppression du marqueur. Le rollback explicite prépare la sauvegarde et une
+copie vérifiée de la version courante hors du chemin actif, puis effectue un
+remplacement atomique. Si la version restaurée ne peut pas être validée, la
+copie préservée est compensée en deux essais maximum ; sinon les éléments de
+récupération restent accompagnés de `RECOVERY_REQUIRED`. Le mode d'injection de panne est réservé au harness
 isolé par une variable d'environnement ; il ne touche aucune tâche réelle.

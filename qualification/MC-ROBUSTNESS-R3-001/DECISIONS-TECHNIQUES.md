@@ -6,7 +6,10 @@ Le plafond porte sur tous les octets présents dans le répertoire privé, pas
 seulement sur les captures référencées par l'index. Le calcul anticipe aussi la
 coexistence nécessaire de l'ancien index et de son fichier temporaire atomique.
 Cette approche est volontairement conservatrice : un fichier inconnu réduit la
-capacité disponible au lieu d'être ignoré ou supprimé.
+capacité disponible au lieu d'être ignoré ou supprimé. Les index temporaires
+ont un nom unique : l'ancien index n'est jamais soustrait pendant que son
+remplaçant est alloué. L'instrumentation relève l'occupation réelle après
+chaque allocation et remplacement.
 
 ## D-R3-02 — sérialiser admission, écriture et commit
 
@@ -44,3 +47,19 @@ vrai chemin transactionnel. Leur usage exige explicitement la variable
 `MC_POSITION_AGENT_TRANSACTION_TEST=1`; le harness remplace les cmdlets Windows
 et travaille dans un répertoire temporaire. Les tests ne créent ni ne modifient
 aucune tâche planifiée.
+
+## D-R3-07 — préserver l'état d'exécution avant remplacement
+
+La transaction mémorise l'état de la tâche et le nombre de processus avant
+l'arrêt. Si la mutation du binaire n'a pas commencé, l'empreinte courante est
+revérifiée puis l'état actif est rétabli avec une attente bornée. Le marqueur
+n'est supprimé qu'après cette validation ; un échec laisse
+`RECOVERY_REQUIRED`.
+
+## D-R3-08 — rollback explicite en deux phases et compensation
+
+Le rollback ne déplace plus le binaire actif avant d'avoir préservé une copie
+vérifiée de celui-ci et préparé une copie vérifiée de la sauvegarde. Le passage
+à la sauvegarde est un remplacement atomique. Toute panne ultérieure restaure
+la version préservée en deux essais maximum et revalide tâche et processus ;
+sinon les artefacts sont conservés avec `RECOVERY_REQUIRED`.

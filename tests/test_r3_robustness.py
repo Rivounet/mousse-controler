@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,9 +25,13 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"r3-bounded-capture"
 
 
 class CaptureHarness:
-    def __init__(self, root: Path, *, limit: int = 16_384) -> None:
+    def __init__(self, root: Path, *, limit: int = 16_384,
+                 observer=None) -> None:
         self.root = root
-        self.broker = CaptureBroker(root, max_bytes=1024, max_total_bytes=limit)
+        self.broker = CaptureBroker(
+            root, max_bytes=1024, max_total_bytes=limit,
+            storage_observer=observer,
+        )
 
     def request(self, action_id: str = "r3-action") -> tuple[threading.Thread, dict, dict]:
         outcome: dict[str, object] = {}
@@ -88,6 +93,51 @@ class CaptureQuotaTests(unittest.TestCase):
         self.assertLessEqual(status["used_bytes"], status["max_total_bytes"])
         self.assertEqual(orphan.stat().st_size, 300)
 
+    def test_exact_limit_is_observed_at_each_physical_coexistence_stage(self) -> None:
+        observations: list[tuple[str, int, set[str]]] = []
+
+        def observe(stage: str, used: int) -> None:
+            names = {path.name for path in self.root.iterdir() if path.is_file()}
+            observations.append((stage, used, names))
+
+        harness = CaptureHarness(self.root, limit=64_000, observer=observe)
+        thread, outcome, request = harness.request()
+        observations.clear()
+        orphan = self.root / "orphan-retained.bin"
+        preexisting = self.root / ".preexisting.tmp"
+        orphan.write_bytes(b"o" * 211)
+        preexisting.write_bytes(b"t" * 173)
+        original = harness.broker._ensure_upload_capacity_locked
+
+        def set_exact_limit(image_size: int, index_size: int) -> int:
+            exact = harness.broker._directory_usage_locked() + image_size + index_size
+            harness.broker._max_total_bytes = exact
+            return original(image_size, index_size)
+
+        with mock.patch.object(
+                harness.broker, "_ensure_upload_capacity_locked",
+                side_effect=set_exact_limit):
+            stored = harness.broker.accept_upload(harness.upload(request))
+        thread.join(1)
+        self.assertNotIn("error", outcome)
+        self.assertEqual(stored["state"], "STORED")
+        quota = harness.broker.quota_status()["max_total_bytes"]
+        self.assertTrue(observations)
+        self.assertTrue(all(used <= quota for _stage, used, _names in observations))
+        image_stage = next(item for item in observations
+                           if item[0] == "image_temporary_written")
+        self.assertIn(".capture-index.json", image_stage[2])
+        self.assertIn(f".{request['capture_id']}.tmp", image_stage[2])
+        index_stage = next(item for item in observations
+                           if item[0] == "index_temporary_written")
+        self.assertIn(".capture-index.json", index_stage[2])
+        self.assertIn(f"{request['capture_id']}.png", index_stage[2])
+        self.assertTrue(any(name.startswith(".capture-index.") and name.endswith(".tmp")
+                            for name in index_stage[2]))
+        self.assertEqual(index_stage[1], quota)
+        self.assertTrue(orphan.exists())
+        self.assertTrue(preexisting.exists())
+
     def test_disk_free_space_is_checked_before_writing(self) -> None:
         harness = CaptureHarness(self.root)
         thread, outcome, request = harness.request()
@@ -100,7 +150,11 @@ class CaptureQuotaTests(unittest.TestCase):
         self.assertEqual(list(self.root.glob("*.png")), [])
 
     def test_concurrent_uploads_are_serialized_and_never_exceed_quota(self) -> None:
-        harness = CaptureHarness(self.root, limit=32_768)
+        observations: list[int] = []
+        harness = CaptureHarness(
+            self.root, limit=32_768,
+            observer=lambda _stage, used: observations.append(used),
+        )
         requests = [harness.request(f"action-{index}") for index in range(2)]
         used = harness.broker.quota_status()["used_bytes"]
         harness.broker._max_total_bytes = used * 2 + len(PNG) + 128
@@ -124,6 +178,9 @@ class CaptureQuotaTests(unittest.TestCase):
         self.assertIn("QUOTA", results)
         status = harness.broker.quota_status()
         self.assertLessEqual(status["used_bytes"], status["max_total_bytes"])
+        self.assertTrue(observations)
+        self.assertTrue(all(used <= status["max_total_bytes"]
+                            for used in observations))
 
     def test_missing_and_invalid_indexes_reconcile_orphans_without_deletion(self) -> None:
         for invalid in (None, "{broken", '{"version":1,"records":[{}]}'):
@@ -160,8 +217,39 @@ class CaptureQuotaTests(unittest.TestCase):
             failed = restarted.delete(request["capture_id"])
         self.assertEqual(failed["state"], "DELETE_FAILED")
         self.assertTrue(temporary.exists())
+        status = restarted.quota_status()
+        self.assertLessEqual(status["used_bytes"], status["max_total_bytes"])
         self.assertEqual(restarted.delete(request["capture_id"])["state"], "DELETED")
         self.assertFalse(temporary.exists())
+
+    def test_interruption_after_image_commit_preserves_and_reconciles_file(self) -> None:
+        observations: list[tuple[str, int]] = []
+        harness = CaptureHarness(
+            self.root, observer=lambda stage, used: observations.append((stage, used)),
+        )
+        thread, outcome, request = harness.request()
+        original = harness.broker._persist_index_locked
+
+        def interrupt_commit() -> None:
+            destination = self.root / f"{request['capture_id']}.png"
+            if destination.exists():
+                raise OSError("simulated interruption before index commit")
+            original()
+
+        with mock.patch.object(
+                harness.broker, "_persist_index_locked", side_effect=interrupt_commit):
+            with self.assertRaisesRegex(OSError, "before index commit"):
+                harness.broker.accept_upload(harness.upload(request))
+        thread.join(1)
+        destination = self.root / f"{request['capture_id']}.png"
+        self.assertTrue(destination.exists())
+        self.assertEqual(
+            harness.broker.get(request["capture_id"])["state"], "DELETE_FAILED",
+        )
+        self.assertTrue(all(used <= harness.broker.quota_status()["max_total_bytes"]
+                            for _stage, used in observations))
+        restarted = CaptureBroker(self.root, max_bytes=1024, max_total_bytes=16_384)
+        self.assertEqual(restarted.get(request["capture_id"])["state"], "DELETE_FAILED")
 
 
 class ServerDouble:
@@ -426,19 +514,29 @@ class PositionAgentTransactionTests(unittest.TestCase):
         self.artifact = self.artifacts / "PositionAgent.exe"
         self.target.write_bytes(b"old-agent-version")
         self.artifact.write_bytes(b"new-agent-version")
+        self.runtime_state = root / "runtime-state.json"
 
     @property
     def state_path(self) -> Path:
         return Path(str(self.target) + ".mc-update-state.json")
 
-    def invoke(self, phase="None", action="Install") -> subprocess.CompletedProcess[str]:
+    def invoke(self, phase="None", action="Install", initial_state="Running") -> subprocess.CompletedProcess[str]:
         environment = dict(os.environ)
         environment["MC_POSITION_AGENT_TRANSACTION_TEST"] = "1"
         return subprocess.run([
             self.shell, "-NoProfile", "-File", str(self.harness),
             "-Updater", str(self.updater), "-Target", str(self.target),
             "-Artifact", str(self.artifact), "-Action", action, "-Phase", phase,
+            "-StateOutput", str(self.runtime_state),
+            "-InitialTaskState", initial_state,
         ], text=True, capture_output=True, timeout=15, env=environment)
+
+    def runtime(self) -> dict:
+        return json.loads(self.runtime_state.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def sha256(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest().upper()
 
     def test_successful_install_and_explicit_rollback_are_hash_verified(self) -> None:
         installed = self.invoke()
@@ -453,13 +551,47 @@ class PositionAgentTransactionTests(unittest.TestCase):
         self.assertEqual(rolled_back.returncode, 0, rolled_back.stderr)
         self.assertEqual(self.target.read_bytes(), b"old-agent-version")
 
-    def test_failures_before_replacement_preserve_original_without_marker(self) -> None:
-        for phase in ("Preparation", "Backup", "Replacement"):
+    def test_failures_before_replacement_restore_original_runtime(self) -> None:
+        for index, phase in enumerate(
+                ("Preparation", "Stop", "Backup", "Staging", "Replacement")):
             with self.subTest(phase=phase):
+                self.prepare_clean_case(f"pre-replacement-{index}")
                 result = self.invoke(phase)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.target.read_bytes(), b"old-agent-version")
+                self.assertEqual(self.sha256(self.target), self.runtime()["target_sha256"])
+                self.assertEqual(self.runtime()["task_state"], "Running")
+                self.assertEqual(self.runtime()["process_count"], 1)
                 self.assertFalse(self.state_path.exists())
+                retry = self.invoke()
+                self.assertEqual(retry.returncode, 0, retry.stderr)
+                self.assertEqual(self.target.read_bytes(), b"new-agent-version")
+
+    def test_pre_replacement_failure_preserves_initial_inactive_state(self) -> None:
+        self.prepare_clean_case("initially-inactive")
+        result = self.invoke("Backup", initial_state="Ready")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.target.read_bytes(), b"old-agent-version")
+        runtime = self.runtime()
+        self.assertEqual(runtime["task_state"], "Ready")
+        self.assertEqual(runtime["process_count"], 0)
+        self.assertFalse(self.state_path.exists())
+
+    def test_failed_pre_replacement_recovery_is_durable_and_blocks_install(self) -> None:
+        for index, phase in enumerate(("RecoveryRestart", "RecoveryVerification")):
+            with self.subTest(phase=phase):
+                self.prepare_clean_case(f"recovery-{index}")
+                result = self.invoke(phase)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.target.read_bytes(), b"old-agent-version")
+                state = json.loads(self.state_path.read_text(encoding="utf-8"))
+                self.assertEqual(state["phase"], "RECOVERY_REQUIRED")
+                self.assertEqual(state["restore_attempts"], 2)
+                self.assertEqual(state["initial_task_state"], "Running")
+                self.assertEqual(state["initial_process_count"], 1)
+                retry = self.invoke()
+                self.assertNotEqual(retry.returncode, 0)
+                self.assertIn("explicit recovery", retry.stderr)
 
     def test_failures_after_replacement_restore_and_restart_previous_version(self) -> None:
         for phase in ("Installation", "Start", "Verification", "Confirmation"):
@@ -476,6 +608,8 @@ class PositionAgentTransactionTests(unittest.TestCase):
         state = json.loads(self.state_path.read_text(encoding="utf-8"))
         self.assertEqual(state["phase"], "RECOVERY_REQUIRED")
         self.assertEqual(state["restore_attempts"], 2)
+        self.assertEqual(state["initial_task_state"], "Running")
+        self.assertEqual(state["initial_process_count"], 1)
         self.assertEqual(self.target.read_bytes(), b"new-agent-version")
         retry = self.invoke()
         self.assertNotEqual(retry.returncode, 0)
@@ -488,6 +622,60 @@ class PositionAgentTransactionTests(unittest.TestCase):
         state = json.loads(self.state_path.read_text(encoding="utf-8"))
         self.assertEqual(state["phase"], "RECOVERY_REQUIRED")
         self.assertEqual(state["restore_attempts"], 2)
+
+    def prepare_clean_case(self, name: str) -> None:
+        root = Path(self.temporary.name) / name
+        self.install = root / "install"
+        self.artifacts = root / "artifact"
+        self.install.mkdir(parents=True)
+        self.artifacts.mkdir()
+        self.target = self.install / "PositionAgent.exe"
+        self.artifact = self.artifacts / "PositionAgent.exe"
+        self.runtime_state = root / "runtime-state.json"
+        self.target.write_bytes(b"old-agent-version")
+        self.artifact.write_bytes(b"new-agent-version")
+
+    def prepare_rollback_case(self, name: str) -> None:
+        self.prepare_clean_case(name)
+        installed = self.invoke()
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+
+    def test_explicit_rollback_faults_restore_original_runtime(self) -> None:
+        phases = (
+            "RollbackBeforeMutation", "RollbackAfterPreserve", "RollbackCopy",
+            "RollbackPartialCopy", "RollbackBeforeValidation", "RollbackValidation",
+            "RollbackAfterMutation", "RollbackStart", "RollbackVerification",
+        )
+        for index, phase in enumerate(phases):
+            with self.subTest(phase=phase):
+                self.prepare_rollback_case(f"rollback-{index}")
+                current_hash = self.sha256(self.target)
+                result = self.invoke(phase, action="Rollback")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.sha256(self.target), current_hash)
+                runtime = self.runtime()
+                self.assertEqual(runtime["task_state"], "Running")
+                self.assertEqual(runtime["process_count"], 1)
+                self.assertFalse(self.state_path.exists())
+                self.assertFalse(Path(str(self.target) + ".mc-mouse-actions.failed").exists())
+                self.assertFalse(Path(str(self.target) + ".mc-mouse-actions.rollback").exists())
+
+    def test_explicit_rollback_compensation_failure_requires_recovery(self) -> None:
+        self.prepare_rollback_case("rollback-compensation")
+        current_hash = self.sha256(self.target)
+        result = self.invoke("RollbackCompensation", action="Rollback")
+        self.assertNotEqual(result.returncode, 0)
+        state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        self.assertEqual(state["phase"], "RECOVERY_REQUIRED")
+        self.assertEqual(state["restore_attempts"], 2)
+        self.assertEqual(state["initial_task_state"], "Running")
+        self.assertEqual(state["initial_process_count"], 1)
+        preserved = Path(str(self.target) + ".mc-mouse-actions.failed")
+        self.assertTrue(preserved.exists())
+        self.assertEqual(self.sha256(preserved), current_hash)
+        retry = self.invoke()
+        self.assertNotEqual(retry.returncode, 0)
+        self.assertIn("explicit recovery", retry.stderr)
 
 
 if __name__ == "__main__":
