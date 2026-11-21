@@ -301,3 +301,19 @@ L'analyse PowerShell appelle uniquement l'analyseur syntaxique 5.1 sur les
 fichiers ; elle ne les exécute pas. Les fichiers temporaires et caches Python
 sont isolés puis supprimés. Les logs et artefacts restent sous `out/`, sans
 installation ni activation.
+
+## Rationalisation R5
+
+Le moteur HOGP actif est `src/hogp-powershell/hogp.ps1`, copié dans le MSIX par
+`Build-HogpPackage.ps1` et lancé par l'alias
+`mousse-hogp-packaged.exe`. Les projets `src/hogp` et `src/hogp-launcher` sont
+des implémentations C++ historiques non référencées par le build, le packaging
+ou les tests actifs. Ils restent conservés car un usage manuel ou diagnostic
+n'a pas été exclu. Le descripteur HID et le chemin HOGP actif sont inchangés.
+
+`SequenceRunner` conserve l'orchestration historique par zones et
+`ActionExecutor` l'orchestration moderne persistée. Leurs mécanismes de
+pause/reprise/arrêt se ressemblent, mais leurs états publics, unités de travail
+et garanties d'échec diffèrent ; aucune fusion ni troisième ordonnanceur n'est
+introduit. Le catalogue refuse désormais un identifiant dupliqué avant
+insertion pour ses trois familles de ressources.

@@ -39,7 +39,8 @@ n'autorisent aucune correction dans la présente PR.
 
 - commandes distinctes pour unité, intégration simulée et matériel opt-in ;
 - commande logicielle unique incapable par construction de toucher radio/session ;
-- CI Windows exécute caractérisations, build C# et analyse PowerShell ;
+- qualification locale Windows exécute caractérisations, build C# et analyse
+  PowerShell ; GitHub Actions et toute CI externe sont exclus ;
 - découverte contrôlée des SDK/Build Tools, sans chemin unique implicite ;
 - versions, durées, exclusions et preuves publiées automatiquement.
 

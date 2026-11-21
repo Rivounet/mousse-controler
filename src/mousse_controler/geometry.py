@@ -219,4 +219,9 @@ class PolygonZone:
             point = rng.randint(left, right), rng.randint(top, bottom)
             if self.contains(point):
                 return point
-        raise RuntimeError("could not sample polygon")
+        # A valid integer polygon always contains its vertices.  Extremely thin
+        # polygons can occupy a vanishing fraction of their bounding box, so a
+        # bounded rejection sampler may legitimately miss them.  Keep the
+        # historical distribution and RNG consumption for successful samples,
+        # then use a seeded vertex as a deterministic, always-valid fallback.
+        return self.vertices[rng.randrange(len(self.vertices))]

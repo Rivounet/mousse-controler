@@ -294,3 +294,19 @@ joindre le rapport expurgé, ne pas fusionner et ne pas modifier la production.
   machines non synchronisées, rien déployé, matériel non requalifié.
 - **Prochaine porte :** revue de la PR Draft R4. Ne pas fusionner, déployer ou
   commencer R5 sans mandat distinct.
+
+### État de reprise actuel — 21 novembre 2026 : R5 ciblé
+
+- **Base :** `main` `c5d8ef6bdb06b0fb6295b946d0be578956e35d93`,
+  fusion de R4 ; le paragraphe R4 précédent est historique.
+- **Branche :** `refactor/mc-robustness-r5-001`, PR Draft à publier.
+- **C-13 :** rejet borné historique conservé, avec repli déterministe sur un
+  sommet garanti dans la zone pour les polygones valides extrêmes.
+- **C-14 :** doublons de commandes, actions et événements refusés avant
+  insertion ; paramètres inconnus encore tolérés pour compatibilité.
+- **Structure :** C-09 inventorié sans suppression ; C-11/C-12/C-17 différés
+  faute d'extraction indépendante à bénéfice démontré.
+- **Qualification :** uniquement profils locaux fermés ; aucun accès cible,
+  HID, capture réelle, installation, déploiement, GitHub Actions ou CI externe.
+- **Prochaine porte :** qualification `full-local`, publication de la PR Draft,
+  puis arrêt. Aucune fusion ni synchronisation de production.

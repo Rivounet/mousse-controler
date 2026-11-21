@@ -42,6 +42,24 @@ class GeometryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "one physical display"):
             RectangleZone(1900, 100, 100, 100).validate(TOPOLOGY)
 
+    def test_extreme_polygons_are_seeded_and_always_sampled_inside(self):
+        polygons = [
+            PolygonZone([(0, 0), (16_383, 1), (16_382, 1)]),  # very thin
+            PolygonZone([(0, 0), (8, 0), (8, 2), (2, 2), (2, 8), (0, 8)]),  # concave
+            PolygonZone([(-20, -10), (-1, -10), (-3, -1), (-18, -2)]),
+            PolygonZone([(1_000_000_000, 1_000_000_000),
+                         (1_000_016_383, 1_000_000_001),
+                         (1_000_016_382, 1_000_000_001)]),
+            PolygonZone([(0, 0), (5, 0), (10, 0), (10, 4), (0, 4)]),  # collinear vertices
+            PolygonZone([(0, 0), (1_000_000, 1), (999_999, 1)]),  # near-degenerate
+        ]
+        for polygon in polygons:
+            for seed in range(50):
+                first = polygon.random_point(random.Random(seed))
+                second = polygon.random_point(random.Random(seed))
+                self.assertEqual(first, second)
+                self.assertTrue(polygon.contains(first), (polygon.vertices, seed, first))
+
 
 class TrajectoryTests(unittest.TestCase):
     def test_curved_seeded_trajectory_and_exact_target(self):

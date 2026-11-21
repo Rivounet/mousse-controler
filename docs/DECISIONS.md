@@ -132,3 +132,15 @@ l'orchestrateur et exigent une autorisation explicite distincte. Un outil
 absent, une interruption ou un test en échec produit un verdict non favorable
 et une sortie non nulle. Le build découvre Roslyn et le SDK Windows de manière
 contrôlée, sans changer la cible .NET Framework ni les contrats des artefacts.
+
+## D-065 — Refactoring R5 limité aux gains démontrés (21 novembre 2026)
+
+**Décision :** corriger C-13 par un repli déterministe borné sur un sommet et
+C-14 par une insertion unique contrôlée avant mutation. Conserver la tolérance
+des paramètres inconnus, les deux séquenceurs, les persistances séparées et les
+sources C++ HOGP historiques.
+
+**Conséquence :** les polygones valides extrêmes restent échantillonnables sans
+boucle non bornée et les trois registres refusent les doublons sans écrasement.
+C-09/C-11/C-12/C-17 restent documentés mais non déclarés terminés : leur
+suppression, convergence ou extraction exige une PR dédiée et une mesure nette.
