@@ -212,13 +212,17 @@ def run_qualification(
                     exit_code = 2
                     break
                 try:
-                    completed = command_runner(
-                        phase.command, cwd=ROOT, env=environment, text=True,
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                        timeout=1800, check=False,
-                    )
-                    output = completed.stdout or ""
-                    log_path.write_text(output, encoding="utf-8", errors="replace")
+                    with log_path.open("w", encoding="utf-8", errors="replace") as log_stream:
+                        completed = command_runner(
+                            phase.command, cwd=ROOT, env=environment, text=True,
+                            stdout=log_stream, stderr=subprocess.STDOUT,
+                            timeout=1800, check=False,
+                        )
+                        # Test doubles may return captured text instead of using the
+                        # supplied stream. Real subprocesses stream directly so a
+                        # verbose suite cannot fill a pipe and perturb timing tests.
+                        if completed.stdout:
+                            log_stream.write(completed.stdout)
                     result["exit_code"] = completed.returncode
                     if completed.returncode != 0:
                         result["status"] = "FAIL"
