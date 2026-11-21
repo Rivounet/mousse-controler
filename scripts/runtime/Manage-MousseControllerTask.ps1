@@ -1,16 +1,19 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Start', 'Status', 'Stop')][string]$Action,
+    [Parameter(Mandatory, ParameterSetName = 'Execute')]
+    [ValidateSet('Start', 'Status', 'Stop')][string]$Action,
     [string]$ConfigPath,
     [string]$PythonPath = 'python.exe',
-    [string]$TaskName = 'MousseControler-HOGP'
+    [string]$TaskName = 'MousseControler-HOGP',
+    [Parameter(Mandatory, ParameterSetName = 'Library')]
+    [Parameter(DontShow)][switch]$LibraryOnly
 )
 
 $ErrorActionPreference = 'Stop'
 $launcher = Join-Path $PSScriptRoot 'Start-MousseController.ps1'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 
-function Stop-ManagedRuntime($Task) {
+function Stop-ManagedRuntime($Task, [scriptblock]$EmergencyStopCommand) {
     $taskAction = @($Task.Actions)[0]
     $expectedLauncher = '-File "{0}"' -f $launcher
     if ($taskAction.Execute -ne 'powershell.exe' -or -not $taskAction.Arguments.Contains($expectedLauncher)) {
@@ -27,7 +30,18 @@ function Stop-ManagedRuntime($Task) {
         $priorPythonPath = $env:PYTHONPATH
         try {
             $env:PYTHONPATH = Join-Path $root 'src'
-            & $managedPython -m mousse_controler.command_client --config $managedConfig stop 2>$null | Out-Null
+            try {
+                if ($EmergencyStopCommand) {
+                    & $EmergencyStopCommand $managedPython $managedConfig | Out-Null
+                }
+                else {
+                    & $managedPython -m mousse_controler.command_client `
+                        --config $managedConfig stop 2>$null | Out-Null
+                }
+            }
+            catch {
+                Write-Verbose "Controller emergency stop did not return cleanly: $($_.Exception.Message)"
+            }
         }
         finally {
             $env:PYTHONPATH = $priorPythonPath
@@ -45,6 +59,8 @@ function Stop-ManagedRuntime($Task) {
     }
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
 }
+
+if ($LibraryOnly) { return }
 
 if ($Action -eq 'Start') {
     if (-not $ConfigPath) { throw '-ConfigPath is required for Start' }
