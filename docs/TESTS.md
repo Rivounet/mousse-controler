@@ -1,220 +1,61 @@
-# Stratégie de tests et qualification
+# Tests et qualification
 
-## Référence
+## Qualification locale officielle
+
+La décision R4 exclut GitHub Actions et toute CI externe. Les trois profils
+fermés sont :
+
+| Profil | Contenu | Exclusions structurelles |
+|---|---|---|
+| `software` | tests unitaires et intégrations simulées | diagnostics matériels, SSH, installation, déploiement |
+| `build` | compilation Python, référence API, syntaxe PowerShell, PositionAgent | exécution des scripts analysés et installation |
+| `full-local` | `software` puis `build` | mêmes exclusions |
+
+Commande de référence :
 
 ```powershell
-python -m unittest discover
+python -B scripts/qualification/qualify.py --profile full-local
 ```
 
-MC-REPRISE-001 a corrigé la découverte depuis la racine : la commande exécutait
-72 tests au lieu d'en annoncer zéro. MC-HID-AUDIT-001/002 ajoutent sept gardes ;
-le 19 novembre 2026, les **79 tests** ont réussi sur mini-pc-backend après le
-cycle radio temporaire, avec un chemin temporaire court.
+Les sept diagnostics matériels exclus sont trois diagnostics Bluetooth et
+quatre diagnostics cible/session. Ils restent hors orchestrateur et exigent une
+autorisation explicite.
 
-La suite couvre 69 tests historiques d'artefacts, releases, chemins, erreurs,
-verrous et client distant hors ligne, trois tests du diagnostic Bluetooth et
-sept tests du diagnostic cible/gardes anti-publicité et de restauration radio.
-Elle ne crée pas de
-publicité et n'émet aucun rapport HID.
+## Dernières qualifications du programme
 
-La PR #4 a livré 72 tests réussis selon MC-REPRISE-001. La PR #5 a déclaré **79 tests réussis** après les audits radio, mais elle reste Draft ; ne pas attribuer ce total à `main` sans réexécution.
+| Lot | SHA de branche qualifié | Résultat déclaré par Codex | Revue ChatGPT |
+|---|---|---|---|
+| R0 | `1b00b067…` | 206/206 PASS | revue statique favorable avec réserves ; tests non réexécutés |
+| R1 | `64aa1bec…` | 222/222 PASS après correctif | correctif relu, tests non réexécutés |
+| R2 | `4601bb6d…` | 242/242 PASS après correctifs | B1/B2 relus, tests non réexécutés |
+| R3 | `5955889c…` | 263/263 PASS après correctifs | B1/B2/B3 relus, tests non réexécutés |
+| R4 | `cf5f7731…` | 269/269 PASS, `full-local` final | commentaire de qualification final ; revue statique distincte |
+| R5 | `8c15c82f…` | 271/271 PASS, `full-local` final | C-13/C-14 relus ; qualification finale commentée séparément |
 
-## Matrice de qualification
+Les détails, durées, artefacts et exclusions sont dans les rapports R0–R5 et
+les commentaires des PR #13–#18. La matrice des défauts est dans
+[ROBUSTESSE.md](ROBUSTESSE.md).
 
-| Niveau | Vérifications | Statut |
-|---|---|---|
-| T0 | cohérence Git, syntaxe et documentation | PASS dans la PR #6 |
-| T1 | Unités, géométrie, trajectoires, séquences, sécurité et adaptateurs simulés | PASS ; suite complète courante |
-| T2 | Séquences A→B→C, modes temporisé/commandé, pause/reprise/étape suivante/arrêt, état et non-rejeu | PASS simulé et matériel ciblé |
-| T3 | HOGP GATT, publicité, pairing, chiffrement, pilote HID natif, mouvement/clic/scroll et relâchement boutons | PASS matériel |
-| T4 | Agent GetCursorPos, topologie/DPI/session, HTTPS épinglé/HMAC, anti-rejeu et mesures fraîches | PASS ; latence aller simple réservée faute d'horloges synchronisées |
-| T5 | Correction par feedback réel, arrivée dans zone, vitesse, latence, arrêt d'urgence et reconnexion | PASS_WITH_RESERVATIONS |
+## Portée des preuves
 
-## Critères d'acceptation
+- `CORRIGÉ_LOGICIEL` signifie que le correctif est fusionné et couvert par des
+  tests locaux/simulés.
+- `QUALIFIÉ_LOCAL` signifie qu'un profil local Windows a réussi au SHA indiqué.
+- Une revue ChatGPT vérifie le diff et les preuves ; sauf mention contraire,
+  elle ne réexécute pas les commandes Windows de Codex.
+- Aucune de ces mentions ne vaut qualification matérielle post-R1–R5,
+  synchronisation des machines ou déploiement.
 
-- **Souris HID native** reconnue sur MonOrdinateur, sans pilote personnalisé sur la cible ; rapport HID réel observé.
-- **Retour réel** de coordonnées physiques signées par agent visible ; horodatage, source, session et génération topologique.
-- **Séquences** de zones A→B→C ; les trois géométries ; point cible tiré dans le périmètre ; trajectoires courbes, vitesse variable et micro-variations bornées pendant mouvement seulement.
-- **Modes** : délai configurable ou commande explicite, avec pause/reprise/arrêt sans rejeu.
-- **Performances démontrées** : 100/100 mouvements, médiane 670,483 ms,
-  P95 983,052 ms, erreur moyenne 0,796 px et maximum 2 px.
-- **Sécurité** : arrêt d'urgence, commandes TTL/idempotentes, relâchement boutons, pas de commande via l'agent cible, aucune donnée sensible publiée.
+## Preuves matérielles historiques
 
-Distinguer les tests simulés, locaux et **observés sur les deux machines**. Une compilation ou un test simulé ne valide pas le fonctionnement réel. La qualification ne vise ni l'usurpation Logitech ni l'évasion de détection d'automatisation.
+MC-HID-EXEC-001 et MC-MOUSE-ACTIONS-001 ont qualifié antérieurement, dans leurs
+périmètres et avant R1–R5, l'appairage HOGP, le HID natif, le retour de position,
+les actions souris, les captures autorisées, l'arrêt et la reconnexion. Leurs
+rapports restent les sources historiques ; les réserves LAN/GATT, roulette
+horizontale et consentement opérationnel demeurent.
 
-Le probe historique `scripts/bluetooth/probe-gatt-shape.ps1` ne constituait pas
-la porte 2 : il créait la forme locale sans `StartAdvertising`. La qualification
-ultérieure de la PR #6 a exécuté le diagnostic cible puis démontré séparément la
-publicité, l'association et le fonctionnement HID réel.
+## Compte rendu obligatoire
 
-## Acceptation MVP
-
-- MonOrdinateur reconnaît une souris Bluetooth native après appairage ;
-- agent cible limité au retour de position, visible et incapable de recevoir une
-  commande souris ;
-- mouvement relatif, clic gauche/droit et défilement via un client autorisé ;
-- aucune commande invalide ou expirée émise ;
-- reconnexion sans rejeu de commandes obsolètes ;
-- arrêt d'urgence mesuré, publicité arrêtée et souris physique disponible ;
-- API non exposée publiquement ;
-- activation par SHA et rollback reproductibles sur mini-pc-backend.
-
-## Compte rendu d'un lot
-
-Indiquer branche et SHA, machine, commandes, total de tests, durée, PASS/FAIL,
-opérations non exécutées, effets Bluetooth éventuels, arrêt/rollback et preuves
-expurgées. Ne publier ni adresses Bluetooth, identifiants matériels uniques,
-comptes, chemins personnels, secrets ou journaux privés.
-
-La revue de code approfondie reste sur demande ou au jalon convenu ; livraison
-d'une PR Draft ne signifie ni validation, ni fusion.
-
-## Chronologie historique MC-HID-EXEC-001
-
-Le 20 novembre 2026, `python -m unittest discover -v` a exécuté **103 tests en
-60,365 s : 103 PASS**. Les 24 tests ajoutés couvrent :
-
-- transport simulé, fraîcheur, correction et changements session/topologie ;
-- HMAC, anti-rejeu, horodatage et réception bornée ;
-- rectangle, cercle, polygone, graine et invalidation hors topologie ;
-- courbe, accélération/décélération, variation de vitesse et absence de jitter
-  à l'arrêt ;
-- A→B→C, attente automatique/commandée, pause/reprise, stop et absence de HID
-  après arrêt ;
-- API loopback, bearer constant-time, TTL et idempotence.
-
-À ce jalon intermédiaire, les preuves réelles obtenues étaient : agent session console 1, deux écrans, échantillon
-HTTPS signé, appairage chiffré, pilote HID/souris natif, rapports relatifs et
-reconnexion après recréation du fournisseur en 14,276 s. Non qualifiés :
-redémarrages matériels, clic/scroll sur surface sûre, précision, P95,
-multi-écrans en trajectoire et arrêt matériel. Le statut global demeure donc
-`INCOMPLETE`.
-
-Après ajout de l'hôte MSIX compatible Smart App Control et de son routage par le
-transport Python, la suite a exécuté **105 tests en 52,869 s : 105 PASS**, puis
-une revalidation complète **105/105 en 80,412 s**. Les
-deux tests supplémentaires vérifient la commande de l'alias packagé et la
-compatibilité du contrat historique direct.
-
-Après correction de la pairabilité et de la reconnexion, la suite complète a
-exécuté **115/115 tests en 78,087 s**. Le chemin court `MC_TEST_TMP` est requis
-pour les tests de déploiement sous la limite de chemins Windows.
-
-La finalisation de performance a porté la suite à **127/127 PASS en 41,984 s**.
-Les nouveaux tests couvrent l'amplitude adaptative et son plafond explicite, le
-plafond configurable des trajectoires, les métriques de position et la
-télémétrie récepteur. Sur matériel réel, la matrice stable comporte 100/100
-arrivées, médiane 670,483 ms, P95 983,052 ms et erreur maximale 2 px.
-
-## Corrections finales avant fusion
-
-Les tests déterministes de concurrence couvrent mouvement, clic, défilement et
-commande boutons en attente du verrou, reconnexion concurrente à l'arrêt, clic
-déjà engagé, arrêt répété et reprise explicite. Ils vérifient la liste exacte des
-événements reçus par `SimulatedHidTransport` : aucune émission ne suit l'arrêt
-effectif, les boutons sont libérés avant `stop`, et `start()` ouvre seul une
-nouvelle époque. La qualification matérielle antérieure n'est pas répétée car le
-protocole et l'algorithme de mouvement ne changent pas.
-
-Après ajout du nettoyage d'un démarrage transport partiel, la suite finale a
-exécuté **136/136 tests en 35,659 s : PASS** hors du chemin temporaire long du
-bac à sable.
-
-## Revalidation post-fusion
-
-Le 20 novembre 2026, après synchronisation de `main` sur le commit de fusion
-`77d4a5939673053fa2e0dae73bc3a284a8597ac7`, la commande de référence a
-réexécuté **136/136 tests en 37,648 s : PASS**. Le contrôleur rechargé depuis ce
-contenu a ensuite confirmé, sans mouvement de souris : publicité HOGP
-`Started`, abonnement HID actif, boutons à zéro, API locale accessible et
-position distante HTTPS/HMAC fraîche.
-La branche documentaire post-fusion a ensuite exécuté la même suite :
-**136/136 tests en 38,938 s : PASS**.
-
-Les livraisons Codex sont publiées en PR Draft avec SHA, tests, durées, résultats et preuves expurgées. Pas de revue de code exhaustive automatique ; fusion sur autorisation.
-
-## Qualification MC-MOUSE-ACTIONS-001
-
-- Clics simple/double/triple, maintien, glisser-déposer, boutons et roulette verticale/horizontale selon HID ; relâchement sur arrêt.
-- Composition en séquences, attente, pause/reprise, erreur configurable, absence de rejeu après reconnexion.
-- Identifiants et notifications WebSocket authentifiées, états cohérents et distinction entre émission HID et effet observé.
-- Capture uniquement avant/après une action configurée ; aucun déclenchement permanent ou indépendant ; sélection du moniteur sous curseur au moment de la capture, y compris multi-écrans.
-- Transfert LAN protégé, intégrité, quotas, stockage et rétention par action/séquence, absence de fuite de captures dans les logs ou GitHub.
-- Arrêt d'urgence prioritaire ; échec de capture sans répétition de l'action souris ; tests logiciels et matériels sur surface sûre.
-
-Jalon logiciel : **177/177 tests réussis en 44,286 s** avec compilation
-Python, puis builds réels `PositionAgent.exe` et `MouseWitness.exe` sous
-`/warnaserror+`. Les nouveaux tests couvrent notamment :
-
-- simple/double/triple/multiple, boutons gauche/droit/central/back/forward,
-  combinaisons, maintien, drag, mouvement bouton maintenu et libération ;
-- molette verticale découpée selon l'int8 HID, mode continu borné/interrompu et
-  rejet explicite de l'horizontale absente du descripteur ;
-- séquences mixtes, attente temporisée/commandée, pause/reprise/annulation,
-  politiques arrêt/retry/poursuite et absence de HID après arrêt ;
-- cycles `ACCEPTED/RUNNING/EXECUTED/CONFIRMED/FAILED/UNKNOWN/CANCELLED`,
-  corrélation parent/enfant, journal de reprise et blocage des doublons ;
-- WebSocket RFC 6455 loopback, bearer constant-time, événements uniques,
-  quotas de connexions/files et refus d'une écoute non-loopback ;
-- captures avant/après seulement, coordonnées négatives, moniteur contenant le
-  curseur, HMAC anti-rejeu, PNG/taille/quota/TTL/suppression et aucune répétition
-  de l'action après échec de capture ;
-- agent sans `SendInput`, `mouse_event` ou `SetCursorPos`, capture visible et
-  absence de listener entrant ; installateur cible borné, hashé et réversible.
-
-Qualification runtime mini-PC sans émission HID : tâche active sur le contenu
-du commit `597f740`, annonce `Started`, `subscribed=True`, boutons `0`, position
-fraîche 47 ms. Le WebSocket réel a diffusé `ACCEPTED → RUNNING → EXECUTED` pour
-une attente de 200 ms, identifiants d'événements uniques, zéro rapport HID.
-
-### Qualification cible réelle clôturée le 20 novembre 2026
-
-Sur la PR #8, au SHA applicatif `92817a7d802c0d2c0d22b4502071a3dc4a994c19` :
-
-- **17 actions souris** réussies sur surface dédiée et **37 événements** témoins, tous dans les bornes sûres ; cinq boutons, clics simple/double/triple, combinaison, maintien, drag/drop, roulettes discrète/continue et séquence.
-- Événements WebSocket corrélés, IDs uniques ; positions marquées `CONFIRMED` uniquement si observées, autres actions `EXECUTED`.
-- **Deux captures réelles avant/après de 1920×1080**, sources supprimées et absentes ; seuls deux recadrages témoins 884×611 publiés dans `qualification/MC-MOUSE-ACTIONS-001/evidence/`.
-- Arrêt d'urgence : action en attente `CANCELLED`, aucun événement témoin après acceptation ; reconnexion GATT `Started`, `subscribed=True`, boutons 0, aucune action active ni rejeu.
-- SSH hors sandbox vérifié avec identité d'hôte stricte, compte et tâche interactifs identifiés, session SSH 0 et console/témoin 1, sans élévation ou changement de protections.
-- **177/177 tests PASS en 44,286 s**, compilations Python et Roslyn warnings-as-errors. Pas de workflow CI GitHub configuré.
-
-**Verdict J6 : PASS_WITH_RESERVATIONS**, branche PR #8 non fusionnée. Réserves : roulette horizontale absente du descripteur HID, dossier vide de maintenance non supprimé, et toute prise de souris future soumise à accord explicite. Voir [rapport et preuves](../qualification/MC-MOUSE-ACTIONS-001/RAPPORT.md).
-
-### Correctifs de revue de la PR #8
-
-Les tests ajoutés couvrent les refus de suppression, la persistance de
-`DELETE_FAILED`, la nouvelle tentative après redémarrage, la prise en compte du
-fichier conservé dans le quota et la récupération des PNG non indexés. Pour les
-actions, ils saturent le registre, évincent un ancien état, compactent journal
-et registre d'identifiants, redémarrent, puis vérifient que la réémission reste
-refusée. La migration d'un journal antérieur et la frontière d'expiration
-configurée sont également déterministes. La suite complète de cette révision
-est reportée dans `qualification/MC-MOUSE-ACTIONS-001/evidence/software-tests.txt`.
-
-## Qualification post-fusion MC-POST-MERGE-002
-
-Sur `main` `09fa2fe475cc70c9bdaf375fffc684195207161b`, la suite complète a
-exécuté **185/185 tests en 49,178 s : PASS** après compilation Python. Les builds
-Roslyn de l'agent et du témoin ont réussi avec warnings-as-errors. Le runtime a
-été contrôlé sans souris : authentification API/WebSocket, attente de 200 ms,
-événements `ACCEPTED → RUNNING → EXECUTED`, rejet d'une réémission du même
-identifiant, GATT abonné, boutons zéro, position fraîche et persistance
-conjointe du journal et de `.ids`. Aucun mouvement, clic, défilement, rapport
-HID ou capture réelle n'a été exécuté. Voir
-[MC-POST-MERGE-002](../qualification/MC-POST-MERGE-002/RAPPORT.md).
-
-## Qualification MC-API-CATALOG-001 — 20 novembre 2026
-
-La suite contient désormais **195 tests**. Avec le chemin court historique
-`MC_TEST_TMP=C:\Projets\Mousse-controler\t`, les **195/195 tests ont réussi en
-67,411 s**. Une première exécution sans ce réglage a correctement refusé 23 cas
-de déploiement par `WINDOWS_PATH_BUDGET_EXCEEDED`; il ne s'agissait pas d'une
-régression applicative.
-
-Les 10 tests du catalogue vérifient l'ensemble exact des 28 commandes et des 12
-types d'actions, la bijection registre/gestionnaires, la structure et les
-exemples, les filtres, les erreurs, l'authentification HTTP, la compatibilité des
-arguments historiques tolérés et la fraîcheur de la référence générée. Un
-transport simulé et un courtier de captures espion prouvent qu'une consultation
-ne produit ni HID ni capture. Aucun essai matériel, mouvement réel ou capture
-réelle n'a été exécuté pour ce mandat.
+Chaque qualification indique SHA, machine, commandes, nombre de tests, durée,
+builds, exclusions, effets matériels éventuels et réserves. Ne publier aucun
+secret, identifiant matériel, adresse privée ou chemin personnel.

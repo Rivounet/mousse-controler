@@ -1,93 +1,62 @@
 # Mousse-controler
 
-Contrôle de la souris de **MonOrdinateur** depuis **mini-pc-backend**. Transport prioritaire : **Bluetooth LE HID (HOGP)**, reconnu par les pilotes Windows natifs ; retour de position réelle par **agent Windows visible et canal LAN privé sécurisé**.
+Mousse-controler pilote la souris de **MonOrdinateur** depuis
+**mini-pc-backend** par Bluetooth LE HID (HOGP). Un agent Windows visible sur
+la cible publie la position réelle et les captures explicitement demandées par
+un canal LAN HTTPS/HMAC sortant ; il ne reçoit aucune commande souris.
 
-> **État : qualification finale `PASS_WITH_RESERVATIONS`.** Appairage chiffré persistant, souris HID native, redémarrages des deux machines, reconnexion, clic, défilement, zones, trajectoires, précision, performance et arrêt d'urgence sont démontrés. Les réserves concernent l'observabilité du délai LAN absolu et une reprise GATT transitoire.
+## État courant vérifié — 21 novembre 2026
 
-## Rôles et architecture
+- GitHub `main` : `0817823eb2e7a5e8d477ed3e382ef128611fd5b9`.
+- Programme de robustesse R0–R5 : fusionné par les PR #13 à #18.
+- R5 était ciblé : C-13 et C-14 sont corrigés ; C-09, C-11, C-12 et C-17
+  restent différés, sans priorité automatique.
+- PR #11 : audit indépendant toujours ouvert en Draft et non fusionné.
+- Qualification locale finale R5 : `full-local` PASS, 271/271 tests sur le SHA
+  final de branche `8c15c82f69371eb395aa0d760bbaee41a7c1e1a8`.
+- Aucun GitHub Actions ni service CI externe. La qualification officielle est
+  locale sous Windows.
+- Les correctifs R1–R5 n'ont pas été requalifiés matériellement. La version du
+  clone et des processus installés n'a pas été vérifiée pendant R6.
 
-- **mini-pc-backend** : Codex unique, Git, développement, moteur HOGP C++/WinRT, contrôleur Python, moteur de trajectoires/séquences, boucle de correction et réception HTTPS des positions.
-- **MonOrdinateur** : hôte HID Bluetooth natif ; **agent C# .NET Framework 4.8 visible**, limité à GetCursorPos/topologie/session, à l'envoi sortant des mesures via HTTPS authentifié et au réveil du lien GATT déjà appairé. Il n'exécute aucune commande souris.
-- **GitHub** : source officielle. Le récepteur USB Logitech Nano 046D:C534 reste indépendant et hors périmètre de la commande Mousse-controler.
+L'état détaillé, les commits de fusion, la matrice C-01 à C-17 et les réserves
+sont centralisés dans [Robustesse R0–R6](docs/ROBUSTESSE.md).
+
+## Architecture en bref
 
 ```text
-mini-pc-backend : séquences/zones → trajectoires → contrôle de position → HOGP BLE
-                                                                │
-                                                    MonOrdinateur : HID natif
-                                                                │
-mini-pc-backend : mesures réelles ← HTTPS/HMAC LAN privé ← agent GetCursorPos
+mini-pc-backend : API → actions/séquences → contrôle de position → HOGP BLE
+                                                                    │
+MonOrdinateur : pile HID Windows native ←───────────────────────────┘
+       agent visible : position/capture → HTTPS + HMAC → mini-pc-backend
 ```
 
-## Fonctionnalités demandées
+Le moteur HOGP actif est PowerShell/WinRT dans un MSIX. Les sources C++ HOGP
+sont historiques et conservées faute de preuve d'absence totale d'usage. Le
+descripteur actuel expose cinq boutons et une roulette verticale ; la roulette
+horizontale n'est pas disponible.
 
-- Séquence de zones **A → B → C → …** ; rectangles, cercles et polygones ; sélection d'un point aléatoire **à l'intérieur** de chaque zone, avec graine déterministe pour les tests.
-- Trajectoires courbes, vitesse configurable avec accélération/décélération et micro-variations bornées **uniquement en mouvement**.
-- Arrivée vérifiée par **mesure réelle** ; correction HID relative, interruption si mesure périmée, changement de session/topologie ou perte de lien.
-- Après arrivée : attente configurable puis progression automatique **ou** attente d'une nouvelle commande ; pause, reprise, étape suivante et arrêt.
-- Clics, boutons, défilement et arrêt d'urgence. Les paramètres de mouvement servent à la fluidité et au contrôle, **pas à masquer l'automatisation ni à usurper l'identité Logitech**.
+## Qualification officielle
 
-Le système n'est pas garanti indiscernable d'une utilisation humaine. L'analyse d'écran et la prise de décision applicative autonome restent hors périmètre.
+```powershell
+python -B scripts/qualification/qualify.py --profile full-local
+```
 
-## État Git et qualification
-
-Les trois puces suivantes conservent l'historique antérieur à la réalisation ;
-elles ne décrivent pas l'état courant de la PR #6.
-
-- PR #4 de consolidation fusionnée dans `main` (merge `d74e13e9a1af502a952d7cfdedf4aef5b0ec7473`) ; PR #1–#3 clôturées sans fusion directe.
-- PR #5 Draft : audits MC-HID-AUDIT-001/002, **non fusionnée** ; résultats et scripts présents sur sa branche, à intégrer sans écrasement.
-- Audits : radio mini-PC On temporaire, fournisseurs HID/Battery et caractéristiques GATT créés avec succès sans publicité, puis radio restaurée Off. Service Device Information réservé : `DisabledByPolicy`.
-- Audit historique de MonOrdinateur : lecture locale de position et deux écrans
-  confirmés ; l'intégration réseau et le Bluetooth HID réel, alors non
-  qualifiés, le sont désormais dans MC-HID-EXEC-001.
-- Les **79 tests** sont déclarés réussis dans le dernier compte rendu d'audit de la PR #5 ; ne pas les attribuer à la suite actuelle de `main` sans réexécution.
-
-## État MC-HID-EXEC-001 vérifié le 20 novembre 2026
-
-- 136/136 tests réussis en 35,659 s hors du chemin temporaire artificiellement long du bac à sable.
-- MSIX 1.0.0.2 signé et vérifié ; appairage `ConfirmOnly` chiffré persistant.
-- Pilotes HID et souris natifs chargés ; mouvement minimal mesuré +3 px horizontal, 0 px vertical.
-- Reconnexion après recréation HOGP en 14,276 s grâce au moniteur GATT de l'agent.
-- Verdict global `PASS_WITH_RESERVATIONS` après qualification matérielle et redémarrages contrôlés.
-- Clic et défilement confirmés sur surface sûre ; rectangle, cercle, polygone et cinq trajectoires mesurés avec erreur maximale 2 px.
-- Optimisation adaptative qualifiée sur 100 déplacements : 100 % de réussite,
-  médiane 0,670 s, P95 0,983 s, erreur moyenne 0,796 px et maximum 2 px.
-- Télémétrie réelle : cadence de feedback médiane 63 ms, HMAC 0,053 ms,
-  traitement récepteur 0,145 ms et `GetPhysicalCursorPos` 20 us. La latence LAN
-  aller simple reste non calculable sans horloges synchronisées.
-- Deux redémarrages cible et un redémarrage mini-PC qualifiés ; reconnexion après ouverture manuelle de session, sans nouvel appairage. Une reprise interne bornée corrige l'échec Bluetooth transitoire observé au premier lancement AtLogOn du mini-PC.
-- Arrêt d'urgence sérialisé avec toutes les émissions HID : les commandes qui
-  attendent le verrou sont refusées après une demande d'arrêt, l'arrêt répété
-  est idempotent et une reprise explicite crée une nouvelle époque de commandes.
-- PR #6 : **fusionnée dans `main`** le 20 novembre 2026 au commit
-  `77d4a5939673053fa2e0dae73bc3a284a8597ac7`; verdict de qualification
-  conservé : `PASS_WITH_RESERVATIONS`.
+Les profils fermés `software`, `build` et `full-local` ne déclenchent ni HID,
+ni capture réelle, ni accès distant, ni installation ou déploiement. Les sept
+diagnostics matériels sont séparés et exigent une autorisation explicite.
 
 ## Documentation
 
-[Référence API](docs/API-REFERENCE.md) · [Reprise](docs/REPRISE.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Planning](docs/PLANNING.md) · [Tests](docs/TESTS.md) · [Décisions](docs/DECISIONS.md) · [Consignes Codex](AGENTS.md).
+- [État de robustesse et matrice des constats](docs/ROBUSTESSE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Décisions](docs/DECISIONS.md)
+- [Planning](docs/PLANNING.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Reprise](docs/REPRISE.md)
+- [Tests](docs/TESTS.md)
+- [Référence API générée](docs/API-REFERENCE.md)
 
-Les **mandats complets restent dans le chat** ; les documents GitHub consignent les décisions et exigences. Aucune fusion implicite.
-
-## Évolution J6 qualifiée — MC-MOUSE-ACTIONS-001 (PR #8, non fusionnée)
-
-La [PR #8](https://github.com/Rivounet/mousse-controler/pull/8) livre les actions standard d'une souris à cinq boutons, clics multiples, maintien, glisser-déposer, roulette verticale, séquences mixtes, WebSocket de résultats authentifié et captures optionnelles avant/après d'une action, limitées à l'écran entier sous le curseur. Pas de clavier, capture continue, autonome ou analyse visuelle.
-
-**Verdict de la branche : PASS_WITH_RESERVATIONS** — 177/177 tests PASS en 44,286 s ; 17 actions sur surface sûre, 37 événements observés, deux captures réelles avant/après puis suppression des sources ; arrêt d'urgence et non-rejeu matériel qualifiés. SSH hors sandbox qualifié avec configuration dédiée et autorisation strictement bornée. Réserves : roulette horizontale indisponible sur le descripteur HOGP actuel, dossier de staging maintenance vide et autorisation explicite préalable à toute nouvelle prise de souris. **Ces fonctions J6 ne sont pas encore fusionnées dans `main`**.
-
-**État GitHub J6 :** la PR #8 a été **fusionnée dans `main`** le 20 novembre 2026 au commit `e0658142a65d8b494f109efa3318c6ea21feac3d`. Les mentions historiques « non fusionnée » ci-dessus décrivent l'état antérieur à cette fusion. Verdict J6 : `PASS_WITH_RESERVATIONS`, 185/185 tests logiciels publiés. La concordance des processus installés avec le commit fusionné doit être vérifiée séparément, sans prise de souris non autorisée.
-
-## Registre automatique de l'API — MC-API-CATALOG-001
-
-La commande authentifiée `api_catalog` interroge, sur le port loopback existant,
-le registre qui pilote aussi le routage et la validation statique. Elle permet
-un catalogue complet, une recherche par nom, un filtre par catégorie et la
-sélection des commandes, types d'actions ou événements WebSocket. La
-[référence API](docs/API-REFERENCE.md) est générée depuis ce même registre avec
-`python scripts/generate_api_reference.py`; `--check` détecte toute référence
-obsolète. La consultation n'émet aucun rapport HID et ne demande aucune capture.
-
-## État courant après PR #10 et audits indépendants (20 novembre 2026)
-
-La PR #8 (J6) et la PR #10 (J7, registre API) sont **fusionnées dans `main`** ; les mentions « non fusionnée » dans les comptes rendus J6 plus haut sont historiques. La PR #11 de contre-expertise reste **Draft, non fusionnée**. La voie HOGP active qualifiée est **PowerShell/WinRT dans un MSIX** ; le moteur C++/WinRT demeure une implémentation historique distincte.
-
-**Verdict consolidé :** `MAINTENABLE_WITH_MAJOR_RESERVATIONS`. Voir le [rapport contradictoire et plan global de correction](audits/2026-11-20-consolidation/REPORT.md) et le [planning](docs/PLANNING.md). Quatre P1 restent ouverts (attentes HOGP, bouton incertain, quota de captures, bornes du serveur LAN). Aucune extension fonctionnelle importante ni synchronisation des processus n'est réputée validée par ces audits.
+Les rapports historiques et audits restent les preuves détaillées. Les mandats
+complets restent dans le chat. Une fusion, une synchronisation des machines ou
+un déploiement nécessitent toujours une décision explicite.

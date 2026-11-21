@@ -1,54 +1,30 @@
-# Critères de sortie proposés pour R1 à R5
+# Critères de sortie R1 à R5 — état actuel
 
-Ces critères dérivent du rapport de consolidation et des reproductions R0. Ils
-n'autorisent aucune correction dans la présente PR.
+Ce document définissait les portes proposées par R0. Elles ont ensuite guidé
+les lots R1–R5. Les rapports de chaque lot et
+[`docs/ROBUSTESSE.md`](../../docs/ROBUSTESSE.md) font foi pour les résultats.
 
-## R1 — sûreté des actions et arrêt
+| Lot | Décision actuelle | Portée |
+|---|---|---|
+| R1 | Critères logiciels atteints, PR #14 fusionnée | matériel non requalifié |
+| R2 | Critères logiciels atteints, PR #15 fusionnée | WinRT et matériel non requalifiés |
+| R3 | Critères logiciels atteints, PR #16 fusionnée | opérations réelles de récupération non requalifiées |
+| R4 | `full-local` final PASS, PR #17 fusionnée | 7 diagnostics matériels exclus ; aucune CI externe |
+| R5 | C-13/C-14 qualifiés localement, PR #18 fusionnée | C-09/C-11/C-12/C-17 différés |
 
-- press/release/hold/drag/click incertains testés sous chaque politique d'erreur ;
-- transition ambiguë => `UNKNOWN` et quarantaine/arrêt indépendamment de
-  `continue`, sans rejeu ;
-- arrêt global coordonne exécuteur moderne et séquenceur historique dans les
-  états MOVING, WAITING et PAUSED ;
-- file pleine, file non vide à `close()` et action suspendue finissent dans un
-  état terminal durable ;
-- zéro nouveau rapport après l'intention d'arrêt ; suite logicielle complète PASS.
+## Critères conservés
 
-## R2 — bornes HOGP et serveur LAN
+- R1 : états ambigus `UNKNOWN`, quarantaine/arrêt, coordination des séquenceurs,
+  drainage de file et absence de rejeu.
+- R2 : deadlines HOGP, arrêt indépendant, drainage stderr, handshake/lectures et
+  connexions LAN bornés, TLS/HMAC inchangés.
+- R3 : quota au pic, temporaires/index/orphelins comptés, nettoyage best-effort,
+  rollback borné et `RECOVERY_REQUIRED` durable.
+- R4 : profils locaux `software`, `build`, `full-local`, découverte contrôlée
+  des outils, résultats et artefacts mesurés. GitHub Actions et toute CI externe
+  sont définitivement exclus du programme actuel.
+- R5 : aucun changement de contrat ; C-13/C-14 couverts ; aucune suppression
+  HOGP ou convergence structurelle sans bénéfice démontré.
 
-- deadlines documentées et mesurées pour démarrage, lecture, commande et arrêt ;
-- processus muet, réponse partielle, mort et `stderr` saturé ne bloquent ni
-  appelant ni fermeture ;
-- chemin d'arrêt indépendant du verrou/canal bloqué ;
-- handshake, lecture du corps, connexions actives et file d'attente bornés ;
-- client lent/tronqué refusé, clients sains suivants servis, TLS/HMAC inchangés ;
-- aucune commande ambiguë rejouée.
-
-## R3 — quotas, ressources et déploiement
-
-- quota dur vérifié avant admission et incluant temporaires, index et orphelins ;
-- refus de suppression conserve `DELETE_FAILED`, chemin et possibilité de retry ;
-- redémarrage réconcilie tous les fichiers sans oubli ni faux `DELETED` ;
-- toute création partielle/fermeture défaillante nettoie best-effort toutes les
-  ressources, avec erreur finale observable ;
-- mise à jour et rollback testés par injection à chaque étape, restauration
-  bornée et état `recovery required` explicite ;
-- aucune cible réelle requise pour la porte logicielle.
-
-## R4 — tests et reproductibilité
-
-- commandes distinctes pour unité, intégration simulée et matériel opt-in ;
-- commande logicielle unique incapable par construction de toucher radio/session ;
-- qualification locale Windows exécute caractérisations, build C# et analyse
-  PowerShell ; GitHub Actions et toute CI externe sont exclus ;
-- découverte contrôlée des SDK/Build Tools, sans chemin unique implicite ;
-- versions, durées, exclusions et preuves publiées automatiquement.
-
-## R5 — refactoring minimal
-
-- chaque extraction a une mesure avant/après de complexité ou duplication ;
-- aucun changement de protocole, état, performance ou compatibilité sans contrat ;
-- code HOGP historique supprimé seulement après preuve d'absence d'usage ;
-- aucune troisième implémentation de séquenceur ;
-- géométries extrêmes et doublons du catalogue couverts par tests comportementaux ;
-- petites PR indépendantes, rollback Git simple et suite complète PASS.
+Ces critères n'autorisent ni déploiement, ni essai HID/capture, ni modification
+des machines. Un résultat logiciel fusionné n'est pas une preuve matérielle.

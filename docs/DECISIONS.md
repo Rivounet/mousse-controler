@@ -1,5 +1,9 @@
 # Décisions et hypothèses
 
+Ce registre est chronologique : les décisions plus récentes complètent ou
+remplacent les états antérieurs. L'état courant des constats est centralisé dans
+[ROBUSTESSE.md](ROBUSTESSE.md).
+
 Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix structurant, noter **date, statut, motivation et effet**. Ce journal fait foi avec la roadmap.
 
 | ID | Date | Statut | Décision / hypothèse | Conséquence |
@@ -144,3 +148,16 @@ sources C++ HOGP historiques.
 boucle non bornée et les trois registres refusent les doublons sans écrasement.
 C-09/C-11/C-12/C-17 restent documentés mais non déclarés terminés : leur
 suppression, convergence ou extraction exige une PR dédiée et une mesure nette.
+
+## D-066 — Clôture documentaire R0–R6 (21 novembre 2026)
+
+**Décision :** prendre `docs/ROBUSTESSE.md` comme matrice unique C-01 à C-17 et
+recentrer README, roadmap, planning, reprise et tests sur l'état courant. R0–R5
+sont fusionnés ; R5 a corrigé uniquement C-13/C-14. C-09/C-11/C-12/C-17 restent
+différés sans priorité automatique. La PR #11 reste ouverte Draft non fusionnée.
+
+**Conséquence :** séparer définitivement fusion GitHub, qualification locale,
+preuves matérielles historiques, synchronisation des machines et déploiement.
+R1–R5 ne sont pas matériellement requalifiés. L'état des processus installés
+reste à vérifier. Les profils Windows locaux demeurent la seule qualification
+logicielle officielle ; GitHub Actions et toute CI externe restent exclus.
