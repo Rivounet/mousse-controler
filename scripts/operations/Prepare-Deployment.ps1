@@ -26,7 +26,16 @@ try {
         git_clean = $dirty.Count -eq 0
         qualification_pass = [bool]($qualification -and $qualification.verdict -eq 'PASS' -and $qualification.git_sha -eq $head)
         package_available = $package.available
-        signing_qualified = [bool]($signing -and $signing.status -eq 'PASS' -and $signing.signature.signer_matches_key)
+        signing_qualified = [bool](
+            $signing -and $signing.status -eq 'PASS' -and
+            $signing.signature.signer_matches_key -and
+            $package.available -and
+            $signing.package.sha256 -and
+            $signing.package.sha256 -eq $package.sha256 -and
+            $signing.package.identity_name -eq 'Rivounet.MousseControler.Hogp' -and
+            $signing.package.publisher -eq 'CN=MousseControler' -and
+            [version]$signing.package.version -ge [version]'1.0.0.3'
+        )
         trust_install_authorized = $false
         package_install_authorized = $false
     }
