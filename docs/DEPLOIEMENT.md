@@ -126,3 +126,11 @@ Restauration : arrêter le contrôleur, désenregistrer les tâches temporaires
 cible, retirer la règle pare-feu privée dédiée, restaurer chaque radio à son état
 initial, supprimer le paquet `Rivounet.MousseControler.Hogp` et retirer uniquement
 les certificats `CN=MousseControler` dont l'empreinte correspond à l'installation.
+
+## Mise en service contrôlée autorisée — 21 novembre 2026
+
+L'utilisateur a autorisé la transition opérationnelle sur `mini-pc-backend` et `MonOrdinateur` : certificat public MSIX v2 vérifié dans le magasin approprié, installation du MSIX 1.0.0.3 signé, mise à jour transactionnelle de PositionAgent, synchronisation du contrôleur, migration des seules configurations/tâches Mousse-controler, activation et contrôles de santé/communication. Cette autorisation **ne couvre pas** les commandes HID réelles, mouvements de souris ni captures. Ne pas désactiver Defender ou Smart App Control, ni étendre les permissions système générales.
+
+Exécuter la séquence documentée dans `scripts/operations/README.md` et `qualification/MC-OPERATIONAL-FINALIZATION-001/PROCEDURE-MISE-EN-SERVICE.md`. Vérifier les sauvegardes, les persistances par ensembles (journal + `.ids`, index + PNG), les états de tâche/processus, les SHA, le verrou d'installation et la disponibilité du rollback. L'installation du **certificat public** dans un magasin de confiance doit rester distincte du stockage de la **clé privée** de signature. Vérifier la chaîne et le signataire exact du MSIX réellement installé, pas seulement du package de staging.
+
+Le résultat final doit prouver les versions actives, tâches, processus, sessions, API/WebSocket, authentification, communication et récupération sans HID ni capture. `OPERATIONAL_PASS` désigne uniquement ce périmètre non matériel ; l'acceptation HID/captures exige un accord ultérieur au moment des essais. Une opération ambiguë impose arrêt contrôlé et restauration ou `RECOVERY_REQUIRED`.
