@@ -29,6 +29,22 @@ OK
 
 ## Qualification finale
 
-À compléter après le commit qualifié. Aucun diagnostic matériel, accès distant,
-HID, capture réelle, installation ou déploiement n'est exécuté.
+```text
+profile: full-local
+verdict: PASS
+git_sha: 9c3b06df809f3fe21d4724cfa5326b5df177ca7f
+software: 271/271 PASS (127.063 s)
+python-compilation: PASS (0.937 s)
+api-reference-check: PASS (0.531 s)
+powershell-syntax: PASS (0.969 s)
+position-agent-build: PASS (2.250 s)
+total: 133.546 s
+PositionAgent.exe: 28672 bytes
+PositionAgent.exe sha256: 36322f018f8448786767e7df1d1af3cac595cef329afb10c66c2cd78ffa38628
+```
+
+Le commit suivant ne modifie que ces résultats documentaires ; le SHA ci-dessus
+est le commit exact contenant le code, les tests et la documentation qualifiés.
+Aucun diagnostic matériel, accès distant, HID, capture réelle, installation ou
+déploiement n'a été exécuté.
 

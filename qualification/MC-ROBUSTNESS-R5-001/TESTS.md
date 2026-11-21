@@ -28,6 +28,28 @@ inconnus.
 
 ## Qualification finale
 
-Le résultat final `full-local`, ses builds, versions, durée, exclusions et SHA
-qualifié sont ajoutés après exécution sur le commit de code/documentation.
+```powershell
+python -B scripts/qualification/qualify.py --profile full-local
+```
+
+Résultat : **PASS** au SHA qualifié
+`9c3b06df809f3fe21d4724cfa5326b5df177ca7f`, 271/271 tests logiciels et les
+quatre contrôles de build PASS, en 133,546 s.
+
+| Phase | Résultat | Durée |
+|---|---:|---:|
+| Tests logiciels | 271/271 PASS | 127,063 s |
+| Compilation Python | PASS | 0,937 s |
+| Référence API | PASS | 0,531 s |
+| Syntaxe PowerShell | PASS | 0,969 s |
+| Build PositionAgent | PASS | 2,250 s |
+
+PositionAgent : 28 672 octets, SHA-256
+`36322f018f8448786767e7df1d1af3cac595cef329afb10c66c2cd78ffa38628`.
+Le binaire est un artefact local non installé.
+
+Environnement : Windows 11 `10.0.26300`, Python 3.12.10, PowerShell 7.6.9,
+Windows PowerShell 5.1.26100.10068 et Git 2.54.0.windows.1. Sept diagnostics
+matériels ainsi que Bluetooth/HID/capture/SSH/installation/déploiement sont
+exclus.
 
