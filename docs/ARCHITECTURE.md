@@ -192,7 +192,7 @@ défaut sont déclarées comme contraintes statiques. Les préconditions liées 
 l'état — fraîcheur de position, moteur optionnel, action ou séquence active,
 topologie physique, abonnement HID — sont publiées séparément comme contraintes
 dynamiques et restent vérifiées par les composants métier existants. Le moteur
-d'actions utilise le même registre pour reconnaître ses 12 discriminants ; les
+d'actions utilise le même registre pour reconnaître ses 13 discriminants ; les
 contrôles conditionnels de sûreté restent dans `ActionExecutor`.
 
 La découverte emprunte exclusivement `POST /v1/command` sur `127.0.0.1` et
@@ -326,3 +326,24 @@ pause/reprise/arrêt se ressemblent, mais leurs états publics, unités de trava
 et garanties d'échec diffèrent ; aucune fusion ni troisième ordonnanceur n'est
 introduit. Le catalogue refuse désormais un identifiant dupliqué avant
 insertion pour ses trois familles de ressources.
+
+## Précision HID et boucle fermée — MC-HID-PRECISION-001
+
+Un rapport relatif HOGP transporte des **unités HID**, pas des pixels écran.
+Windows applique ensuite sa chaîne de pointeur ; la vitesse, l'accélération et
+les arrondis peuvent donc produire une amplitude écran différente. L'action
+historique `move_relative` conserve volontairement cette sémantique brute.
+
+L'action `move_relative_confirmed` exprime au contraire `dx` et `dy` en pixels
+écran. Elle relève d'abord une mesure PositionAgent fraîche, en déduit une cible
+absolue sur la même topologie, puis réutilise la boucle fermée `move_to`. Chaque
+correction est bornée en amplitude, durée, nombre d'itérations et mouvement HID
+cumulé. La boucle s'arrête aussi sur stagnation, oscillation, absence de progrès,
+changement de session/topologie ou arrêt d'urgence. `CONFIRMED` n'est publié
+qu'après une nouvelle observation indépendante dans la tolérance demandée.
+
+Une mesure initiale absente ou périmée ne produit aucun rapport. Après une
+émission, toute perte de retour ou erreur de transport est classée comme issue
+incertaine et interdit le rejeu automatique. Les métriques exposent la cible,
+l'erreur finale, les corrections et le mouvement commandé, sans transformer une
+tentative de compensation en preuve matérielle.

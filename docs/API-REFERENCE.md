@@ -8,7 +8,7 @@ Toutes les commandes utilisent `POST /v1/command`, sur l'interface loopback, ave
 
 Les horodatages `issued_at_ms` présents dans les exemples sont purement illustratifs. Avant d'utiliser une requête, remplacer cette valeur par l'heure Unix actuelle en millisecondes ; une valeur d'exemple ancienne sera refusée par le contrôle de TTL.
 
-Le registre contient **28 commandes**, **12 types d'actions** et **6 événements WebSocket**.
+Le registre contient **28 commandes**, **13 types d'actions** et **6 événements WebSocket**.
 
 ## Lecture des contraintes
 
@@ -1054,7 +1054,7 @@ Une action est une ressource soumise par `action_submit`; ce n'est pas une comma
 
 ### `move_relative`
 
-Déplacement relatif.
+Déplacement relatif brut en unités HID.
 
 Paramètres obligatoires : `kind`, `dx`, `dy`.
 
@@ -1070,9 +1070,41 @@ Paramètres obligatoires : `kind`, `dx`, `dy`.
 
 Exemple : `{"kind": "move_relative", "dx": 5, "dy": -3}`
 
-Contraintes dynamiques : aucune spécifique.
+Contraintes dynamiques : La transformation Windows du pointeur peut modifier l'amplitude écran observée.
 
-Effets potentiels : Émet un rapport HID relatif.
+Effets potentiels : Émet un rapport HID relatif; les unités HID ne sont pas des pixels écran.
+
+### `move_relative_confirmed`
+
+Déplacement relatif en pixels avec confirmation distante.
+
+Paramètres obligatoires : `kind`, `dx`, `dy`.
+
+| Paramètre | Type | Obligatoire | Défaut | Valeurs/contraintes |
+|---|---|---:|---|---|
+| `kind` | `string` | oui | `—` | valeurs=["move_relative_confirmed"] |
+| `action_id` | `string` | non | `—` | {"max_length": 128, "min_length": 1} |
+| `error_policy` | `string` | non | `"stop"` | valeurs=["stop", "retry", "continue"] |
+| `max_attempts` | `integer` | non | `1` | {"maximum": 3, "minimum": 1}; défaut conditionnel={"value": 2, "when": {"error_policy": "retry"}} |
+| `capture` | `object` | non | `—` | — |
+| `dx` | `integer` | oui | `—` | {"maximum": 32767, "minimum": -32768} |
+| `dy` | `integer` | oui | `—` | {"maximum": 32767, "minimum": -32768} |
+| `tolerance_px` | `integer` | non | `0` | {"minimum": 0} |
+| `timeout_seconds` | `number` | non | `5.0` | {"minimum_exclusive": 0} |
+| `max_step` | `integer` | non | `48` | {"maximum": 32767, "minimum": 1} |
+| `max_total_movement` | `number` | non | `—` | {"maximum": 262144, "minimum_exclusive": 0} |
+| `max_iterations` | `integer` | non | `64` | {"maximum": 256, "minimum": 1} |
+| `feedback_timeout_seconds` | `number` | non | `0.25` | {"maximum": 5, "minimum": 0.01} |
+| `max_age_ms` | `integer` | non | `150` | {"maximum": 5000, "minimum": 1} |
+| `stagnation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |
+| `oscillation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |
+| `no_progress_limit` | `integer` | non | `8` | {"maximum": 64, "minimum": 1} |
+
+Exemple : `{"kind": "move_relative_confirmed", "dx": 10, "dy": 0, "tolerance_px": 0}`
+
+Contraintes dynamiques : La cible est calculée depuis une mesure PositionAgent fraîche et indépendante. La confirmation n'est produite qu'après observation de la cible dans la tolérance.
+
+Effets potentiels : Peut émettre plusieurs rapports HID relatifs strictement bornés.
 
 ### `move_to`
 
@@ -1091,10 +1123,18 @@ Paramètres obligatoires : `kind`, `x`, `y`.
 | `y` | `integer` | oui | `—` | — |
 | `tolerance_px` | `integer` | non | `2` | {"minimum": 0} |
 | `timeout_seconds` | `number` | non | `5.0` | {"minimum_exclusive": 0} |
+| `max_step` | `integer` | non | `48` | {"maximum": 32767, "minimum": 1} |
+| `max_total_movement` | `number` | non | `—` | {"maximum": 262144, "minimum_exclusive": 0} |
+| `max_iterations` | `integer` | non | `64` | {"maximum": 256, "minimum": 1} |
+| `feedback_timeout_seconds` | `number` | non | `0.25` | {"maximum": 5, "minimum": 0.01} |
+| `max_age_ms` | `integer` | non | `150` | {"maximum": 5000, "minimum": 1} |
+| `stagnation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |
+| `oscillation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |
+| `no_progress_limit` | `integer` | non | `8` | {"maximum": 64, "minimum": 1} |
 
 Exemple : `{"kind": "move_to", "x": 100, "y": 200}`
 
-Contraintes dynamiques : La position distante doit être fraîche et la cible sur la topologie physique.
+Contraintes dynamiques : La position distante doit être fraîche et la cible sur la topologie physique. Toute émission suivie d'un résultat incertain interdit le rejeu automatique.
 
 Effets potentiels : Peut émettre plusieurs rapports HID relatifs.
 

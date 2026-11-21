@@ -413,6 +413,34 @@ ABSOLUTE = {
     "timeout_seconds": _parameter("number", "Délai de positionnement.", default=5.0,
                                   constraints={"minimum_exclusive": 0}),
 }
+POSITIONING_GUARDS = {
+    "max_step": _parameter("integer", "Amplitude HID maximale par correction.", default=48,
+                           constraints={"minimum": 1, "maximum": 32767}),
+    "max_total_movement": _parameter(
+        "number", "Somme maximale des amplitudes HID commandées.",
+        constraints={"minimum_exclusive": 0, "maximum": 262144},
+    ),
+    "max_iterations": _parameter("integer", "Nombre maximal de corrections.", default=64,
+                                 constraints={"minimum": 1, "maximum": 256}),
+    "feedback_timeout_seconds": _parameter(
+        "number", "Délai maximal d'une observation indépendante.", default=0.25,
+        constraints={"minimum": 0.01, "maximum": 5},
+    ),
+    "max_age_ms": _parameter("integer", "Âge maximal d'une mesure de position.", default=150,
+                             constraints={"minimum": 1, "maximum": 5000}),
+    "stagnation_limit": _parameter(
+        "integer", "Nombre maximal d'observations sans déplacement.", default=3,
+        constraints={"minimum": 1, "maximum": 32},
+    ),
+    "oscillation_limit": _parameter(
+        "integer", "Nombre maximal de retours cycliques sans progrès.", default=3,
+        constraints={"minimum": 1, "maximum": 32},
+    ),
+    "no_progress_limit": _parameter(
+        "integer", "Nombre maximal de corrections sans amélioration.", default=8,
+        constraints={"minimum": 1, "maximum": 64},
+    ),
+}
 BUTTON_MASK_PARAMETERS = {
     "button": copy.deepcopy(BUTTON),
     "mask": copy.deepcopy(MASK),
@@ -427,16 +455,52 @@ def _add_action(contract: dict[str, Any]) -> None:
     _insert_unique(ACTION_CONTRACTS, contract, "action")
 
 
-_add_action(_action("move_relative", "Déplacement relatif.", {
-    "dx": _parameter("integer", "Delta X.", required=True, constraints=RELATIVE_COORDINATE),
-    "dy": _parameter("integer", "Delta Y.", required=True, constraints=RELATIVE_COORDINATE),
+_add_action(_action("move_relative", "Déplacement relatif brut en unités HID.", {
+    "dx": _parameter("integer", "Delta X en unités HID.", required=True, constraints=RELATIVE_COORDINATE),
+    "dy": _parameter("integer", "Delta Y en unités HID.", required=True, constraints=RELATIVE_COORDINATE),
 }, example={"kind": "move_relative", "dx": 5, "dy": -3},
-    effects=["Émet un rapport HID relatif."], errors=["MOVE_UNCERTAIN", "ACTION_FAILED"]))
-_add_action(_action("move_to", "Positionnement absolu avec confirmation distante.", ABSOLUTE,
+    effects=["Émet un rapport HID relatif; les unités HID ne sont pas des pixels écran."],
+    dynamic=["La transformation Windows du pointeur peut modifier l'amplitude écran observée."],
+    errors=["MOVE_UNCERTAIN", "ACTION_FAILED"]))
+_add_action(_action("move_relative_confirmed", "Déplacement relatif en pixels avec confirmation distante.", {
+    "dx": _parameter("integer", "Delta X cible en pixels écran.", required=True,
+                     constraints=RELATIVE_COORDINATE),
+    "dy": _parameter("integer", "Delta Y cible en pixels écran.", required=True,
+                     constraints=RELATIVE_COORDINATE),
+    "tolerance_px": _parameter("integer", "Tolérance de confirmation.", default=0,
+                               constraints={"minimum": 0}),
+    "timeout_seconds": _parameter("number", "Délai de positionnement.", default=5.0,
+                                  constraints={"minimum_exclusive": 0}),
+    **POSITIONING_GUARDS,
+}, example={"kind": "move_relative_confirmed", "dx": 10, "dy": 0, "tolerance_px": 0},
+    effects=["Peut émettre plusieurs rapports HID relatifs strictement bornés."],
+    dynamic=[
+        "La cible est calculée depuis une mesure PositionAgent fraîche et indépendante.",
+        "La confirmation n'est produite qu'après observation de la cible dans la tolérance.",
+    ],
+    errors=[
+        "POSITION_FEEDBACK_UNAVAILABLE", "POSITION_FEEDBACK_FAILURE",
+        "POSITION_STAGNATION", "POSITION_OSCILLATION", "POSITION_NO_PROGRESS",
+        "POSITION_ITERATION_LIMIT", "POSITION_MOVEMENT_LIMIT",
+        "POSITION_DEADLINE", "POSITION_SESSION_CHANGED", "POSITION_TOPOLOGY_CHANGED",
+        "POSITION_EMISSION_UNCERTAIN", "POSITION_INTERRUPTED",
+    ]))
+_add_action(_action("move_to", "Positionnement absolu avec confirmation distante.", {
+    **ABSOLUTE, **POSITIONING_GUARDS,
+},
     example={"kind": "move_to", "x": 100, "y": 200},
     effects=["Peut émettre plusieurs rapports HID relatifs."],
-    dynamic=["La position distante doit être fraîche et la cible sur la topologie physique."],
-    errors=["POSITION_UNAVAILABLE", "POSITION_STALE", "ACTION_FAILED"]))
+    dynamic=[
+        "La position distante doit être fraîche et la cible sur la topologie physique.",
+        "Toute émission suivie d'un résultat incertain interdit le rejeu automatique.",
+    ],
+    errors=[
+        "POSITION_FEEDBACK_UNAVAILABLE", "POSITION_FEEDBACK_FAILURE",
+        "POSITION_STAGNATION", "POSITION_OSCILLATION", "POSITION_NO_PROGRESS",
+        "POSITION_ITERATION_LIMIT", "POSITION_MOVEMENT_LIMIT",
+        "POSITION_DEADLINE", "POSITION_SESSION_CHANGED", "POSITION_TOPOLOGY_CHANGED",
+        "POSITION_EMISSION_UNCERTAIN", "POSITION_INTERRUPTED",
+    ]))
 _add_action(_action("click", "Un ou plusieurs clics d'un bouton.", {
     "button": copy.deepcopy(BUTTON),
     "count": _parameter("integer", "Nombre de clics.", default=1,

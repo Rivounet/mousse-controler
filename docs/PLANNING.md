@@ -12,6 +12,8 @@ constats et les preuves est [ROBUSTESSE.md](ROBUSTESSE.md).
 | PR #11 — audit indépendant | Ouverte, Draft, non fusionnée | décision séparée ; aucune fusion implicite |
 | Synchronisation mini-PC / processus | Non planifiée dans R6 | mandat opérationnel distinct et vérification des SHA |
 | Qualification matérielle post-R1–R5 | Non planifiée | autorisation explicite, protocole sûr et preuves séparées |
+| MC-HID-PRECISION-001 — correction logicielle | En qualification dans la PR #26 | `SOFTWARE_FIX_QUALIFIED`, sans émission HID réelle |
+| MC-HID-PRECISION-001 — requalification matérielle | Bloquée par autorisation distincte après qualification logicielle | deux actions bornées, aucun clic/défilement/capture |
 
 ## Travaux différés sans priorité automatique
 

@@ -126,3 +126,25 @@ Restauration : arrêter le contrôleur, désenregistrer les tâches temporaires
 cible, retirer la règle pare-feu privée dédiée, restaurer chaque radio à son état
 initial, supprimer le paquet `Rivounet.MousseControler.Hogp` et retirer uniquement
 les certificats `CN=MousseControler` dont l'empreinte correspond à l'installation.
+
+## Déploiement de MC-HID-PRECISION-001
+
+Ce correctif modifie uniquement le contrôleur Python, le catalogue et leur
+documentation. Le MSIX HOGP, son identité/version/signature et
+`PositionAgent.exe` ne changent pas. Une publication Git ou une qualification
+`full-local` n'active donc rien dans le processus en service.
+
+Après qualification du SHA exact et autorisation opérationnelle distincte :
+
+1. conserver le worktree actif et les persistences (`action_journal`, `.ids`,
+   index de captures et configuration DPAPI) comme point de retour ;
+2. préparer un worktree immuable au SHA qualifié et vérifier arbre propre,
+   configuration référencée par la tâche et unicité du processus ;
+3. arrêter le contrôleur par la procédure qualifiée, repointer uniquement sa
+   tâche vers ce worktree, puis redémarrer et contrôler position fraîche,
+   `subscribed=True`, `buttons=0` et aucune action active ;
+4. ne lancer le scénario matériel minimal qu'après un nouvel accord explicite.
+
+Rollback : arrêter le candidat, repointer la tâche vers le worktree précédent,
+redémarrer et répéter les mêmes contrôles de santé. Aucun rollback de MSIX,
+certificat, appairage ou PositionAgent n'est requis pour ce changement.

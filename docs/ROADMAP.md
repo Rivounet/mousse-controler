@@ -21,6 +21,9 @@ et ne sont pas étendues aux correctifs R1–R5.
    net et indépendant est démontré.
 4. **Fonctionnalités :** toute extension doit préserver les garanties R1–R5 et
    séparer code, qualification locale, fusion, synchronisation et déploiement.
+5. **Précision HID :** publier et qualifier logiciellement la boucle fermée de
+   la PR #26, puis seulement sur autorisation distincte la déployer et exécuter
+   un aller/retour minimal sans clic, défilement ni capture supplémentaire.
 
 ## Gouvernance
 

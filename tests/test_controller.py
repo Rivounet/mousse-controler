@@ -4,7 +4,13 @@ import threading
 import time
 import unittest
 
-from mousse_controler.controller import MouseController, PositionError, PositionSnapshot, PositionStore
+from mousse_controler.controller import (
+    MouseController,
+    PositionError,
+    PositioningError,
+    PositionSnapshot,
+    PositionStore,
+)
 from mousse_controler.transport import SimulatedHidTransport
 
 
@@ -17,6 +23,25 @@ class ControllerTests(unittest.TestCase):
 
     def sample(self, x=10, y=20, sequence=1, session=7, topology="a"):
         return PositionSnapshot(x, y, sequence, session, topology, int(time.time() * 1000), time.monotonic())
+
+    def attach_feedback(self, transform):
+        current = self.store.latest(max_age_ms=10_000)
+        state = {"x": current.x, "y": current.y, "sequence": current.sequence}
+        original = self.transport.move
+
+        def move(dx, dy):
+            original(dx, dy)
+            updated = transform(state["x"], state["y"], dx, dy)
+            if updated is None:
+                return
+            state["x"], state["y"] = updated
+            state["sequence"] += 1
+            self.store.update(self.sample(
+                x=state["x"], y=state["y"], sequence=state["sequence"],
+            ))
+
+        self.transport.move = move
+        return state
 
     def run_queued_command_during_stop(self, command):
         command_started = threading.Event()
@@ -284,3 +309,163 @@ class ControllerTests(unittest.TestCase):
         ))
         with self.assertRaisesRegex(PositionError, "stale"):
             self.controller.move_to(100, 200)
+
+    def test_confirmed_relative_return_is_exact_after_one_pixel_residual(self):
+        self.store.update(self.sample(x=100, y=50))
+
+        def accelerated(_x, _y, dx, dy):
+            def effect(value):
+                if abs(value) <= 1:
+                    return value
+                return value - (1 if value > 0 else -1)
+            return _x + effect(dx), _y + effect(dy)
+
+        self.attach_feedback(accelerated)
+        first_initial, outbound = self.controller.move_relative_confirmed(
+            -10, 0, tolerance_px=0,
+        )
+        return_initial, returned = self.controller.move_relative_confirmed(
+            10, 0, tolerance_px=0,
+        )
+
+        self.assertEqual((first_initial.x, outbound.x), (100, 90))
+        self.assertEqual((return_initial.x, returned.x, returned.y), (90, 100, 50))
+        self.assertEqual(self.controller.positioning_metrics()["final_error_px"], 0.0)
+        self.assertGreaterEqual(
+            len([event for event in self.transport.events if event[0] == "move"]), 4,
+        )
+
+    def test_confirmed_relative_rejects_unavailable_measurement_without_hid(self):
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_relative_confirmed(10, 0)
+
+        self.assertEqual(raised.exception.code, "POSITION_FEEDBACK_UNAVAILABLE")
+        self.assertFalse(raised.exception.emitted)
+        self.assertFalse(any(event[0] == "move" for event in self.transport.events))
+
+    def test_confirmed_relative_rejects_stale_measurement_without_hid(self):
+        sample = self.sample(x=0, y=0)
+        self.store.update(PositionSnapshot(
+            sample.x, sample.y, sample.sequence, sample.session_id,
+            sample.topology_generation, sample.observed_at_unix_ms,
+            time.monotonic() - 1,
+        ))
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_relative_confirmed(10, 0, max_age_ms=100)
+
+        self.assertEqual(raised.exception.code, "POSITION_FEEDBACK_UNAVAILABLE")
+        self.assertFalse(raised.exception.emitted)
+        self.assertFalse(any(event[0] == "move" for event in self.transport.events))
+
+    def test_position_loop_detects_ineffective_corrections(self):
+        self.store.update(self.sample(x=0, y=0))
+        self.attach_feedback(lambda x, y, _dx, _dy: (x, y + 1))
+
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(
+                10, 0, tolerance_px=0, no_progress_limit=2,
+                stagnation_limit=10, oscillation_limit=10,
+            )
+
+        self.assertEqual(raised.exception.code, "POSITION_NO_PROGRESS")
+        self.assertTrue(raised.exception.emitted)
+
+    def test_position_loop_detects_stagnation(self):
+        self.store.update(self.sample(x=0, y=0))
+        self.attach_feedback(lambda x, y, _dx, _dy: (x, y))
+
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(
+                10, 0, tolerance_px=0, stagnation_limit=2,
+                no_progress_limit=10, oscillation_limit=10,
+            )
+
+        self.assertEqual(raised.exception.code, "POSITION_STAGNATION")
+        self.assertTrue(raised.exception.emitted)
+
+    def test_position_loop_detects_oscillation(self):
+        self.store.update(self.sample(x=0, y=0))
+        state = {"alternate": False}
+
+        def oscillate(_x, y, _dx, _dy):
+            state["alternate"] = not state["alternate"]
+            return (-1 if state["alternate"] else 0), y
+
+        self.attach_feedback(oscillate)
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(
+                10, 0, tolerance_px=0, oscillation_limit=2,
+                stagnation_limit=10, no_progress_limit=10,
+            )
+
+        self.assertEqual(raised.exception.code, "POSITION_OSCILLATION")
+        self.assertTrue(raised.exception.emitted)
+
+    def test_position_loop_enforces_iteration_limit(self):
+        self.store.update(self.sample(x=0, y=0))
+        self.attach_feedback(lambda x, y, _dx, _dy: (x + 1, y))
+
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(
+                10, 0, tolerance_px=0, max_iterations=2,
+                stagnation_limit=10, oscillation_limit=10, no_progress_limit=10,
+            )
+
+        self.assertEqual(raised.exception.code, "POSITION_ITERATION_LIMIT")
+        self.assertEqual(raised.exception.metrics["corrections"], 2)
+
+    def test_position_loop_enforces_cumulative_movement_limit(self):
+        self.store.update(self.sample(x=0, y=0))
+
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(10, 0, tolerance_px=0, max_total_movement=1)
+
+        self.assertEqual(raised.exception.code, "POSITION_MOVEMENT_LIMIT")
+        self.assertFalse(raised.exception.emitted)
+        self.assertFalse(any(event[0] == "move" for event in self.transport.events))
+
+    def test_emergency_stop_interrupts_feedback_wait(self):
+        self.store.update(self.sample(x=0, y=0))
+        errors = []
+
+        def position():
+            try:
+                self.controller.move_to(10, 0, feedback_timeout=5)
+            except Exception as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=position)
+        started = time.monotonic()
+        thread.start()
+        deadline = time.monotonic() + 1
+        while not any(event[0] == "move" for event in self.transport.events):
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.001)
+        self.controller.emergency_stop()
+        thread.join(1)
+
+        self.assertFalse(thread.is_alive())
+        self.assertLess(time.monotonic() - started, 1)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], PositioningError)
+        self.assertEqual(errors[0].code, "POSITION_INTERRUPTED")
+        self.assertTrue(errors[0].emitted)
+        self.assertEqual(self.transport.events[-1], ("stop",))
+
+    def test_uncertain_hid_emission_is_explicit(self):
+        self.store.update(self.sample(x=0, y=0))
+        original = self.transport.move
+
+        def uncertain(dx, dy):
+            original(dx, dy)
+            raise RuntimeError("delivery acknowledgement lost")
+
+        self.transport.move = uncertain
+        with self.assertRaises(PositioningError) as raised:
+            self.controller.move_to(10, 0)
+
+        self.assertEqual(raised.exception.code, "POSITION_EMISSION_UNCERTAIN")
+        self.assertTrue(raised.exception.emitted)
+        self.assertEqual(
+            len([event for event in self.transport.events if event[0] == "move"]), 1,
+        )

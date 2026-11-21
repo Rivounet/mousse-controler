@@ -43,6 +43,12 @@ class FailingClickTransport(SimulatedHidTransport):
             raise TransportError("delivery became uncertain")
 
 
+class UncertainFeedbackTransport(FeedbackTransport):
+    def move(self, dx, dy):
+        super().move(dx, dy)
+        raise TransportError("delivery became uncertain after effect")
+
+
 class CaptureStub:
     def __init__(self, fail_after=False):
         self.calls = []
@@ -267,6 +273,52 @@ class ActionExecutorTests(unittest.TestCase):
         })
         self.assertEqual(result["state"], "CONFIRMED")
         self.assertEqual(result["result"]["attempts"], 2)
+
+    def test_confirmed_relative_move_reaches_pixel_target(self):
+        result = self.submit_wait({
+            "kind": "move_relative_confirmed",
+            "dx": 10,
+            "dy": -4,
+            "tolerance_px": 0,
+            "max_iterations": 16,
+            "max_total_movement": 128,
+        })
+
+        self.assertEqual(result["state"], "CONFIRMED")
+        self.assertEqual(result["result"]["initial_position"]["x"], 0)
+        self.assertEqual(result["result"]["target_position"], {"x": 10, "y": -4})
+        self.assertEqual(result["result"]["position"]["x"], 10)
+        self.assertEqual(result["result"]["position"]["y"], -4)
+        self.assertEqual(result["result"]["positioning"]["final_error_px"], 0.0)
+
+    def test_uncertain_confirmed_move_is_unknown_and_never_retried(self):
+        self.executor.close()
+        store = PositionStore()
+        transport = UncertainFeedbackTransport(store)
+        controller = MouseController(transport, store)
+        controller.start()
+        registry = ActionRegistry()
+        executor = ActionExecutor(controller, registry)
+        try:
+            accepted = executor.submit({
+                "kind": "move_relative_confirmed",
+                "dx": 10,
+                "dy": 0,
+                "error_policy": "retry",
+                "max_attempts": 3,
+            })
+            deadline = time.monotonic() + 1
+            while registry.get(accepted["action_id"])["state"] not in TERMINAL:
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.005)
+            result = registry.get(accepted["action_id"])
+            self.assertEqual(result["state"], "UNKNOWN")
+            self.assertEqual(result["error_code"], "POSITION_EMISSION_UNCERTAIN")
+            self.assertEqual(
+                len([event for event in transport.events if event[0] == "move"]), 1,
+            )
+        finally:
+            executor.close()
 
     def test_continue_policy_advances_sequence_after_failed_child(self):
         result = self.submit_wait({

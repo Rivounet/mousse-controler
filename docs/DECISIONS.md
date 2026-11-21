@@ -161,3 +161,23 @@ preuves matérielles historiques, synchronisation des machines et déploiement.
 R1–R5 ne sont pas matériellement requalifiés. L'état des processus installés
 reste à vérifier. Les profils Windows locaux demeurent la seule qualification
 logicielle officielle ; GitHub Actions et toute CI externe restent exclus.
+
+## D-067 — Déplacement relatif confirmé en pixels (21 novembre 2026)
+
+**Décision :** conserver `move_relative` comme primitive brute en unités HID et
+ajouter `move_relative_confirmed` pour le contrat fonctionnel en pixels écran.
+Cette dernière action calcule une cible depuis une mesure PositionAgent fraîche
+et utilise une boucle fermée strictement bornée. La configuration Windows du
+pointeur n'est ni modifiée ni contournée.
+
+**Motivation :** l'essai matériel de la PR #26 a observé 9 pixels pour un
+rapport relatif de 10 unités avec l'accélération Windows active, puis un retour
+exact par positionnement confirmé. L'hypothèse « une unité HID égale un pixel »
+est donc invalide ; l'accélération est un contributeur observé, sans être
+présentée comme cause mécanique unique.
+
+**Conséquence :** fraîcheur, durée, amplitude, mouvement cumulé, itérations,
+stagnation, oscillation et absence de progrès sont bornés. Une émission dont le
+résultat devient incertain n'est jamais rejouée. La correction logicielle doit
+être qualifiée avant un unique scénario matériel séparément autorisé ; elle ne
+change ni HOGP, ni PositionAgent, ni l'installation active.
