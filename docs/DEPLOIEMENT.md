@@ -74,6 +74,9 @@ python -m unittest discover -v
 ```
 
 Le paquet HOGP doit être signé par le certificat exact préalablement vérifié.
+Toute mise à jour doit aussi porter une version de manifeste strictement
+supérieure à celle déjà installée ; réutiliser la même version avec un contenu
+différent n'est pas une procédure de mise à jour supportée.
 Le moteur WinRT est un script livré dans le catalogue MSIX et hébergé par la
 copie intacte et Authenticode-valide du `powershell.exe` Windows. Cette
 architecture conserve l'identité MSIX nécessaire au serveur GATT tout en
