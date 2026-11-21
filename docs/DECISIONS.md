@@ -162,7 +162,15 @@ R1–R5 ne sont pas matériellement requalifiés. L'état des processus install�
 reste à vérifier. Les profils Windows locaux demeurent la seule qualification
 logicielle officielle ; GitHub Actions et toute CI externe restent exclus.
 
-## D-067 — Déplacement relatif confirmé en pixels (21 novembre 2026)
+## D-067 — Autorisation de mise en service contrôlée (21 novembre 2026)
+
+**Décision utilisateur :** autoriser sur `mini-pc-backend` et `MonOrdinateur` la mise en confiance du certificat **public** MSIX v2 vérifié dans le magasin approprié, l'installation du MSIX signé, la mise à jour transactionnelle de PositionAgent, la synchronisation du contrôleur, la migration des seules configurations et tâches Mousse-controler, l'activation progressive et les contrôles de santé/communication. Sauvegarde et rollback obligatoires.
+
+**Limites :** aucun mouvement/clic HID réel, aucune prise de souris ni capture sans accord matériel spécifique ultérieur. Aucun affaiblissement de Defender/Smart App Control, aucune permission générale SSH/ACL/administrateur, aucun changement hors composants Mousse-controler. Cette décision ne vaut pas fusion automatique d'une nouvelle PR.
+
+**État :** autorisation accordée, **exécution et qualification opérationnelle non encore attestées**. Le dernier `main` qualifié pour la préparation est `e5553f2ff3342b16546128e4a351b57f2e2801dc` (PR #24 fusionnée) ; `OPERATIONAL_PASS` exige des preuves sur les binaires et processus réellement actifs. La qualification matérielle demeure une porte distincte.
+
+## D-068 — Déplacement relatif confirmé en pixels (21 novembre 2026)
 
 **Décision :** conserver `move_relative` comme primitive brute en unités HID et
 ajouter `move_relative_confirmed` pour le contrat fonctionnel en pixels écran.

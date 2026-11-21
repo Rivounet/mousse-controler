@@ -1,35 +1,20 @@
-# Planning opérationnel
+# Planning opérationnel — 21 novembre 2026
 
-## État courant
-
-Le programme correctif R0–R5 est fusionné dans `main` au SHA `0817823…`.
-R6 consolide uniquement la documentation. La source unique pour les statuts des
-constats et les preuves est [ROBUSTESSE.md](ROBUSTESSE.md).
-
-| Travail | État | Sortie attendue |
+| Chantier | État | Critère de clôture |
 |---|---|---|
-| R6 — cohérence documentaire | En revue | PR Draft documentaire, liens et statuts vérifiés |
-| PR #11 — audit indépendant | Ouverte, Draft, non fusionnée | décision séparée ; aucune fusion implicite |
-| Synchronisation mini-PC / processus | Non planifiée dans R6 | mandat opérationnel distinct et vérification des SHA |
-| Qualification matérielle post-R1–R5 | Non planifiée | autorisation explicite, protocole sûr et preuves séparées |
+| Robustesse R0–R5 et R6 | Fusionnés | Qualifications logicielles et rapports historiques conservés |
+| PR #22–#24 : préparation et environnement Codex | Fusionnées | `ENVIRONMENT_READY`, `full-local` 286/286 PASS selon Codex |
+| Mise en service mini-pc-backend et MonOrdinateur | **AUTORISÉE — À EXÉCUTER** | MSIX signé et approuvé installé, PositionAgent mis à jour, contrôleur actif, SHA et santé vérifiés, rollback prêt |
+| Communication/API/WebSocket sans action HID | À qualifier en exploitation | Authentification, sessions, ports, états et échange LAN vérifiés |
+| Qualification matérielle HID/capture | **EN ATTENTE DE CONSENTEMENT SPÉCIFIQUE** | Accord à l'instant des essais, arrêt d'urgence, preuves réelles |
+| PR #11 audit historique | Draft non fusionnée | Décision distincte ; aucune fusion implicite |
 | MC-HID-PRECISION-001 — correction logicielle | En qualification dans la PR #26 | `SOFTWARE_FIX_QUALIFIED`, sans émission HID réelle |
 | MC-HID-PRECISION-001 — requalification matérielle | Bloquée par autorisation distincte après qualification logicielle | deux actions bornées, aucun clic/défilement/capture |
 
-## Travaux différés sans priorité automatique
+## Exécution
 
-- C-09 : sources C++ HOGP historiques conservées.
-- C-11 : deux séquenceurs maintenus.
-- C-12 : responsabilités concentrées dans `actions.py` et `PositionAgent.cs`.
-- C-17 : persistances et répétitions techniques non mutualisées.
+Codex réalise les étapes déjà autorisées de bout en bout, réutilise les procédures `scripts/operations/` dans leurs contextes exacts et corrige les anomalies ordinaires sans arrêter le mandat à chaque étape. Rapporter les jalons significatifs avec temps écoulé. Une PR ou un build ne constituent pas une preuve de mise en service. ChatGPT maintient la documentation de référence et suit GitHub ; les nouvelles fusions restent soumises à accord explicite. Aucun GitHub Actions ni CI externe.
 
-Ces sujets ne sont ni résolus ni automatiquement ouverts. Une reprise exige un
-bénéfice mesurable, un mandat spécifique et des tests protégeant R1–R5.
+## Différés
 
-## Règles de livraison
-
-- Codex réalise, qualifie et publie les preuves.
-- ChatGPT vérifie la cohérence documentaire et effectue les revues indépendantes
-  convenues ; une revue statique n'est pas une réexécution des tests Codex.
-- L'utilisateur autorise fusion, déploiement, accès cible et essais matériels.
-- GitHub Actions et toute CI externe restent exclus.
-- Aucun changement de production ou de machine n'est implicite dans une fusion.
+C-09/C-11/C-12/C-17 ne sont pas automatiquement rouverts. Les essais matériels restent séparés de l'activation logicielle.

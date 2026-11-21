@@ -13,6 +13,14 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Codex sur mini-pc-backend est responsable de l'intégration sur les deux machines dans le périmètre autorisé ; l'accès distant authentifié à MonOrdinateur doit être vérifié/établi sans supposer un accès à sa session interactive.
 - **ChatGPT détient la responsabilité de la documentation de référence et peut effectuer des revues de code à la demande ou aux jalons convenus, sans revue systématique à chaque livraison**. Proposer les corrections documentaires dans le compte rendu ; ne pas déclarer un jalon validé sans vérification adaptée.
 
+## Mandat opérationnel autorisé — 21 novembre 2026
+
+- L'utilisateur a autorisé la **mise en service contrôlée** de Mousse-controler sur `mini-pc-backend` et `MonOrdinateur` : installation du certificat public MSIX v2 vérifié dans le magasin approprié, mise à jour du MSIX signé, mise à jour transactionnelle de PositionAgent, synchronisation du contrôleur, migration des seules configurations et tâches Mousse-controler, activation progressive, contrôles de santé et communication, sauvegarde et rollback.
+- Cette autorisation **n'inclut pas** les commandes HID réelles, mouvements de souris ni captures : demander un accord spécifique au moment des essais matériels, avec arrêt d'urgence. Ne pas désactiver Defender/Smart App Control, étendre les ACL, modifier la sécurité Windows générale, élargir les permissions SSH ni intervenir sur d'autres machines.
+- **Livraison attendue : état opérationnel vérifié**, pas seulement build, staging, PR ou préparation. Exécuter de bout en bout les étapes déjà autorisées, corriger et requalifier les incidents ordinaires sans arrêt à chaque phase. Arrêter la seule opération risquée si une précondition est ambiguë ; préserver les autres travaux.
+- Une fusion GitHub et un déploiement sont distincts : le présent accord opérationnel ne permet pas une nouvelle fusion de PR sans décision explicite. Toute preuve doit préciser les versions **réellement installées et actives**.
+- Avant de déclarer `OPERATIONAL_PASS`, vérifier installation, état des tâches/processus, API/WebSocket, authentification, communication et récupération, sans HID ni capture. Indiquer explicitement que la qualification matérielle demeure en attente. Si une étape autorisée ne peut aboutir, donner un verdict `PARTIAL` motivé, sans annoncer un succès global.
+
 ## Pour chaque mandat
 
 1. Lire `docs/REPRISE.md` (état et mandat courant), puis `README.md`, `docs/ROADMAP.md`, `docs/PLANNING.md`, `docs/ARCHITECTURE.md` et les documents concernés.

@@ -1,33 +1,29 @@
-# Roadmap — décisions futures
+# Roadmap — Mousse-controler
 
-## Programme achevé
+## État au 21 novembre 2026
 
-R0 à R5 sont fusionnés dans `main`. La PR Draft R6 prépare la clôture de la
-consolidation documentaire, qui reste soumise à revue et fusion explicite. Les
-références exactes figurent dans [ROBUSTESSE.md](ROBUSTESSE.md).
+- Robustesse R0–R5 intégrée ; R6 documentaire consolidé.
+- PR #22–#24 fusionnées : préparation opérationnelle, signature MSIX v2 et procédures Codex qualifiées. `main` de référence : `e5553f2ff3342b16546128e4a351b57f2e2801dc`.
+- Qualification locale Windows `full-local` : 286/286 PASS sur le SHA logiciel final de la PR #24, selon Codex. Sept diagnostics matériels exclus.
+- La mise en service sur les deux machines est **autorisée mais non encore attestée** ; ne pas la déclarer achevée sur la seule base du dépôt.
 
-Le résultat est un durcissement logiciel qualifié localement, pas une nouvelle
-qualification matérielle ni un déploiement. Les preuves matérielles historiques
-de MC-HID-EXEC-001 et MC-MOUSE-ACTIONS-001 restent valides dans leur périmètre
-et ne sont pas étendues aux correctifs R1–R5.
+## Priorité immédiate — mise en service opérationnelle
 
-## Portes futures
+1. Préflight et sauvegarde des états réels des deux machines.
+2. Confiance limitée du certificat public MSIX v2 vérifié et installation du MSIX 1.0.0.3 signé.
+3. Mise à jour transactionnelle de PositionAgent, synchronisation du contrôleur, configuration et tâches Mousse-controler.
+4. Activation progressive et qualification de santé/API/WebSocket/communication **sans HID ni capture** ; preuve des SHA réellement actifs.
+5. Verdict `OPERATIONAL_PASS` seulement si les contrôles autorisés sont réellement réussis ; sinon `PARTIAL` ou `ROLLBACK_REQUIRED`.
+6. Qualification matérielle distincte après consentement explicite, avec arrêt d'urgence, mouvements HID et captures uniquement dans ce cadre.
 
-1. **Exploitation :** avant toute activation, relever le SHA du clone, du
-   contrôleur, du MSIX HOGP et de PositionAgent ; préparer rollback et santé.
-2. **Matériel :** requalifier seulement sur mandat explicite, avec arrêt
-   d'urgence et consentement pour toute prise de souris ou capture.
-3. **Dette différée :** rouvrir C-09/C-11/C-12/C-17 uniquement si un bénéfice
-   net et indépendant est démontré.
-4. **Fonctionnalités :** toute extension doit préserver les garanties R1–R5 et
-   séparer code, qualification locale, fusion, synchronisation et déploiement.
-5. **Précision HID :** publier et qualifier logiciellement la boucle fermée de
-   la PR #26, puis seulement sur autorisation distincte la déployer et exécuter
-   un aller/retour minimal sans clic, défilement ni capture supplémentaire.
+## Précision HID — PR #26
 
-## Gouvernance
+Le scénario matériel initial conserve son verdict `MATERIAL_FAIL` : un rapport
+relatif de 10 unités HID a produit 9 pixels écran. La priorité est de publier et
+qualifier logiciellement la boucle fermée, puis seulement sur autorisation
+distincte de la déployer et d'exécuter un aller/retour minimal sans clic,
+défilement ni capture supplémentaire.
 
-Le dépôt GitHub est la source officielle. Les profils locaux Windows remplacent
-durablement toute attente de GitHub Actions ou de CI externe pour ce programme.
-Les rapports historiques restent immuables ; les changements d'état sont ajoutés
-au registre [DECISIONS.md](DECISIONS.md).
+## Après mise en service
+
+Les sujets C-09/C-11/C-12/C-17 restent différés ; aucune extension produit automatique. GitHub Actions et CI externe restent exclus ; tests locaux Windows et preuves versionnées. La PR #11 reste indépendante et non fusionnée.

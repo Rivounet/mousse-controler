@@ -15,5 +15,7 @@ alwaysApply: true
 - Do not request a general SSH, PowerShell, network, or administrator permission.
 - Use the qualified scripts in `scripts/operations/`; preserve their structured JSON and exit-code contracts.
 - Never infer an interactive display from SSH session 0. Never modify task ACLs or create an elevated helper task.
-- HID movement, capture, trust-store changes, MSIX installation, activation, and deployment require an explicit mandate.
+- User authorization dated 2026-11-21 covers verified MSIX v2 public-certificate trust installation, signed MSIX update, transactional PositionAgent update, controller/config/task synchronization, controlled activation and non-HID health/communication checks on the two named machines. Preserve backup, rollback and least privilege; use qualified exact outside-sandbox channels.
+- Real HID movement, mouse control and capture still require separate explicit consent at test time. Do not disable Defender or Smart App Control, broaden ACLs/SSH approvals, or change unrelated Windows security.
+- Do not stop at PREPARED_NOT_AUTHORIZED when authorized operational steps can proceed. Deliver verified installed/active versions and health; distinguish OPERATIONAL_PASS (non-material scope) from pending material qualification. No PR merge without explicit authorization.
 - If one capability is unavailable, report the exact boundary and continue independent work.
