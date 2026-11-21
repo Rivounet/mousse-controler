@@ -43,3 +43,21 @@ qualification ont été créés.
 
 Les preuves expurgées sont dans `evidence/procedure-results.json`. Les contrats
 exécutables sont documentés dans `scripts/operations/README.md`.
+
+## Finalisation de la PR #24
+
+Les deux réserves de revue sont closes par des preuves comportementales :
+
+- un refus du fournisseur de processus produit `BLOCKED`, code `2`, avec nombre
+  et liste de processus à `null`; une inspection réussie sans processus produit
+  distinctement `PASS`, `0` et une liste vide;
+- `prepare-deployment` ouvre un instantané verrouillé du MSIX, relit son manifeste
+  et exige la concordance exacte du SHA-256, de la taille, du nom d'identité, du
+  publisher et de la version avec la preuve de signature;
+- les divergences de hash, d'identité et de version retournent toutes `PARTIAL`,
+  code `2`, avec `signing_qualified=false`;
+- l'inspecteur local corrigé a également été rejoué dans son contexte Windows
+  réel en lecture seule.
+
+La suite `full-local` est rejouée sur le HEAD final. Son SHA, son nombre de tests,
+sa durée et le verdict sont publiés dans le commentaire final de la PR.

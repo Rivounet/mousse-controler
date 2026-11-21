@@ -17,3 +17,8 @@ Les inspecteurs sont idempotents et en lecture seule. Les effets de build sont
 bornés à `out/`. Les tests de non-régression vérifient la présence des six
 contrats, les canaux exacts et l'absence d'opération matérielle dans les
 inspecteurs ou la préparation de signature.
+
+Les contrats critiques possèdent en plus des tests d'exécution : fournisseur de
+processus disponible, vide ou refusé, et MSIX temporaires dont la preuve est
+concordante ou altérée sur le hash, l'identité ou la version. Ces tests appellent
+les fonctions et scripts réels; ils ne reposent pas sur la recherche de chaînes.

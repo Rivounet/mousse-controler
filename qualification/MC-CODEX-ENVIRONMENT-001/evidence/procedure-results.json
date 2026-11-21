@@ -16,6 +16,7 @@
   },
   "local_runtime": {
     "status": "PASS_REUSED",
+    "process_inspection_status": "PASS",
     "task_enabled": true,
     "task_state": "Ready",
     "logon_type": "InteractiveToken",
@@ -24,6 +25,24 @@
     "matching_process_count": 0,
     "command_port_open": false,
     "effects": "read-only"
+  },
+  "finalization_error_scenarios": {
+    "targeted_tests_passed": 12,
+    "process_provider_denied": {
+      "status": "BLOCKED",
+      "exit_code": 2,
+      "matching_process_count": null,
+      "processes": null
+    },
+    "process_provider_verified_empty": {
+      "status": "PASS",
+      "matching_process_count": 0,
+      "processes": []
+    },
+    "deployment_exact_evidence": "ACCEPTED",
+    "deployment_hash_mismatch": "PARTIAL_EXIT_2",
+    "deployment_identity_mismatch": "PARTIAL_EXIT_2",
+    "deployment_version_mismatch": "PARTIAL_EXIT_2"
   },
   "remote_target": {
     "status": "PASS_REUSED",
