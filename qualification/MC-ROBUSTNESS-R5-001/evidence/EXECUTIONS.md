@@ -47,4 +47,3 @@ Le commit suivant ne modifie que ces résultats documentaires ; le SHA ci-dessus
 est le commit exact contenant le code, les tests et la documentation qualifiés.
 Aucun diagnostic matériel, accès distant, HID, capture réelle, installation ou
 déploiement n'a été exécuté.
-

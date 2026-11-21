@@ -34,4 +34,3 @@ documentés sans être présentés comme terminés.
 Le chemin actif est démontré, mais l'absence d'usage manuel/diagnostic des deux
 projets C++ ne l'est pas. Ils restent donc dans le dépôt. L'implémentation active
 et le descripteur HID ne sont pas modifiés.
-

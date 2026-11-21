@@ -38,4 +38,3 @@ troisième moteur ni fusion n'est introduit.
   aucune fusion proposée.
 - utilitaires PowerShell : répétitions techniques dispersées, mais leurs
   privilèges, cibles et transactions diffèrent ; aucune primitive extraite.
-

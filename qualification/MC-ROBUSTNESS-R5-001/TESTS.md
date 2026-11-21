@@ -52,4 +52,3 @@ Environnement : Windows 11 `10.0.26300`, Python 3.12.10, PowerShell 7.6.9,
 Windows PowerShell 5.1.26100.10068 et Git 2.54.0.windows.1. Sept diagnostics
 matériels ainsi que Bluetooth/HID/capture/SSH/installation/déploiement sont
 exclus.
-

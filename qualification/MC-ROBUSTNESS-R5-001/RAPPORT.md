@@ -41,4 +41,3 @@ extraction de l'exécution d'actions, de la persistance, de la capture ou du
 transport de l'agent doit faire l'objet d'une PR indépendante avec
 caractérisation comportementale et mesure avant/après. Les sources HOGP C++ ne
 pourront être archivées qu'après confirmation de leurs consommateurs manuels.
-

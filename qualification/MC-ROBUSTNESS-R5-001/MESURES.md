@@ -34,4 +34,3 @@ Mesure AST simple : nombre de fonctions et de nœuds de branchement (`if`,
 | utilitaires PowerShell | plusieurs scripts | répétitions superficielles seulement | moyen, transactions et privilèges différents | différée |
 
 Aucune valeur « après » artificielle n'est annoncée pour les travaux différés.
-
