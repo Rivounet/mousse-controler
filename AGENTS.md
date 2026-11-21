@@ -47,10 +47,11 @@ Ces consignes s'appliquent à toute intervention dans `Rivounet/mousse-controler
 - Utiliser l'alias exact `MonOrdinateur` avec son fichier dédié
   `~/.ssh/monordinateur-pv-mig.conf`. Ne pas recopier adresse, clé ou empreinte
   dans le dépôt et ne pas accepter automatiquement une nouvelle clé d'hôte.
-- Commencer par la même commande de lecture seule dans la sandbox puis, si le
-  réseau est refusé, demander l'approbation Codex normale hors sandbox. La règle
-  persistante doit être limitée au binaire SSH, à ce fichier de configuration
-  et à cet alias ; ne jamais autoriser globalement PowerShell ou le réseau.
+- Ce canal a été qualifié comme indisponible dans la sandbox : demander
+  directement l'exécution hors sandbox de la commande exacte décrite dans
+  `scripts/operations/README.md`. La règle persistante reste limitée au binaire
+  SSH, à ce fichier de configuration et à cet alias ; ne jamais autoriser
+  globalement PowerShell ou le réseau.
 - Un refus de connexion dans la sandbox suivi d'un `whoami` réussi hors sandbox
   est un blocage réseau Codex. Une connexion SSH réussie suivie d'un code
   Windows tel que `Access denied` est un problème de session, ACL ou jeton

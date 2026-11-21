@@ -1,0 +1,53 @@
+# Procédures d'exploitation Codex
+
+Ces procédures sont les points d'entrée qualifiés pour le mini-PC Windows. Elles
+produisent du JSON, n'exposent ni compte, ni adresse, ni clé, et utilisent les
+codes communs suivants : `0` = objectif atteint, `1` = défaut constaté,
+`2` = précondition ou autorisation manquante, `130` = interruption.
+
+| Procédure | Contexte et effets autorisés | Limites |
+|---|---|---|
+| `Check-CodexEnvironment.ps1` | Sandbox; lecture des outils, fichiers et Git | Ne teste pas le réseau |
+| `Inspect-LocalRuntime.ps1` | Contexte Windows approuvé; lecture de la tâche et des processus | Aucun démarrage, ACL ou élévation |
+| `Inspect-RemoteTarget.ps1` | Hors sandbox, canal SSH exact; commande distante passive | Session 0, aucune preuve d'affichage |
+| `Invoke-BuildAndQualify.ps1` | Sandbox; écrit seulement sous `out/qualification` | Exclut tout matériel et déploiement |
+| `Prepare-MsixSigning.ps1` | Contexte Windows approuvé; crée ou lit une clé utilisateur protégée | N'installe jamais la confiance ni le paquet |
+| `Prepare-Deployment.ps1` | Sandbox; contrôle passif des preuves et artefacts | Ne déploie et n'active rien |
+
+## Contextes approuvés
+
+Le canal distant est exclusivement :
+
+```text
+C:\Windows\System32\OpenSSH\ssh.exe -F %USERPROFILE%\.ssh\monordinateur-pv-mig.conf MonOrdinateur
+```
+
+Codex doit demander directement l'exécution hors sandbox avec cette liste
+d'arguments exacte. La règle persistante est limitée au binaire, au fichier de
+configuration et à l'alias. La configuration impose la vérification stricte de
+l'hôte et conserve la clé hors du dépôt.
+
+La lecture dynamique de la tâche locale utilise exclusivement :
+
+```text
+C:\Windows\System32\schtasks.exe /Query /TN \MousseControler-HOGP
+```
+
+Les scripts d'inspection peuvent nécessiter une approbation limitée à leur
+chemin exact. Une erreur `access denied` depuis la sandbox signifie seulement
+que le fournisseur système y est masqué; elle ne justifie ni ACL supplémentaire,
+ni tâche auxiliaire, ni administrateur.
+
+## Contrats et reprise
+
+Chaque script est idempotent dans son mode de lecture. Une interruption ne doit
+laisser aucun processus auxiliaire. `Prepare-MsixSigning.ps1 -Action Create`
+supprime certificat et dossier s'il échoue avant la publication des métadonnées.
+Un second `Create` retourne l'état existant sans remplacer la clé. L'action
+`Restore` déchiffre le secret DPAPI et réimporte le PFX uniquement dans
+`CurrentUser\My`; elle ne touche à aucun magasin de confiance.
+
+La séquence normale est : environnement, inspections locale et distante, build
+et qualification, préparation de signature, puis préparation du déploiement.
+L'installation du certificat public dans `TrustedPeople`, le remplacement du
+MSIX et l'activation sont des opérations séparées soumises à autorisation.
