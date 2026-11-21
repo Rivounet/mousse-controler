@@ -21,6 +21,91 @@ from .security import HmacVerifier
 from .transport import NativeHogpTransport
 
 
+class RuntimeCleanupError(RuntimeError):
+    def __init__(self, primary: BaseException | None,
+                 cleanup_errors: list[tuple[str, BaseException]]) -> None:
+        self.primary = primary
+        self.cleanup_errors = tuple(cleanup_errors)
+        parts = []
+        if primary is not None:
+            parts.append(f"primary failure: {primary}")
+        parts.extend(f"{label}: {error}" for label, error in cleanup_errors)
+        super().__init__("runtime cleanup failed; " + "; ".join(parts))
+
+
+class _RuntimeLifecycle:
+    """Small, idempotent resource stack for the foreground runtime."""
+
+    def __init__(self, actions: ActionExecutor, controller: MouseController,
+                 command_token: bytes, keys: dict[str, bytes]) -> None:
+        self.actions = actions
+        self.controller = controller
+        self.command_token = command_token
+        self.keys = keys
+        self.stopped = threading.Event()
+        self.servers: list[dict[str, object]] = []
+        self.maintenance: threading.Thread | None = None
+        self.closed = False
+
+    def add_server(self, name: str, server: object) -> object:
+        self.servers.append({"name": name, "server": server, "thread": None})
+        return server
+
+    def start_server(self, name: str) -> None:
+        entry = next(item for item in self.servers if item["name"] == name)
+        server = entry["server"]
+        thread = threading.Thread(
+            target=server.serve_forever, name=name, daemon=True,
+        )
+        thread.start()
+        entry["thread"] = thread
+
+    def close(self) -> list[tuple[str, BaseException]]:
+        if self.closed:
+            return []
+        self.closed = True
+        errors: list[tuple[str, BaseException]] = []
+
+        def attempt(label: str, operation) -> None:
+            try:
+                operation()
+            except BaseException as exc:
+                errors.append((label, exc))
+
+        def join_bounded(thread: threading.Thread, label: str) -> None:
+            thread.join(timeout=6)
+            if thread.is_alive():
+                raise RuntimeError(f"{label} did not stop within 6 seconds")
+
+        attempt("stop event", self.stopped.set)
+        if self.maintenance is not None:
+            attempt(
+                "maintenance thread join",
+                lambda: join_bounded(self.maintenance, "maintenance thread"),
+            )
+        for entry in reversed(self.servers):
+            name = str(entry["name"])
+            server = entry["server"]
+            thread = entry["thread"]
+            if thread is not None:
+                attempt(f"{name} shutdown", lambda current=server: current.shutdown())
+                attempt(
+                    f"{name} thread join",
+                    lambda current=thread, current_name=name: join_bounded(
+                        current, current_name,
+                    ),
+                )
+            attempt(f"{name} server_close", lambda current=server: current.server_close())
+        attempt("actions close", self.actions.close)
+        attempt("controller emergency_stop", self.controller.emergency_stop)
+        if isinstance(self.command_token, bytearray):
+            self.command_token[:] = b"\0" * len(self.command_token)
+        for secret in self.keys.values():
+            if isinstance(secret, bytearray):
+                secret[:] = b"\0" * len(secret)
+        return errors
+
+
 def serve(config_path: Path) -> int:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     store = PositionStore()
@@ -52,12 +137,13 @@ def serve(config_path: Path) -> int:
     )
     actions = ActionExecutor(controller, registry, capture_broker,
                              max_queue=int(config.get("action_queue_size", 256)))
-    event_server = None
+    lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
+    primary_error: BaseException | None = None
     try:
         controller.start()
         transport.advertise()
         gateway = CommandGateway(command_token, controller, transport, receiver, actions, capture_broker)
-        position_server = make_https_server(
+        position_server = lifecycle.add_server("position-https", make_https_server(
             config["position_bind"], int(config["position_port"]), receiver,
             config["tls_certificate"], config["tls_private_key"],
             max_connections=int(config.get("position_max_connections", 8)),
@@ -73,68 +159,63 @@ def serve(config_path: Path) -> int:
             capture_body_total_timeout=float(config.get(
                 "position_capture_body_total_timeout_seconds", 120.0)),
             write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
+        ))
+        command_server = lifecycle.add_server(
+            "command-loopback",
+            make_command_server(int(config.get("command_port", 8766)), gateway),
         )
-        command_server = make_command_server(int(config.get("command_port", 8766)), gateway)
-        event_server = make_event_server(int(config.get("event_port", 8767)), command_token, registry)
-    except Exception:
-        actions.close()
-        controller.emergency_stop()
-        raise
-    threads = [
-        threading.Thread(target=position_server.serve_forever, name="position-https", daemon=True),
-        threading.Thread(target=command_server.serve_forever, name="command-loopback", daemon=True),
-        threading.Thread(target=event_server.serve_forever, name="events-websocket", daemon=True),
-    ]
-    for thread in threads:
-        thread.start()
-    stopped = threading.Event()
+        event_server = lifecycle.add_server(
+            "events-websocket",
+            make_event_server(int(config.get("event_port", 8767)), command_token, registry),
+        )
 
-    def maintain_hogp() -> None:
-        disconnected_since: float | None = None
-        refresh_seconds = float(config.get("hogp_reconnect_refresh_seconds", 30.0))
-        while not stopped.wait(5.0):
-            if controller.is_stopped():
-                return
-            try:
-                status = transport.status()
-                if status.get("subscribed", "").lower() == "true":
-                    disconnected_since = None
-                    continue
-                now = time.monotonic()
-                if disconnected_since is None:
-                    disconnected_since = now
-                elif now - disconnected_since >= refresh_seconds:
-                    controller.restart_transport()
-                    disconnected_since = time.monotonic()
-            except Exception as exc:
-                print(f"HOGP reconnect maintenance pending: {exc}", file=sys.stderr, flush=True)
+        for name in ("position-https", "command-loopback", "events-websocket"):
+            lifecycle.start_server(name)
 
-    maintenance = threading.Thread(target=maintain_hogp, name="hogp-maintenance", daemon=True)
-    maintenance.start()
+        def maintain_hogp() -> None:
+            disconnected_since: float | None = None
+            refresh_seconds = float(config.get("hogp_reconnect_refresh_seconds", 30.0))
+            while not lifecycle.stopped.wait(5.0):
+                if controller.is_stopped():
+                    return
+                try:
+                    status = transport.status()
+                    if status.get("subscribed", "").lower() == "true":
+                        disconnected_since = None
+                        continue
+                    now = time.monotonic()
+                    if disconnected_since is None:
+                        disconnected_since = now
+                    elif now - disconnected_since >= refresh_seconds:
+                        controller.restart_transport()
+                        disconnected_since = time.monotonic()
+                except Exception as exc:
+                    print(f"HOGP reconnect maintenance pending: {exc}", file=sys.stderr, flush=True)
 
-    def stop_handler(signum, frame):
-        stopped.set()
+        lifecycle.maintenance = threading.Thread(
+            target=maintain_hogp, name="hogp-maintenance", daemon=True,
+        )
+        lifecycle.maintenance.start()
 
-    signal.signal(signal.SIGINT, stop_handler)
-    signal.signal(signal.SIGTERM, stop_handler)
-    print("Mousse controller ready; GATT advertising active.", flush=True)
-    print(f"Position HTTPS: {config['position_bind']}:{config['position_port']}", flush=True)
-    print(f"Command API: 127.0.0.1:{config.get('command_port', 8766)}", flush=True)
-    print(f"Action events: ws://127.0.0.1:{config.get('event_port', 8767)}/v1/events", flush=True)
-    try:
-        stopped.wait()
-    finally:
-        stopped.set()
-        maintenance.join(timeout=6)
-        position_server.shutdown()
-        command_server.shutdown()
-        event_server.shutdown()
-        actions.close()
-        controller.emergency_stop()
-        command_token = b"\0" * len(command_token)
-        for secret in keys.values():
-            if isinstance(secret, bytearray):
-                secret[:] = b"\0" * len(secret)
+        def stop_handler(signum, frame):
+            lifecycle.stopped.set()
+
+        signal.signal(signal.SIGINT, stop_handler)
+        signal.signal(signal.SIGTERM, stop_handler)
+        print("Mousse controller ready; GATT advertising active.", flush=True)
+        print(f"Position HTTPS: {config['position_bind']}:{config['position_port']}", flush=True)
+        print(f"Command API: 127.0.0.1:{config.get('command_port', 8766)}", flush=True)
+        print(f"Action events: ws://127.0.0.1:{config.get('event_port', 8767)}/v1/events", flush=True)
+        lifecycle.stopped.wait()
+    except BaseException as exc:
+        primary_error = exc
+    cleanup_errors = lifecycle.close()
+    if primary_error is not None:
+        if cleanup_errors:
+            raise RuntimeCleanupError(primary_error, cleanup_errors) from primary_error
+        raise primary_error
+    if cleanup_errors:
+        raise RuntimeCleanupError(None, cleanup_errors)
     return 0
 
 

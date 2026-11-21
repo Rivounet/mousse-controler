@@ -246,3 +246,43 @@ environ 205 Kio/s, tout en restant finis. Le corps doit correspondre exactement
 à `Content-Length` avant HMAC. Les slots sont libérés en `finally`, y compris
 sur timeout ou déconnexion. TLS 1.2 minimum, HMAC, anti-rejeu, tailles maximales,
 interfaces d'écoute et protocoles publics restent inchangés.
+
+## Durcissement R3 — stockage, cycle de vie et mise à jour cible
+
+Le quota de `CaptureBroker` est un plafond dur vérifié avant chaque écriture.
+L'admission compte tous les fichiers du répertoire privé, y compris index
+courant, index temporaire atomique, PNG, fichiers temporaires, index invalides
+préservés et orphelins. Elle contrôle aussi l'espace disque libre. Les
+téléversements concurrents sont sérialisés pendant admission et commit. Chaque
+index atomique emploie un temporaire unique : l'ancien index, le PNG final et le
+nouvel index temporaire sont comptés simultanément, sans soustraire un fichier
+avant sa disparition physique. Un observateur optionnel mesure chaque étape et
+vérifie `used_bytes <= capture_total_bytes`. Un refus passe la
+demande à `FAILED` sans créer de PNG. Au démarrage, un index absent ou invalide
+ne provoque aucune suppression : l'index invalide est conservé sous un nom
+distinct et les fichiers non indexés deviennent `DELETE_FAILED`, donc visibles,
+comptés et supprimables par une nouvelle tentative contrôlée.
+
+Le runtime principal utilise une pile de ressources idempotente. Chaque serveur
+est enregistré immédiatement après sa création et fermé en ordre inverse. Seuls
+les serveurs dont le thread a démarré reçoivent `shutdown()` ; tous reçoivent
+`server_close()`. L'arrêt continue malgré les erreurs de fermeture, ferme aussi
+le moteur d'actions et le contrôleur, puis expose l'ensemble des erreurs dans
+`RuntimeCleanupError`, sans masquer l'erreur initiale.
+
+La mise à jour de `PositionAgent.exe` est une transaction observable. Le script
+vérifie les empreintes de l'agent installé, de l'artefact, du staging et de la
+sauvegarde ; il persiste les phases dans un marqueur atomique voisin du binaire.
+Le nouveau binaire n'est confirmé qu'après démarrage de la tâche et observation
+conjointe de son état `Running` et du processus attendu. Tout échec après
+remplacement tente au plus deux restaurations de la sauvegarde, avec vérification
+d'empreinte et redémarrage. Un échec de restauration conserve
+`RECOVERY_REQUIRED` et bloque une nouvelle installation ambiguë jusqu'à une
+récupération explicite. Une panne avant remplacement restaure aussi l'état
+initial de la tâche : un agent auparavant actif est redémarré et contrôlé avant
+suppression du marqueur. Le rollback explicite prépare la sauvegarde et une
+copie vérifiée de la version courante hors du chemin actif, puis effectue un
+remplacement atomique. Si la version restaurée ne peut pas être validée, la
+copie préservée est compensée en deux essais maximum ; sinon les éléments de
+récupération restent accompagnés de `RECOVERY_REQUIRED`. Le mode d'injection de panne est réservé au harness
+isolé par une variable d'environnement ; il ne touche aucune tâche réelle.

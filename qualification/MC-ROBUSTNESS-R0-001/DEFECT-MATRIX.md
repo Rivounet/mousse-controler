@@ -19,12 +19,12 @@ ligne ci-dessous distingue donc le comportement courant du critère futur.
 | N01 / C-04 | client HTTPS lent | un corps partiel attend sans deadline explicite | timeout lecture/handshake mesuré, reprise propre | R2 | `test_N01_current_defect_slow_client_has_no_read_deadline` |
 | N02 / C-04 | corps HTTP tronqué | le handler passe les octets reçus sans vérifier leur nombre | refuser le corps incomplet avant authentification métier | R2 | `test_N02_current_defect_incomplete_body_is_accepted_by_handler` |
 | N03 / C-04 | connexions simultanées | quatre handlers simultanés acceptés, sans plafond actif explicite | plafond documenté, refus/reprise bornés | R2 | `test_N03_threaded_handler_accepts_simultaneous_connections` |
-| S01 / C-03 | quota atteint + suppression refusée | fichier conservé et `DELETE_FAILED`, mais quota dur dépassé après écriture | admission avant écriture et quota dur incluant temporaires | R3 | `test_S01_quota_pressure_retains_undeletable_file_as_error` |
+| S01 / C-03 | quota atteint + suppression refusée | corrigé : admission refusée avant PNG et pic complet sous quota | admission avant écriture et quota dur incluant temporaires | R3 | `test_S01_quota_pressure_retains_undeletable_file_as_error` |
 | S02 | suppression refusée | `DELETE_FAILED` persiste, fichier traçable et suppression rejouable | conserver cette propriété pendant le durcissement quota | R3 | `test_S02_delete_denied_survives_restart_and_can_be_retried` |
 | S03 | redémarrage avec capture incomplète | entrée récupérée en `FAILED` explicite | conserver suivi et fichier éventuel, aucune perte silencieuse | R3 | `test_S03_restart_marks_incomplete_capture_failed` |
-| L01 / C-07 | échec de création du second serveur | le premier serveur créé n'est pas fermé | rollback inverse complet de toutes les ressources | R3 | `test_L01_current_defect_partial_server_creation_is_not_closed` |
-| L02 / C-07 | échec pendant la fermeture | le premier échec saute serveurs, actions et arrêt contrôleur suivants | fermeture best-effort complète puis erreur agrégée | R3 | `test_L02_current_defect_first_close_failure_skips_remaining_cleanup` |
-| L03 / C-08 | échec mise à jour/rollback | modèle confirme remplacement avant démarrage; panne laisse nouvelle version en place; rollback peut aussi échouer | transaction testée avec restauration bornée et état de récupération explicite | R3 | `test_L03_model_only_update_and_rollback_start_failures_are_explicit` |
+| L01 / C-07 | échec de création du second serveur | corrigé : tous les serveurs créés sont fermés en ordre inverse | rollback inverse complet de toutes les ressources | R3 | `test_L01_partial_server_creation_is_closed` |
+| L02 / C-07 | échec pendant la fermeture | corrigé : les fermetures suivantes continuent et les erreurs sont agrégées | fermeture best-effort complète puis erreur agrégée | R3 | `test_L02_close_failure_does_not_skip_remaining_cleanup` |
+| L03 / C-08 | échec mise à jour/rollback | corrigé : le script réel restaure, ou persiste `RECOVERY_REQUIRED` après deux essais | transaction testée avec restauration bornée et état de récupération explicite | R3 | `test_L03_failed_update_restores_previous_content_with_real_script` |
 
 ## Propriétés de non-régression
 
@@ -52,8 +52,9 @@ ligne ci-dessous distingue donc le comportement courant du critère futur.
   d'un bouton ; il prouve seulement l'ordonnancement logiciel.
 - Les scénarios de stockage utilisent un système de fichiers temporaire et une
   injection `PermissionError`, pas un disque plein, antivirus ou panne secteur.
-- L03 est volontairement un modèle d'ordre couplé à une assertion statique sur
-  le script. Il n'exécute ni tâche Windows ni remplacement réel et ne constitue
-  pas une preuve opérationnelle de rollback.
+- L03 et les tests R3 exécutent le script réel sur des fichiers temporaires,
+  mais remplacent les cmdlets de tâche/processus par un harness isolé. Ils
+  qualifient la transaction de fichiers et ses états, pas une tâche Windows
+  réelle ni les droits de la session cible.
 - Les serveurs de cycle de vie sont des doubles : ils prouvent les appels omis,
   pas la libération effective d'un socket Windows réel.

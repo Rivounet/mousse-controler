@@ -9,7 +9,7 @@ import time
 import unittest
 from unittest import mock
 
-from mousse_controler.capture import CaptureBroker
+from mousse_controler.capture import CaptureBroker, CaptureQuotaError
 from mousse_controler.controller import PositionStore
 from mousse_controler.position_server import PositionReceiver
 from mousse_controler.security import HmacVerifier, sign
@@ -124,17 +124,18 @@ class CaptureBrokerTests(unittest.TestCase):
         self.assertIsNone(deleted["storage_path"])
         self.assertFalse(path.exists())
 
-    def test_quota_does_not_forget_file_when_deletion_is_refused(self):
-        self.broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
-                                    max_total_bytes=len(PNG) - 1)
+    def test_quota_refuses_upload_before_any_image_write(self):
         thread, outcome, request = self.start_request(timeout=1)
-        with mock.patch.object(Path, "unlink", side_effect=PermissionError("quota denied")):
-            stored = self.broker.accept_upload(self.upload(request))
+        used = self.broker.quota_status()["used_bytes"]
+        self.broker._max_total_bytes = used + len(PNG)
+        with self.assertRaises(CaptureQuotaError):
+            self.broker.accept_upload(self.upload(request))
         thread.join(1)
-        self.assertEqual(stored["state"], "DELETE_FAILED")
-        self.assertTrue(Path(stored["storage_path"]).is_file())
-        self.assertEqual(self.broker.prune(), 1)
-        self.assertEqual(self.broker.get(request["capture_id"])["state"], "DELETED")
+        self.assertIsInstance(outcome.get("error"), RuntimeError)
+        self.assertEqual(self.broker.get(request["capture_id"])["state"], "FAILED")
+        self.assertFalse((Path(self.temporary.name) / f"{request['capture_id']}.png").exists())
+        status = self.broker.quota_status()
+        self.assertLessEqual(status["used_bytes"], status["max_total_bytes"])
 
     def test_restart_recovers_unindexed_capture_file_for_controlled_deletion(self):
         orphan = Path(self.temporary.name) / "orphan.png"

@@ -106,10 +106,17 @@ J7 / PR #10 est **fusionnée** dans `main` au SHA `d19db664bc1e7d83ab1d289f89373
 |---|---|---|---|---|
 | R0 | Baseline, tests simulés, non-régression et consentement matériel | Prérequis | Validé — PR #13 fusionnée, `d8b412f` | Scénarios reproductibles sans HID |
 | R1 | Boutons incertains, arrêt global des séquenceurs, file d'actions | P1/P2 | Validé logiciel — PR #14 fusionnée, `5b158a6` | Aucune poursuite ambiguë, états cohérents |
-| R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | Correctif de revue B1/B2 qualifié — PR Draft #15 | Attentes bornées, aucune reprise ambiguë |
-| R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | À lancer après R0 | Quota strict, ressources fermées, restauration testée |
+| R2 | Délais HOGP/WinRT et limites connexions/lectures LAN | P1 | Validé logiciel — PR #15 fusionnée, `a938b74` | Attentes bornées, aucune reprise ambiguë |
+| R3 | Quotas de captures, nettoyage serveurs, rollback agent | P1/P2 | Qualifié logiciel sur branche dédiée — PR Draft à publier | Quota strict, ressources fermées, restauration testée |
 | R4 | Tests comportementaux, opt-in matériel, compilation C#, builds reproductibles | P2 | En accompagnement R1–R3 | Suite logicielle reproductible |
 | R5 | Séquenceurs, validations, historique HOGP, refactoring ciblé | P2/P3 | Différé | Aucun changement de contrat, gain démontré |
 | R6 | Documentation, roadmap, planning, reprise et suivi des preuves | Transversal | En cours | Statuts courants cohérents |
 
 **Règles :** PR distinctes, revue avant fusion, aucun HID/capture réelle ni intervention sur `MonOrdinateur` sans autorisation. Aucune synchronisation de la production impliquée par ce planning.
+
+R3 corrige C-03, C-07 et C-08 sur la base exacte `a938b745...` : admission
+capture avant écriture avec calcul du pic complet, fermeture inverse et
+best-effort de toutes les ressources, puis transaction PositionAgent avec
+restauration bornée et état `RECOVERY_REQUIRED`. Les scénarios sont exécutés
+uniquement dans des répertoires temporaires et avec des doubles ; la production
+reste inchangée. Prochaine porte : revue de la PR Draft R3, sans fusion implicite.

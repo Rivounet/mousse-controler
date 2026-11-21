@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import base64
 import binascii
 import json
 import os
 from pathlib import Path
+import shutil
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Callable
 
 
 @dataclass
@@ -56,12 +57,17 @@ class CaptureRecord:
         }
 
 
+class CaptureQuotaError(RuntimeError):
+    """The capture cannot be admitted without exceeding a hard storage bound."""
+
+
 class CaptureBroker:
     """Queues capture requests for delivery in the agent's outbound HTTPS flow."""
 
     def __init__(self, storage_directory: Path, *, max_pending: int = 64,
                  max_records: int = 2048, max_bytes: int = 16 * 1024 * 1024,
-                 max_total_bytes: int = 512 * 1024 * 1024):
+                 max_total_bytes: int = 512 * 1024 * 1024,
+                 storage_observer: Callable[[str, int], None] | None = None):
         if min(max_pending, max_records, max_bytes, max_total_bytes) < 1:
             raise ValueError("capture limits must be positive")
         self.storage_directory = Path(storage_directory)
@@ -74,6 +80,7 @@ class CaptureBroker:
         self._pending: deque[str] = deque()
         self._lock = threading.Lock()
         self._index_path = self.storage_directory / ".capture-index.json"
+        self._storage_observer = storage_observer
         self._load_index()
 
     def request_capture(self, action_id: str, moment: str, *,
@@ -92,14 +99,19 @@ class CaptureBroker:
         )
         with self._lock:
             self._prune_locked(now)
-            self._persist_index_locked()
             if len(self._pending) >= self._max_pending:
                 raise RuntimeError("capture request capacity exceeded")
             self._make_record_room_locked()
             self._records[record.capture_id] = record
             self._order.append(record.capture_id)
             self._pending.append(record.capture_id)
-            self._persist_index_locked()
+            try:
+                self._persist_index_locked()
+            except BaseException:
+                self._pending.remove(record.capture_id)
+                self._order.remove(record.capture_id)
+                del self._records[record.capture_id]
+                raise
         if not record.event.wait(timeout):
             with self._lock:
                 if record.state in ("PENDING", "DELIVERED"):
@@ -190,27 +202,82 @@ class CaptureBroker:
         captured_at = int(payload["captured_at_ms"])
         if abs(int(time.time() * 1000) - captured_at) > 30_000:
             raise ValueError("capture timestamp outside allowed window")
-        self.storage_directory.mkdir(parents=True, exist_ok=True)
-        destination = self.storage_directory / f"{identifier}.png"
-        temporary = self.storage_directory / f".{identifier}.tmp"
-        temporary.write_bytes(image)
-        temporary.replace(destination)
         with self._lock:
             record = self._records[identifier]
-            record.state = "STORED"
-            record.captured_at_ms = captured_at
-            record.cursor = {"x": x, "y": y}
-            record.monitor = {
+            if record.state != "DELIVERED":
+                raise ValueError("capture is not awaiting an upload")
+            self.storage_directory.mkdir(parents=True, exist_ok=True)
+            self._observe_storage_locked("upload_begin")
+            destination = self.storage_directory / f"{identifier}.png"
+            temporary = self.storage_directory / f".{identifier}.tmp"
+            if destination.exists() or temporary.exists():
+                raise RuntimeError("capture storage path already exists")
+            candidate = replace(
+                record, state="STORED", captured_at_ms=captured_at,
+                cursor={"x": x, "y": y}, monitor={
                 "x": mx, "y": my, "width": width, "height": height,
                 "primary": bool(monitor.get("primary", False)),
-            }
-            record.content_type = "image/png"
-            record.size_bytes = len(image)
-            record.storage_path = str(destination)
-            record.delete_at_ms = captured_at + record.retention_seconds * 1000
+                }, content_type="image/png", size_bytes=len(image),
+                storage_path=str(destination),
+                delete_at_ms=captured_at + record.retention_seconds * 1000,
+                error=None,
+            )
+            self._records[identifier] = candidate
+            try:
+                prospective_index = self._encode_index_locked()
+            finally:
+                self._records[identifier] = record
+            try:
+                self._ensure_upload_capacity_locked(len(image), len(prospective_index))
+            except CaptureQuotaError as exc:
+                record.state = "FAILED"
+                record.error = str(exc)
+                record.event.set()
+                try:
+                    self._persist_index_locked()
+                except CaptureQuotaError:
+                    pass
+                raise
+            try:
+                self._ensure_allocation_capacity_locked(
+                    len(image), "capture image temporary",
+                )
+                with temporary.open("xb") as stream:
+                    stream.write(image)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                self._observe_storage_locked("image_temporary_written")
+                temporary.replace(destination)
+                self._observe_storage_locked("image_committed")
+                record.state = candidate.state
+                record.captured_at_ms = candidate.captured_at_ms
+                record.cursor = candidate.cursor
+                record.monitor = candidate.monitor
+                record.content_type = candidate.content_type
+                record.size_bytes = candidate.size_bytes
+                record.storage_path = candidate.storage_path
+                record.delete_at_ms = candidate.delete_at_ms
+                record.error = None
+                self._prune_locked(int(time.time() * 1000))
+                self._persist_index_locked()
+            except BaseException as exc:
+                remaining = (destination if destination.is_file() else
+                             temporary if temporary.is_file() else None)
+                if remaining is not None:
+                    record.state = "DELETE_FAILED"
+                    record.storage_path = str(remaining)
+                    record.size_bytes = remaining.stat().st_size
+                    record.error = f"capture storage transaction interrupted: {exc}"
+                else:
+                    record.state = "FAILED"
+                    record.error = f"capture storage transaction failed: {exc}"
+                record.event.set()
+                try:
+                    self._persist_index_locked()
+                except BaseException:
+                    pass
+                raise
             record.event.set()
-            self._prune_locked(int(time.time() * 1000))
-            self._persist_index_locked()
             return record.snapshot()
 
     def fail_upload(self, body: bytes) -> dict[str, Any]:
@@ -245,6 +312,16 @@ class CaptureBroker:
             removed = self._prune_locked(int(time.time() * 1000))
             self._persist_index_locked()
             return removed
+
+    def quota_status(self) -> dict[str, int | bool]:
+        with self._lock:
+            used = self._directory_usage_locked()
+            return {
+                "used_bytes": used,
+                "max_total_bytes": self._max_total_bytes,
+                "available_bytes": max(0, self._max_total_bytes - used),
+                "over_quota": used > self._max_total_bytes,
+            }
 
     def _make_record_room_locked(self) -> None:
         while len(self._records) >= self._max_records:
@@ -357,15 +434,22 @@ class CaptureBroker:
                         changed = True
                     self._records[record.capture_id] = record
                     self._order.append(record.capture_id)
-            except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
-                raise RuntimeError("capture index is invalid") from exc
+            except (OSError, RuntimeError, TypeError, ValueError, KeyError,
+                    json.JSONDecodeError):
+                self._records.clear()
+                self._order.clear()
+                invalid = self.storage_directory / (
+                    f".capture-index.invalid-{uuid.uuid4()}.json"
+                )
+                try:
+                    self._index_path.replace(invalid)
+                except OSError as exc:
+                    raise RuntimeError("capture index is invalid and cannot be preserved") from exc
+                changed = True
         tracked = {Path(record.storage_path).name for record in self._records.values()
                    if record.storage_path}
-        index_temporary = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
-        candidates = list(self.storage_directory.glob("*.png")) + [
-            path for path in self.storage_directory.glob(".*.tmp")
-            if path != index_temporary
-        ]
+        candidates = (list(self.storage_directory.glob("*.png")) +
+                      list(self.storage_directory.glob(".*.tmp")))
         for path in candidates:
             if path.name in tracked:
                 continue
@@ -415,8 +499,7 @@ class CaptureBroker:
             delete_at_ms=data.get("delete_at_ms"), error=data.get("error"),
         )
 
-    def _persist_index_locked(self) -> None:
-        self.storage_directory.mkdir(parents=True, exist_ok=True)
+    def _encode_index_locked(self) -> bytes:
         records = []
         for identifier in self._order:
             record = self._records[identifier]
@@ -428,11 +511,75 @@ class CaptureBroker:
             snapshot["max_bytes"] = record.max_bytes
             snapshot["expires_at_ms"] = record.expires_at_ms
             records.append(snapshot)
-        encoded = json.dumps({"version": 1, "records": records}, separators=(",", ":"),
-                             ensure_ascii=False)
-        temporary = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
-        with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+        return json.dumps(
+            {"version": 1, "records": records}, separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+    def _directory_usage_locked(self) -> int:
+        if not self.storage_directory.exists():
+            return 0
+        total = 0
+        for root, directories, files in os.walk(self.storage_directory, followlinks=False):
+            directories[:] = [name for name in directories
+                              if not (Path(root) / name).is_symlink()]
+            for name in files:
+                try:
+                    total += (Path(root) / name).lstat().st_size
+                except FileNotFoundError:
+                    continue
+        return total
+
+    def _ensure_disk_space_locked(self, additional_bytes: int) -> None:
+        free = shutil.disk_usage(self.storage_directory).free
+        if free < additional_bytes:
+            raise CaptureQuotaError(
+                f"capture storage has insufficient free space: need {additional_bytes}, free {free}"
+            )
+
+    def _ensure_allocation_capacity_locked(self, additional_bytes: int,
+                                           allocation: str) -> int:
+        current = self._directory_usage_locked()
+        peak = current + additional_bytes
+        if peak > self._max_total_bytes:
+            raise CaptureQuotaError(
+                f"capture quota admission denied for {allocation}: peak {peak} exceeds "
+                f"{self._max_total_bytes}"
+            )
+        self._ensure_disk_space_locked(additional_bytes)
+        return peak
+
+    def _ensure_upload_capacity_locked(self, image_size: int, index_size: int) -> int:
+        # Transaction stages and physical peaks:
+        #   1. current index/files + image temporary;
+        #   2. current index/files + image final (rename, same byte count);
+        #   3. current index/files + image final + unique index temporary;
+        #   4. image final + new index (atomic replacement lowers usage).
+        # No existing file is subtracted before it has physically disappeared.
+        return self._ensure_allocation_capacity_locked(
+            image_size + index_size, "capture image and atomic index",
+        )
+
+    def _observe_storage_locked(self, stage: str) -> int:
+        used = self._directory_usage_locked()
+        if used > self._max_total_bytes:
+            raise RuntimeError(
+                f"capture quota invariant violated at {stage}: "
+                f"{used} exceeds {self._max_total_bytes}"
+            )
+        if self._storage_observer is not None:
+            self._storage_observer(stage, used)
+        return used
+
+    def _persist_index_locked(self) -> None:
+        self.storage_directory.mkdir(parents=True, exist_ok=True)
+        encoded = self._encode_index_locked()
+        self._ensure_allocation_capacity_locked(len(encoded), "atomic index temporary")
+        temporary = self.storage_directory / f".capture-index.{uuid.uuid4()}.tmp"
+        with temporary.open("xb") as stream:
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
+        self._observe_storage_locked("index_temporary_written")
         temporary.replace(self._index_path)
+        self._observe_storage_locked("index_committed")

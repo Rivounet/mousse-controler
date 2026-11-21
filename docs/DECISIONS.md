@@ -104,3 +104,17 @@ les performances ne sont plus des inconnues : ils sont qualifiés dans la PR #6.
 **Références :** audit ChatGPT sur `audit/independent-review-chatgpt-20261120` (commit `81e840668a07f135f925b7f9e0b92c083c3cdcf0`), audit Codex [PR #11](https://github.com/Rivounet/mousse-controler/pull/11) (Draft, non fusionnée), base commune `d19db664bc1e7d83ab1d289f89373f9e327a482b`. Les quatre P1 prioritaires sont HOGP non borné, bouton incertain, quota captures non strict et absence de bornes explicites sur les connexions/lectures LAN. Les autres risques sont conservés dans la matrice du rapport.
 
 **Exécution :** lots R0 à R6 définis au planning ; aucune correction, déploiement, essai HID réel, capture réelle ou fusion de PR n'est autorisé implicitement. Conserver la séparation entre code GitHub, clone local et processus en service. Une revue et une autorisation de fusion restent requises pour chaque PR.
+
+## D-063 — Transactions bornées pour stockage, runtime et agent (21 novembre 2026)
+
+**Décision :** le quota de captures porte sur le pic physique complet avant
+écriture ; le runtime possède explicitement toutes ses ressources et les ferme
+en ordre inverse sans abandon au premier échec ; une mise à jour PositionAgent
+n'est confirmée qu'après contrôle du binaire, de la tâche et du processus.
+
+**Conséquence :** les fichiers temporaires, index et orphelins sont inclus dans
+le plafond et restent traçables ; les erreurs de fermeture sont agrégées ; une
+panne post-remplacement restaure la sauvegarde en deux tentatives maximum ou
+laisse un marqueur durable `RECOVERY_REQUIRED` qui interdit toute nouvelle
+installation ambiguë. La qualification R3 reste logicielle et n'autorise ni
+déploiement, ni tâche cible, ni HID/capture réelle.

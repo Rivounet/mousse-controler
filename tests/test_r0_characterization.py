@@ -13,8 +13,11 @@ import base64
 import http.client
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import socket
+import subprocess
 from http.server import ThreadingHTTPServer
 import tempfile
 import threading
@@ -42,7 +45,6 @@ from tests.r0_doubles import (
     SaturatingStderr,
     ControllerStopDouble,
     SequenceDouble,
-    UpdateOrderModel,
 )
 
 
@@ -344,13 +346,17 @@ class StorageCharacterizationTests(unittest.TestCase):
 
     def test_S01_quota_pressure_retains_undeletable_file_as_error(self):
         broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024,
-                               max_total_bytes=len(PNG) - 1)
+                               max_total_bytes=4096)
         thread, _outcome, request = self.begin_request(broker)
-        with mock.patch.object(Path, "unlink", side_effect=PermissionError("denied")):
-            record = broker.accept_upload(self.upload(request))
+        used = broker.quota_status()["used_bytes"]
+        broker._max_total_bytes = used + len(PNG)
+        with self.assertRaisesRegex(RuntimeError, "quota admission denied"):
+            broker.accept_upload(self.upload(request))
         thread.join(1)
-        self.assertEqual(record["state"], "DELETE_FAILED")
-        self.assertTrue(Path(record["storage_path"]).is_file())
+        self.assertEqual(broker.get(request["capture_id"])["state"], "FAILED")
+        self.assertFalse((Path(self.temporary.name) / f"{request['capture_id']}.png").exists())
+        status = broker.quota_status()
+        self.assertLessEqual(status["used_bytes"], status["max_total_bytes"])
 
     def test_S02_delete_denied_survives_restart_and_can_be_retried(self):
         broker = CaptureBroker(Path(self.temporary.name), max_bytes=1024, max_total_bytes=4096)
@@ -381,6 +387,7 @@ class StorageCharacterizationTests(unittest.TestCase):
 class FakeServer:
     def __init__(self, *, shutdown_error: bool = False) -> None:
         self.shutdown_calls = 0
+        self.server_close_calls = 0
         self.shutdown_error = shutdown_error
 
     def serve_forever(self) -> None:
@@ -390,6 +397,9 @@ class FakeServer:
         self.shutdown_calls += 1
         if self.shutdown_error:
             raise RuntimeError("simulated close failure")
+
+    def server_close(self) -> None:
+        self.server_close_calls += 1
 
 
 class ImmediateEvent:
@@ -470,7 +480,7 @@ class LifecycleCharacterizationTests(unittest.TestCase):
         ]
         return config, patches
 
-    def test_L01_current_defect_partial_server_creation_is_not_closed(self):
+    def test_L01_partial_server_creation_is_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             config, patches = self.runtime(directory)
             position = FakeServer()
@@ -483,10 +493,11 @@ class LifecycleCharacterizationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "creation failure"):
                     app.serve(config)
             self.assertEqual(position.shutdown_calls, 0)
+            self.assertEqual(position.server_close_calls, 1)
             self.assertEqual(RuntimeActions.instances[-1].close_calls, 1)
             self.assertEqual(RuntimeController.instances[-1].stop_calls, 1)
 
-    def test_L02_current_defect_first_close_failure_skips_remaining_cleanup(self):
+    def test_L02_close_failure_does_not_skip_remaining_cleanup(self):
         with tempfile.TemporaryDirectory() as directory:
             config, patches = self.runtime(directory)
             position = FakeServer(shutdown_error=True)
@@ -501,26 +512,46 @@ class LifecycleCharacterizationTests(unittest.TestCase):
                 mock.patch.object(app.signal, "signal", return_value=None),
             ])
             with self._stack(patches):
-                with self.assertRaisesRegex(RuntimeError, "close failure"):
+                with self.assertRaisesRegex(app.RuntimeCleanupError, "close failure"):
                     app.serve(config)
-            self.assertEqual(command.shutdown_calls, 0)
-            self.assertEqual(events.shutdown_calls, 0)
-            self.assertEqual(RuntimeActions.instances[-1].close_calls, 0)
-            self.assertEqual(RuntimeController.instances[-1].stop_calls, 0)
+            self.assertEqual(command.shutdown_calls, 1)
+            self.assertEqual(events.shutdown_calls, 1)
+            self.assertEqual(position.server_close_calls, 1)
+            self.assertEqual(command.server_close_calls, 1)
+            self.assertEqual(events.server_close_calls, 1)
+            self.assertEqual(RuntimeActions.instances[-1].close_calls, 1)
+            self.assertEqual(RuntimeController.instances[-1].stop_calls, 1)
 
-    def test_L03_model_only_update_and_rollback_start_failures_are_explicit(self):
-        source = (ROOT / "scripts" / "target" /
-                  "Update-InteractivePositionAgent.ps1").read_text(encoding="utf-8")
-        self.assertLess(source.index("Move-Item -LiteralPath $temporary"),
-                        source.index("Start-ScheduledTask -TaskName $TaskName",
-                                     source.index("Move-Item -LiteralPath $temporary")))
-        model = UpdateOrderModel()
-        with self.assertRaisesRegex(RuntimeError, "start failure"):
-            model.install(fail_start=True)
-        self.assertEqual(model.installed, "new")
-        with self.assertRaisesRegex(RuntimeError, "rollback start failure"):
-            model.rollback(fail_start=True)
-        self.assertEqual(model.installed, "old")
+    def test_L03_failed_update_restores_previous_content_with_real_script(self):
+        shell = shutil.which("pwsh") or shutil.which("powershell")
+        if shell is None:
+            self.skipTest("PowerShell is required")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            install = root / "install"
+            artifact_dir = root / "artifact"
+            install.mkdir()
+            artifact_dir.mkdir()
+            target = install / "PositionAgent.exe"
+            artifact = artifact_dir / "PositionAgent.exe"
+            target.write_bytes(b"old-agent")
+            artifact.write_bytes(b"new-agent")
+            state_output = root / "runtime-state.json"
+            environment = dict(os.environ)
+            environment["MC_POSITION_AGENT_TRANSACTION_TEST"] = "1"
+            result = subprocess.run([
+                shell, "-NoProfile", "-File",
+                str(ROOT / "tests" / "position_agent_transaction_harness.ps1"),
+                "-Updater", str(ROOT / "scripts" / "target" /
+                                 "Update-InteractivePositionAgent.ps1"),
+                "-Target", str(target), "-Artifact", str(artifact),
+                "-Action", "Install", "-Phase", "Installation",
+                "-StateOutput", str(state_output),
+            ], capture_output=True, text=True, timeout=15, env=environment)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("previous version was restored", result.stderr)
+            self.assertEqual(target.read_bytes(), b"old-agent")
+            self.assertFalse(Path(str(target) + ".mc-update-state.json").exists())
 
     @staticmethod
     def _stack(patches):
