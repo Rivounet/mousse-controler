@@ -51,3 +51,13 @@ La séquence normale est : environnement, inspections locale et distante, build
 et qualification, préparation de signature, puis préparation du déploiement.
 L'installation du certificat public dans `TrustedPeople`, le remplacement du
 MSIX et l'activation sont des opérations séparées soumises à autorisation.
+
+## Autorisation opérationnelle active (21 novembre 2026)
+
+L'utilisateur autorise sur les deux machines nommées la confiance du **certificat public MSIX v2 vérifié**, l'installation du MSIX signé, la mise à jour transactionnelle de PositionAgent, la synchronisation contrôlée du runtime et des tâches/configurations Mousse-controler, puis l'activation et les contrôles de santé **sans commande HID ni capture**. Le mandat reste limité aux composants Mousse-controler et ne permet ni désactivation de protections Windows, ni permissions générales, ni fusion de PR.
+
+La séquence d'exploitation est : `Check-CodexEnvironment` → `Inspect-LocalRuntime` et `Inspect-RemoteTarget` dans leurs contextes exacts → `Invoke-BuildAndQualify -Profile full-local` → `Prepare-MsixSigning -Action Status/Qualify` → `Prepare-Deployment` → sauvegarde immédiate et préflight → **installation autorisée** de la confiance et du MSIX signé → mise à jour PositionAgent avec `Plan` puis `Install` → promotion atomique de la configuration et réinscription de la tâche → activation progressive → contrôles santé, API/WebSocket, authentification, processus, sessions, ports et persistances → rapport et rollback prêt.
+
+**Attention :** `Prepare-Deployment.ps1` reste volontairement un contrôle passif et peut renvoyer `PREPARED_NOT_AUTHORIZED` parce que ses champs d'autorisation sont statiques ; cela ne révoque pas l'autorisation utilisateur explicite, mais ce script **ne réalise aucune installation**. Vérifier l'autorisation et les empreintes réelles séparément avant les opérations mutantes. Ne pas confondre le certificat privé de signature (`CurrentUser\\My`) et le certificat **public** à approuver dans le magasin adapté. Revalider signature/chaîne, identité, version et SHA de l'artefact réellement installé. Préserver l'ancien package et son certificat jusqu'à la qualification de la transition.
+
+L'état `OPERATIONAL_PASS` exige des preuves de fonctionnement sur les versions actives, sans prétendre qualifier HID/captures. Une nouvelle demande de consentement est obligatoire avant tout essai matériel. Si une opération échoue : arrêt borné, restauration vérifiée ou `RECOVERY_REQUIRED`, et poursuite des travaux indépendants.
