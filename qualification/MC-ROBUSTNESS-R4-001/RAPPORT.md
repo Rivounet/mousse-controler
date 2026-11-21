@@ -98,4 +98,3 @@ C-10 est traité par des profils fermés, des exclusions observables et des test
 de sûreté de l'orchestrateur. C-15 est traité par la découverte contrôlée de
 Roslyn, du SDK Windows, des contrats WinRT et des outils MSIX. La production
 reste inchangée.
-

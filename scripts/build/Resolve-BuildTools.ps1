@@ -15,7 +15,6 @@ function Get-HighestVersionDirectory {
     }
     return $candidates | Sort-Object Version -Descending | Select-Object -First 1
 }
-
 function Resolve-MousseBuildTools {
     [CmdletBinding()]
     param(

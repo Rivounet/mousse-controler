@@ -60,4 +60,3 @@ installé: false
 
 Les logs bruts restent dans le dossier `out/` ignoré par Git. Cette preuve ne
 publie que les résultats nécessaires et expurgés.
-

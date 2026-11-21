@@ -50,4 +50,3 @@ sur les opérations restent inchangés.
 Chaque artefact reçoit chemin relatif, taille et SHA-256, avec version de
 compilateur et SDK. Ces données permettent de comparer des exécutions mais ne
 constituent pas une promesse de binaire bit-à-bit reproductible.
-

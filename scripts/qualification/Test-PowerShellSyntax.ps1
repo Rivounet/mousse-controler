@@ -29,4 +29,3 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 Write-Output "PowerShell syntax valid: $($files.Count) active scripts parsed; none executed."
-

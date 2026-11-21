@@ -56,4 +56,3 @@ Les diagnostics matériels n'ont aucun profil dans `qualify.py`. Leur lancement
 reste une opération manuelle distincte, après autorisation explicite, avec les
 préconditions de session, radio et cible de leurs procédures. R4 ne les a pas
 exécutés.
-
