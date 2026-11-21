@@ -26,6 +26,8 @@ try {
         [ordered]@{ type = $_.Type; enabled = $_.Enabled; start_boundary_present = -not [string]::IsNullOrWhiteSpace($_.StartBoundary) }
     })
     $matchingProcesses = @()
+    $processInspection = 'PASS'
+    $processInspectionError = $null
     try {
         $matchingProcesses = @(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object {
             $_.CommandLine -and $_.CommandLine.IndexOf('Start-MousseController.ps1', [StringComparison]::OrdinalIgnoreCase) -ge 0
@@ -34,6 +36,8 @@ try {
         })
     } catch {
         $matchingProcesses = @()
+        $processInspection = 'BLOCKED'
+        $processInspectionError = $_.Exception.GetType().Name
     }
     $definitionPath = 'C:\ProgramData\MousseControler\MousseControler-HOGP.task.xml'
     $definitionHash = if (Test-Path -LiteralPath $definitionPath -PathType Leaf) {
@@ -41,7 +45,7 @@ try {
     } else { $null }
     [ordered]@{
         contract = 'MC-CODEX-ENVIRONMENT-001/inspect-local-runtime-v1'
-        status = 'PASS'
+        status = if ($processInspection -eq 'PASS') { 'PASS' } else { 'BLOCKED' }
         task = [ordered]@{
             name = $TaskName
             enabled = $task.Enabled
@@ -54,12 +58,15 @@ try {
             definition_sha256 = $definitionHash
         }
         runtime = [ordered]@{
-            matching_process_count = $matchingProcesses.Count
-            processes = $matchingProcesses
+            inspection_status = $processInspection
+            inspection_error_type = $processInspectionError
+            matching_process_count = if ($processInspection -eq 'PASS') { $matchingProcesses.Count } else { $null }
+            processes = if ($processInspection -eq 'PASS') { $matchingProcesses } else { $null }
             command_port_open = Test-LoopbackPort $CommandPort
         }
         effects = 'read-only'
     } | ConvertTo-Json -Depth 8
+    if ($processInspection -ne 'PASS') { exit 2 }
 } catch [UnauthorizedAccessException] {
     [ordered]@{ contract = 'MC-CODEX-ENVIRONMENT-001/inspect-local-runtime-v1'; status = 'BLOCKED'; boundary = 'windows-task-provider'; error = $_.Exception.Message } | ConvertTo-Json
     exit 2
