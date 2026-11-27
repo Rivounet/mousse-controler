@@ -12,19 +12,22 @@ from mousse_controler.actions import ActionExecutor, ActionRegistry
 from mousse_controler.command_server import CommandError, CommandGateway
 from mousse_controler.controller import MouseController, PositionSnapshot, PositionStore
 from mousse_controler.transport import SimulatedHidTransport, TransportError
+from tests.support.waiting import wait_until
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
 
 
 def wait_terminal(registry: ActionRegistry, action_id: str, timeout: float = 1.0) -> dict:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    def terminal() -> dict | None:
         record = registry.get(action_id)
-        if record["state"] in TERMINAL:
-            return record
-        time.sleep(0.005)
-    raise AssertionError(f"action {action_id} did not become terminal")
+        return record if record["state"] in TERMINAL else None
+
+    return wait_until(
+        terminal,
+        timeout=timeout,
+        description=f"action {action_id} terminal state",
+    )
 
 
 class ArmedButtonFailureTransport(SimulatedHidTransport):
@@ -274,10 +277,10 @@ class ExecutorCloseTests(unittest.TestCase):
         _transport, _controller, registry, executor = self.make_executor()
         running = executor.submit({"kind": "wait", "duration_seconds": 5},
                                   action_id="suspended")
-        deadline = time.monotonic() + 1
-        while registry.get(running["action_id"])["state"] != "RUNNING":
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: registry.get(running["action_id"])["state"] == "RUNNING",
+            description="suspended action start",
+        )
         executor.pause("suspended")
         executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
         executor.close(timeout=1)
@@ -292,10 +295,10 @@ class ExecutorCloseTests(unittest.TestCase):
         executor.submit({
             "kind": "hold", "button": "left", "duration_seconds": 5,
         }, action_id="inflight-hold")
-        deadline = time.monotonic() + 1
-        while controller.buttons_mask() != 1:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: controller.buttons_mask() == 1,
+            description="inflight hold press",
+        )
         executor.close(timeout=1)
         result = registry.get("inflight-hold")
         self.assertEqual(result["state"], "UNKNOWN")
@@ -309,10 +312,10 @@ class ExecutorCloseTests(unittest.TestCase):
     def test_full_queue_failure_and_close_leave_all_ids_terminal(self):
         _transport, _controller, registry, executor = self.make_executor(max_queue=1)
         executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
-        deadline = time.monotonic() + 1
-        while registry.get("running")["state"] != "RUNNING":
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: registry.get("running")["state"] == "RUNNING",
+            description="queue owner start",
+        )
         executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
         with self.assertRaisesRegex(RuntimeError, "queue capacity"):
             executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="overflow")
@@ -326,10 +329,10 @@ class ExecutorCloseTests(unittest.TestCase):
             journal = Path(directory) / "actions.jsonl"
             _transport, _controller, registry, executor = self.make_executor(journal=journal)
             executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
-            deadline = time.monotonic() + 1
-            while registry.get("running")["state"] != "RUNNING":
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: registry.get("running")["state"] == "RUNNING",
+                description="journalled action start",
+            )
             executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
             executor.close(timeout=1)
 
@@ -374,10 +377,10 @@ class ExecutorCloseTests(unittest.TestCase):
         registry = ActionRegistry()
         executor = ActionExecutor(FailingController(), registry)
         executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
-        deadline = time.monotonic() + 1
-        while registry.get("running")["state"] != "RUNNING":
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: registry.get("running")["state"] == "RUNNING",
+            description="failing controller action start",
+        )
         executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
         with self.assertRaisesRegex(RuntimeError, "controller stop failed"):
             executor.close(timeout=1)

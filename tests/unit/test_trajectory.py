@@ -11,6 +11,7 @@ from mousse_controler.geometry import CircleZone, DesktopTopology, Display, Poly
 from mousse_controler.sequence import SequenceRunner, SequenceState, SequenceStep, WaitMode
 from mousse_controler.trajectory import TrajectoryConfig, TrajectoryEngine
 from mousse_controler.transport import SimulatedHidTransport
+from tests.support.waiting import wait_until
 
 
 TOPOLOGY = DesktopTopology((Display(0, 0, 1920, 1080), Display(1920, 0, 1920, 1080)), "two")
@@ -172,9 +173,10 @@ class SequenceTests(unittest.TestCase):
         steps = [SequenceStep(RectangleZone(1000, 800, 5, 5))]
         runner, transport = self.make_runner(steps, delay=0.01)
         runner.start()
-        deadline = time.time() + 1
-        while len([e for e in transport.events if e[0] == "move"]) < 2 and time.time() < deadline:
-            time.sleep(0.005)
+        wait_until(
+            lambda: len([event for event in transport.events if event[0] == "move"]) >= 2,
+            description="trajectory reports before pause",
+        )
         runner.pause()
         count = len(transport.events)
         time.sleep(0.08)
@@ -195,9 +197,11 @@ class SequenceTests(unittest.TestCase):
         ]
         runner, transport = self.make_runner(steps)
         runner.start()
-        deadline = time.time() + 2
-        while runner.status().state != SequenceState.WAITING and time.time() < deadline:
-            time.sleep(0.005)
+        wait_until(
+            lambda: runner.status().state == SequenceState.WAITING,
+            timeout=2,
+            description="trajectory waiting state",
+        )
         self.assertEqual(runner.status().state, SequenceState.WAITING)
         runner.stop(); runner.join(1)
         stopped_count = len(transport.events)
@@ -209,10 +213,10 @@ class SequenceTests(unittest.TestCase):
         runner, transport = self.make_runner(
             [SequenceStep(RectangleZone(1000, 800, 5, 5))], delay=0.01)
         runner.start()
-        deadline = time.time() + 1
-        while len([event for event in transport.events if event[0] == "move"]) < 2:
-            self.assertLess(time.time(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: len([event for event in transport.events if event[0] == "move"]) >= 2,
+            description="trajectory movement before pause race",
+        )
         runner.pause()
         self.assertEqual(runner.status().state, SequenceState.PAUSED)
         runner.stop(); runner.join(1)

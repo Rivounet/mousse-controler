@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import math
 from pathlib import Path
@@ -10,6 +11,7 @@ import signal
 import sys
 import threading
 import time
+from typing import Any, Callable
 
 from .actions import ActionExecutor, ActionRegistry
 from .application import MouseApplicationService
@@ -120,10 +122,59 @@ class _RuntimeLifecycle:
         return errors
 
 
-def serve(config_path: Path) -> int:
+@dataclass(frozen=True)
+class RuntimeFactories:
+    """Explicit process boundaries used to assemble a runtime."""
+
+    unprotect_secret: Callable[[str], bytes]
+    transport: Callable[..., Any]
+    position_server: Callable[..., Any]
+    command_server: Callable[..., Any]
+    event_server: Callable[..., Any]
+
+
+@dataclass(frozen=True)
+class RuntimeAssembly:
+    """Fully wired runtime, before any process or server is started."""
+
+    config: dict[str, Any]
+    store: PositionStore
+    receiver: PositionReceiver
+    transport: Any
+    controller: MouseController
+    capture_broker: CaptureBroker
+    registry: ActionRegistry
+    actions: ActionExecutor
+    application: MouseApplicationService
+    gateway: CommandGateway
+    lifecycle: _RuntimeLifecycle
+    factories: RuntimeFactories
+
+
+def _default_runtime_factories() -> RuntimeFactories:
+    # Resolve globals at call time so boundary replacements remain explicit and
+    # existing characterization tests can still patch process integrations.
+    return RuntimeFactories(
+        unprotect_secret=unprotect,
+        transport=NativeHogpTransport,
+        position_server=make_https_server,
+        command_server=make_command_server,
+        event_server=make_event_server,
+    )
+
+
+def build_runtime(
+    config_path: Path, *, factories: RuntimeFactories | None = None,
+) -> RuntimeAssembly:
+    """Compose the application without starting its transport or servers."""
+
+    selected = factories or _default_runtime_factories()
     config = json.loads(config_path.read_text(encoding="utf-8"))
     store = PositionStore()
-    keys = {key_id: unprotect(value) for key_id, value in config["agent_keys_dpapi"].items()}
+    keys = {
+        key_id: selected.unprotect_secret(value)
+        for key_id, value in config["agent_keys_dpapi"].items()
+    }
     capture_broker = CaptureBroker(
         Path(config.get("capture_directory", str(config_path.parent / "captures"))),
         max_pending=int(config.get("capture_max_pending", 64)),
@@ -132,7 +183,7 @@ def serve(config_path: Path) -> int:
         max_total_bytes=int(config.get("capture_max_total_bytes", 512 * 1024 * 1024)),
     )
     receiver = PositionReceiver(store, HmacVerifier(keys), capture_broker)
-    transport = NativeHogpTransport(
+    transport = selected.transport(
         Path(config["hogp_executable"]),
         startup_timeout=float(config.get("hogp_startup_timeout_seconds", 15.0)),
         command_timeout=float(config.get("hogp_command_timeout_seconds", 3.0)),
@@ -140,7 +191,7 @@ def serve(config_path: Path) -> int:
         termination_timeout=float(config.get("hogp_termination_timeout_seconds", 2.0)),
     )
     controller = MouseController(transport, store)
-    command_token = unprotect(config["command_token_dpapi"])
+    command_token = selected.unprotect_secret(config["command_token_dpapi"])
     registry = ActionRegistry(
         max_records=int(config.get("action_max_records", 2048)),
         max_subscribers=int(config.get("event_max_subscribers", 16)),
@@ -158,6 +209,83 @@ def serve(config_path: Path) -> int:
         coordinator=coordinator,
     )
     lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
+    application = MouseApplicationService(
+        controller,
+        transport,
+        receiver,
+        actions,
+        capture_broker,
+        coordinator,
+    )
+    gateway = CommandGateway(
+        command_token,
+        controller,
+        transport,
+        receiver,
+        actions,
+        capture_broker,
+        application,
+    )
+    return RuntimeAssembly(
+        config=config,
+        store=store,
+        receiver=receiver,
+        transport=transport,
+        controller=controller,
+        capture_broker=capture_broker,
+        registry=registry,
+        actions=actions,
+        application=application,
+        gateway=gateway,
+        lifecycle=lifecycle,
+        factories=selected,
+    )
+
+
+def register_runtime_servers(runtime: RuntimeAssembly) -> None:
+    """Create and register all protocol servers on an assembled runtime."""
+
+    config = runtime.config
+    lifecycle = runtime.lifecycle
+    lifecycle.add_server("position-https", runtime.factories.position_server(
+        config["position_bind"], int(config["position_port"]), runtime.receiver,
+        config["tls_certificate"], config["tls_private_key"],
+        max_connections=int(config.get("position_max_connections", 8)),
+        request_queue_size=int(config.get("position_request_queue_size", 8)),
+        tls_handshake_timeout=float(config.get(
+            "position_tls_handshake_timeout_seconds", 3.0)),
+        header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
+        header_total_timeout=float(config.get(
+            "position_header_total_timeout_seconds", 5.0)),
+        body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+        body_total_timeout=float(config.get(
+            "position_body_total_timeout_seconds", 10.0)),
+        capture_body_total_timeout=float(config.get(
+            "position_capture_body_total_timeout_seconds", 120.0)),
+        write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
+    ))
+    lifecycle.add_server(
+        "command-loopback",
+        runtime.factories.command_server(
+            int(config.get("command_port", 8766)), runtime.gateway,
+        ),
+    )
+    lifecycle.add_server(
+        "events-websocket",
+        runtime.factories.event_server(
+            int(config.get("event_port", 8767)),
+            lifecycle.command_token,
+            runtime.registry,
+        ),
+    )
+
+
+def serve(config_path: Path) -> int:
+    runtime = build_runtime(config_path)
+    config = runtime.config
+    transport = runtime.transport
+    controller = runtime.controller
+    lifecycle = runtime.lifecycle
     primary_error: BaseException | None = None
     try:
         refresh_seconds = _bounded_interval(
@@ -171,48 +299,7 @@ def serve(config_path: Path) -> int:
         )
         controller.start()
         transport.advertise()
-        application = MouseApplicationService(
-            controller,
-            transport,
-            receiver,
-            actions,
-            capture_broker,
-            coordinator,
-        )
-        gateway = CommandGateway(
-            command_token,
-            controller,
-            transport,
-            receiver,
-            actions,
-            capture_broker,
-            application,
-        )
-        position_server = lifecycle.add_server("position-https", make_https_server(
-            config["position_bind"], int(config["position_port"]), receiver,
-            config["tls_certificate"], config["tls_private_key"],
-            max_connections=int(config.get("position_max_connections", 8)),
-            request_queue_size=int(config.get("position_request_queue_size", 8)),
-            tls_handshake_timeout=float(config.get(
-                "position_tls_handshake_timeout_seconds", 3.0)),
-            header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
-            header_total_timeout=float(config.get(
-                "position_header_total_timeout_seconds", 5.0)),
-            body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
-            body_total_timeout=float(config.get(
-                "position_body_total_timeout_seconds", 10.0)),
-            capture_body_total_timeout=float(config.get(
-                "position_capture_body_total_timeout_seconds", 120.0)),
-            write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
-        ))
-        command_server = lifecycle.add_server(
-            "command-loopback",
-            make_command_server(int(config.get("command_port", 8766)), gateway),
-        )
-        event_server = lifecycle.add_server(
-            "events-websocket",
-            make_event_server(int(config.get("event_port", 8767)), command_token, registry),
-        )
+        register_runtime_servers(runtime)
 
         for name in ("position-https", "command-loopback", "events-websocket"):
             lifecycle.start_server(name)
