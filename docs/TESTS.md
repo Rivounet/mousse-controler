@@ -21,6 +21,20 @@ Les sept diagnostics matériels exclus sont trois diagnostics Bluetooth et
 quatre diagnostics cible/session. Ils restent hors orchestrateur et exigent une
 autorisation explicite.
 
+## Contrats de convergence architecturale
+
+`tests/test_architecture_convergence.py` vérifie notamment que :
+
+- une commande historique ne peut pas s'insérer pendant un maintien moderne ;
+- une action annulée en attente du coordinateur n'acquiert jamais le HID ;
+- position et topologie sont publiées sous la même génération ;
+- une génération incohérente est refusée avant publication.
+
+`tests/test_controller_release.py` construit de vrais dépôts Git temporaires et
+vérifie dépôt sale refusé, extraction des seuls objets sélectionnés, réutilisation
+identique, exécution autonome du vérificateur, altération et fichier inattendu
+refusés. Ces tests ne créent ni tâche ni processus applicatif persistant.
+
 ## Dernières qualifications du programme
 
 | Lot | SHA de branche qualifié | Résultat déclaré par Codex | Revue ChatGPT |

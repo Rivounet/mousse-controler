@@ -11,6 +11,7 @@ import uuid
 
 from .controller import MouseController, PositionError, PositionSnapshot
 from .geometry import DesktopTopology, Point, Zone
+from .orchestration import OperationCoordinator, OperationLease
 from .trajectory import TrajectoryEngine
 
 
@@ -76,6 +77,7 @@ class SequenceRunner:
         steps: list[SequenceStep],
         *,
         seed: int | None = None,
+        coordinator: OperationCoordinator | None = None,
     ):
         if not steps:
             raise ValueError("sequence needs at least one zone")
@@ -86,6 +88,8 @@ class SequenceRunner:
         self._topology = topology
         self._steps = list(steps)
         self._rng = random.Random(seed)
+        self._coordinator = coordinator or OperationCoordinator()
+        self._lease: OperationLease | None = None
         self._status = SequenceStatus(sequence_id=str(uuid.uuid4()))
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -101,6 +105,9 @@ class SequenceRunner:
         with self._lock:
             if self._thread is not None:
                 raise RuntimeError("sequence runner cannot be replayed")
+            lease = self._coordinator.acquire(
+                f"sequence:{self._status.sequence_id}", wait=False,
+            )
             self._stop.clear()
             self._skip.clear()
             self._advance.clear()
@@ -109,7 +116,13 @@ class SequenceRunner:
             self._status.started_at = time.time()
             self._status.updated_at = time.time()
             self._thread = threading.Thread(target=self._run, name="mousse-sequence", daemon=True)
-            self._thread.start()
+            self._lease = lease
+            try:
+                self._thread.start()
+            except Exception:
+                self._lease = None
+                lease.close()
+                raise
 
     def pause(self) -> None:
         with self._lock:
@@ -217,6 +230,8 @@ class SequenceRunner:
                     self._status.wait_mode = step.wait_mode
                     self._status.results.append(result)
                 current = self._controller.position_snapshot()
+                if current.topology_generation != self._topology.generation:
+                    raise PositionError("display topology changed before sequence execution")
                 generation_started = time.perf_counter()
                 points = self._trajectory.generate((current.x, current.y), target, self._topology, self._rng)
                 result.metrics = {
@@ -301,3 +316,7 @@ class SequenceRunner:
                 self._controller.emergency_stop()
             except Exception:
                 pass
+        finally:
+            lease, self._lease = self._lease, None
+            if lease is not None:
+                lease.close()

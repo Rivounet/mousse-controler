@@ -39,6 +39,21 @@ def parse_json_output(completed: subprocess.CompletedProcess[str]) -> dict[str, 
 
 
 class OperationalProcedureContractTests(unittest.TestCase):
+    def test_controller_manager_resolves_relative_python_to_absolute_path(self) -> None:
+        manager = ROOT / "scripts" / "runtime" / "Manage-MousseControllerTask.ps1"
+        script = str(manager).replace("'", "''")
+        command = rf"""
+. '{script}' -LibraryOnly
+$resolved = Resolve-PythonExecutable 'python.exe'
+[ordered]@{{
+    rooted = [IO.Path]::IsPathRooted($resolved)
+    exists = Test-Path -LiteralPath $resolved -PathType Leaf
+}} | ConvertTo-Json -Compress
+"""
+        completed = run_powershell(command)
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual({"rooted": True, "exists": True}, parse_json_output(completed))
+
     def test_controller_task_stop_continues_after_emergency_stop_error(self) -> None:
         manager = ROOT / "scripts" / "runtime" / "Manage-MousseControllerTask.ps1"
         with tempfile.TemporaryDirectory(prefix="mc-task-stop-") as temporary:

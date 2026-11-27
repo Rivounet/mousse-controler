@@ -1,4 +1,4 @@
-# Planning opérationnel — 21 novembre 2026
+# Planning opérationnel — 27 novembre 2026
 
 | Chantier | État | Critère de clôture |
 |---|---|---|
@@ -11,6 +11,11 @@
 | MC-HID-PRECISION-001 — correction logicielle | **QUALIFIÉE** dans la PR #26 | `SOFTWARE_FIX_QUALIFIED`, 301/301 sur `aa53504…` |
 | MC-HID-PRECISION-001 — requalification matérielle | **QUALIFIÉE** | aller/retour exact, axes X/Y, amplitudes, absolu, tolérance et bornes observés |
 | MC-FINAL-VALIDATION-001 | **TERMINÉE — PR À REVOIR** | rapport consolidé publié ; PR maintenue Draft et non fusionnée |
+| Audit architecture/runtime | **TERMINÉ** | dérive de worktree, concurrence des voies et feedback non atomique démontrés |
+| Couche application et coordination | **IMPLÉMENTÉE, À QUALIFIER AU SHA PUBLIÉ** | aucun entrelacement inter-voie ; arrêt toujours prioritaire |
+| Feedback position/topologie | **IMPLÉMENTÉ, À QUALIFIER AU SHA PUBLIÉ** | une génération atomique ou refus fail-closed |
+| Release contrôleur immuable | **IMPLÉMENTÉE, NON ACTIVÉE** | extraction Git propre, manifeste, empreintes et refus des fichiers inattendus |
+| Runtime actif historique | **NON REPRODUCTIBLE — À REMPLACER APRÈS PORTE** | aucune mutation avant qualification, PR et rollback vérifié |
 
 ## Exécution
 
@@ -18,6 +23,7 @@ Codex réalise les étapes déjà autorisées de bout en bout, réutilise les pr
 
 ## Différés
 
-C-09/C-11/C-12/C-17 ne sont pas automatiquement rouverts. Toute nouvelle
+C-11 est rouvert et traité par la convergence ; C-12 est réduit de façon
+ciblée. C-09/C-17 restent différés. Toute nouvelle
 prise de souris reste soumise à un nouveau consentement immédiat malgré la
 clôture de cette validation.

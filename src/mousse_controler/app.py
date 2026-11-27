@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import signal
 import sys
@@ -11,12 +12,14 @@ import threading
 import time
 
 from .actions import ActionExecutor, ActionRegistry
+from .application import MouseApplicationService
 from .capture import CaptureBroker
 from .command_server import CommandGateway, make_command_server
 from .controller import MouseController, PositionStore
 from .dpapi import protect, unprotect
 from .event_server import make_event_server
 from .position_server import PositionReceiver, make_https_server
+from .orchestration import OperationCoordinator
 from .security import HmacVerifier
 from .transport import NativeHogpTransport
 
@@ -31,6 +34,17 @@ class RuntimeCleanupError(RuntimeError):
             parts.append(f"primary failure: {primary}")
         parts.extend(f"{label}: {error}" for label, error in cleanup_errors)
         super().__init__("runtime cleanup failed; " + "; ".join(parts))
+
+
+def _bounded_interval(
+    config: dict[str, object], name: str, default: float, maximum: float,
+) -> float:
+    value = float(config.get(name, default))
+    if not math.isfinite(value) or not 0.1 <= value <= maximum:
+        raise ValueError(
+            f"{name} must be finite and between 0.1 and {maximum} seconds"
+        )
+    return value
 
 
 class _RuntimeLifecycle:
@@ -135,14 +149,45 @@ def serve(config_path: Path) -> int:
         action_id_retention_seconds=int(config.get(
             "action_id_retention_seconds", 2_592_000)),
     )
-    actions = ActionExecutor(controller, registry, capture_broker,
-                             max_queue=int(config.get("action_queue_size", 256)))
+    coordinator = OperationCoordinator()
+    actions = ActionExecutor(
+        controller,
+        registry,
+        capture_broker,
+        max_queue=int(config.get("action_queue_size", 256)),
+        coordinator=coordinator,
+    )
     lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
     primary_error: BaseException | None = None
     try:
+        refresh_seconds = _bounded_interval(
+            config, "hogp_reconnect_refresh_seconds", 30.0, 3600.0,
+        )
+        fault_recovery_seconds = _bounded_interval(
+            config, "hogp_fault_recovery_seconds", 5.0, 3600.0,
+        )
+        health_poll_seconds = _bounded_interval(
+            config, "hogp_health_poll_seconds", 30.0, 300.0,
+        )
         controller.start()
         transport.advertise()
-        gateway = CommandGateway(command_token, controller, transport, receiver, actions, capture_broker)
+        application = MouseApplicationService(
+            controller,
+            transport,
+            receiver,
+            actions,
+            capture_broker,
+            coordinator,
+        )
+        gateway = CommandGateway(
+            command_token,
+            controller,
+            transport,
+            receiver,
+            actions,
+            capture_broker,
+            application,
+        )
         position_server = lifecycle.add_server("position-https", make_https_server(
             config["position_bind"], int(config["position_port"]), receiver,
             config["tls_certificate"], config["tls_private_key"],
@@ -174,14 +219,15 @@ def serve(config_path: Path) -> int:
 
         def maintain_hogp() -> None:
             disconnected_since: float | None = None
-            refresh_seconds = float(config.get("hogp_reconnect_refresh_seconds", 30.0))
-            while not lifecycle.stopped.wait(5.0):
+            last_fault_recovery: float | None = None
+            while not lifecycle.stopped.wait(health_poll_seconds):
                 if controller.is_stopped():
                     return
                 try:
                     status = transport.status()
                     if status.get("subscribed", "").lower() == "true":
                         disconnected_since = None
+                        last_fault_recovery = None
                         continue
                     now = time.monotonic()
                     if disconnected_since is None:
@@ -191,6 +237,19 @@ def serve(config_path: Path) -> int:
                         disconnected_since = time.monotonic()
                 except Exception as exc:
                     print(f"HOGP reconnect maintenance pending: {exc}", file=sys.stderr, flush=True)
+                    now = time.monotonic()
+                    if (last_fault_recovery is None or
+                            now - last_fault_recovery >= fault_recovery_seconds):
+                        last_fault_recovery = now
+                        try:
+                            controller.restart_transport()
+                            disconnected_since = None
+                        except Exception as recovery_exc:
+                            print(
+                                f"HOGP fault recovery failed: {recovery_exc}",
+                                file=sys.stderr,
+                                flush=True,
+                            )
 
         lifecycle.maintenance = threading.Thread(
             target=maintain_hogp, name="hogp-maintenance", daemon=True,

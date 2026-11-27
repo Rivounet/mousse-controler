@@ -14,7 +14,7 @@ import threading
 import time
 from typing import Any
 
-from .controller import PositionSnapshot, PositionStore
+from .feedback import FeedbackSnapshot, PositionSnapshot, PositionStore
 from .geometry import DesktopTopology, Display
 from .security import AuthenticationError, HmacVerifier
 
@@ -184,7 +184,6 @@ class PositionReceiver:
         self.store = store
         self.verifier = verifier
         self.capture_broker = capture_broker
-        self._topology: DesktopTopology | None = None
         self._lock = threading.Lock()
         self._last_received_monotonic: float | None = None
         self._interarrival_ms: deque[float] = deque(maxlen=2048)
@@ -216,10 +215,10 @@ class PositionReceiver:
             }
 
     def topology(self) -> DesktopTopology:
-        with self._lock:
-            if self._topology is None:
-                raise ValueError("display topology has not been received")
-            return self._topology
+        return self.store.feedback(max_age_ms=None).topology
+
+    def feedback(self, max_age_ms: int | None = 5_000) -> FeedbackSnapshot:
+        return self.store.feedback(max_age_ms=max_age_ms)
 
     def accept(self, headers: Any, body: bytes, path: str = "/v1/position") -> int:
         processing_started = time.perf_counter()
@@ -250,7 +249,7 @@ class PositionReceiver:
             int(item["x"]), int(item["y"]), int(item["width"]), int(item["height"])
         ) for item in displays_payload)
         topology = DesktopTopology(displays, str(payload["topology_generation"]))
-        self.store.update(PositionSnapshot(
+        snapshot = PositionSnapshot(
             x=int(payload["x"]),
             y=int(payload["y"]),
             sequence=sequence,
@@ -258,9 +257,9 @@ class PositionReceiver:
             topology_generation=str(payload["topology_generation"]),
             observed_at_unix_ms=observed,
             received_monotonic=received_monotonic,
-        ))
+        )
+        self.store.update(snapshot, topology)
         with self._lock:
-            self._topology = topology
             if self._last_received_monotonic is not None:
                 self._interarrival_ms.append((received_monotonic - self._last_received_monotonic) * 1000.0)
             self._last_received_monotonic = received_monotonic

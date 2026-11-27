@@ -422,6 +422,10 @@ POSITIONING_GUARDS = {
     ),
     "max_iterations": _parameter("integer", "Nombre maximal de corrections.", default=64,
                                  constraints={"minimum": 1, "maximum": 256}),
+    "preflight_timeout_seconds": _parameter(
+        "number", "Attente maximale d'une mesure fraîche avant toute émission HID.", default=2.0,
+        constraints={"minimum": 0.01, "maximum": 10},
+    ),
     "feedback_timeout_seconds": _parameter(
         "number", "Délai maximal d'une observation indépendante.", default=0.25,
         constraints={"minimum": 0.01, "maximum": 5},

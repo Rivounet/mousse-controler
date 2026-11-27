@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
 import threading
 import time
 
+from .feedback import PositionError, PositionSnapshot, PositionStore
 from .transport import HidTransport
-
-
-class PositionError(RuntimeError):
-    pass
-
 
 class PositioningError(PositionError):
     """A bounded feedback move failed, with explicit HID emission evidence."""
@@ -23,65 +18,6 @@ class PositioningError(PositionError):
         self.code = code
         self.emitted = emitted
         self.metrics = dict(metrics or {})
-
-
-@dataclass(frozen=True)
-class PositionSnapshot:
-    x: int
-    y: int
-    sequence: int
-    session_id: int
-    topology_generation: str
-    observed_at_unix_ms: int
-    received_monotonic: float
-
-    def age_ms(self, now: float | None = None) -> float:
-        current = time.monotonic() if now is None else now
-        return max(0.0, (current - self.received_monotonic) * 1000.0)
-
-
-class PositionStore:
-    def __init__(self) -> None:
-        self._condition = threading.Condition()
-        self._latest: PositionSnapshot | None = None
-
-    def update(self, snapshot: PositionSnapshot) -> None:
-        with self._condition:
-            if self._latest and snapshot.sequence <= self._latest.sequence:
-                raise ValueError("position sequence did not advance")
-            self._latest = snapshot
-            self._condition.notify_all()
-
-    def latest(self, max_age_ms: int = 150) -> PositionSnapshot:
-        with self._condition:
-            if self._latest is None:
-                raise PositionError("no position sample")
-            if self._latest.age_ms() > max_age_ms:
-                raise PositionError("position sample is stale")
-            return self._latest
-
-    def wait_newer(
-        self,
-        sequence: int,
-        timeout: float,
-        max_age_ms: int = 150,
-        interrupt_events: tuple[threading.Event, ...] = (),
-    ) -> PositionSnapshot:
-        deadline = time.monotonic() + timeout
-        with self._condition:
-            while self._latest is None or self._latest.sequence <= sequence:
-                if any(event.is_set() for event in interrupt_events):
-                    raise PositionError("position feedback wait interrupted")
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise PositionError("timed out waiting for fresh feedback")
-                self._condition.wait(min(remaining, 0.02) if interrupt_events else remaining)
-            if any(event.is_set() for event in interrupt_events):
-                raise PositionError("position feedback wait interrupted")
-            if self._latest.age_ms() > max_age_ms:
-                raise PositionError("new feedback is stale")
-            return self._latest
-
 
 class MouseController:
     def __init__(self, transport: HidTransport, positions: PositionStore):
@@ -130,9 +66,15 @@ class MouseController:
                 return
             try:
                 self._transport.release_all()
-            finally:
-                self._buttons = 0
+            except Exception:
+                # Recovery must continue when the failed channel can no longer
+                # acknowledge a release.  The local button model is cleared and
+                # the old engine is terminated before a new channel is created.
+                pass
+            self._buttons = 0
+            try:
                 self._transport.stop()
+            finally:
                 self._transport_stopped = True
             if self._stopped.is_set():
                 return
@@ -180,8 +122,9 @@ class MouseController:
             raise ValueError("button mask outside five-button range")
         with self._lock:
             self._ensure_running_locked()
-            self._buttons |= mask
-            self._transport.buttons(self._buttons)
+            next_mask = self._buttons | mask
+            self._transport.buttons(next_mask)
+            self._buttons = next_mask
             return self._buttons
 
     def release_buttons(self, mask: int) -> int:
@@ -190,8 +133,9 @@ class MouseController:
             raise ValueError("button mask outside five-button range")
         with self._lock:
             self._ensure_running_locked()
-            self._buttons &= ~mask
-            self._transport.buttons(self._buttons)
+            next_mask = self._buttons & ~mask
+            self._transport.buttons(next_mask)
+            self._buttons = next_mask
             return self._buttons
 
     def buttons_mask(self) -> int:
@@ -228,6 +172,7 @@ class MouseController:
         proportional_gain: float = 0.35,
         adaptive_acceleration: bool = True,
         minimum_effective_step: int = 4,
+        preflight_timeout: float = 2.0,
         feedback_timeout: float = 0.25,
         max_age_ms: int = 150,
         max_iterations: int = 64,
@@ -241,7 +186,8 @@ class MouseController:
     ) -> PositionSnapshot:
         if (tolerance_px < 0 or timeout <= 0 or max_step <= 0 or
                 not 0 < proportional_gain <= 1 or minimum_effective_step <= 0 or
-                feedback_timeout <= 0 or max_age_ms <= 0 or max_iterations <= 0 or
+                preflight_timeout <= 0 or feedback_timeout <= 0 or
+                max_age_ms <= 0 or max_iterations <= 0 or
                 stagnation_limit <= 0 or oscillation_limit <= 0 or
                 no_progress_limit <= 0 or
                 (max_total_movement is not None and
@@ -250,7 +196,11 @@ class MouseController:
         started = time.perf_counter()
         deadline = time.monotonic() + timeout
         try:
-            snapshot = self._positions.latest(max_age_ms)
+            interrupt_events = ((self._stopped,) if cancel_event is None else
+                                (self._stopped, cancel_event))
+            snapshot = self._positions.wait_fresh(
+                min(preflight_timeout, timeout), max_age_ms, interrupt_events,
+            )
         except PositionError as exc:
             raise PositioningError(
                 str(exc), code="POSITION_FEEDBACK_UNAVAILABLE", emitted=False,
@@ -448,7 +398,13 @@ class MouseController:
             raise ValueError("movement outside int16 bounds")
         max_age_ms = int(limits.get("max_age_ms", 150))
         try:
-            initial = self._positions.latest(max_age_ms)
+            preflight_timeout = float(limits.get("preflight_timeout", 2.0))
+            cancel_event = limits.get("cancel_event")
+            interrupt_events = ((self._stopped,) if cancel_event is None else
+                                (self._stopped, cancel_event))
+            initial = self._positions.wait_fresh(
+                preflight_timeout, max_age_ms, interrupt_events,
+            )
         except PositionError as exc:
             raise PositioningError(
                 str(exc), code="POSITION_FEEDBACK_UNAVAILABLE", emitted=False,
