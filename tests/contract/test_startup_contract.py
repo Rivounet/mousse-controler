@@ -59,6 +59,7 @@ class StartupContractTests(unittest.TestCase):
         self.assertIn("verify --release", manager)
         self.assertIn("Mutable source launch refused", launcher)
         self.assertIn("Controller release integrity verification failed", launcher)
+        self.assertIn("& $PythonPath -B -m mousse_controler.app", launcher)
 
     def test_runtime_cleans_transport_when_initialization_fails(self) -> None:
         source = (ROOT / "src" / "mousse_controler" / "app.py").read_text(encoding="utf-8")

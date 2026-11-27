@@ -2,9 +2,12 @@
 
 | Chantier | État | Critère de clôture |
 |---|---|---|
+| Qualification like-prod sur `DESKTOP-NPIHO8K` depuis le `main` courant | **EN COURS — NON QUALIFIÉE** | instance HOGP dédiée, paire de baux, abonné unique autorisé, actions sur surface sûre et preuves au SHA exact |
+| Production `mini-pc-backend` | **PRÉSERVÉE — HORS QUALIFICATION** | aucune tâche de production repointée ou utilisée par le run like-prod |
+| Preuves `MonOrdinateur` | **HISTORIQUES UNIQUEMENT** | ne sont jamais présentées comme preuve pour `DESKTOP-NPIHO8K` |
 | Robustesse R0–R5 et R6 | Fusionnés | Qualifications logicielles et rapports historiques conservés |
 | PR #22–#24 : préparation et environnement Codex | Fusionnées | `ENVIRONMENT_READY`, `full-local` 286/286 PASS selon Codex |
-| Mise en service mini-pc-backend et MonOrdinateur | **QUALIFIÉE** | MSIX et PositionAgent conformes, contrôleur PR #26 actif, sauvegarde et rollback vérifiés |
+| Mise en service mini-pc-backend et MonOrdinateur | **QUALIFICATION HISTORIQUE** | MSIX et PositionAgent conformes à l'ancien périmètre ; ne qualifie pas la nouvelle cible |
 | Communication/API/WebSocket | **QUALIFIÉE** | 401 sans jeton, événements corrélés, télémétrie fraîche et reconnexion vérifiés |
 | Qualification matérielle HID/capture | **EXÉCUTÉE** | Consentement immédiat, actions bornées, capture privée supprimée, arrêt d'urgence et récupération vérifiés |
 | PR #11 audit historique | Draft non fusionnée | Décision distincte ; aucune fusion implicite |

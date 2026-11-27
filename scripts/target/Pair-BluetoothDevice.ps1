@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Name,
+    [Parameter(Mandatory)][ValidatePattern('^[0-9A-Fa-f]{64}$')][string]$ExpectedDeviceIdSha256,
     [Parameter(Mandatory)][switch]$ConfirmPairing,
     [Parameter(Mandatory)][string]$ResultPath,
     [int]$TimeoutSeconds = 90
@@ -34,22 +35,56 @@ $devices = Convert-AsyncOperationToResult `
     -Operation $operation `
     -ResultType ([Windows.Devices.Enumeration.DeviceInformationCollection])
 $matches = @($devices | Where-Object { $_.Name -ceq $Name })
-if ($matches.Count -ne 1) { throw "Expected one exact Bluetooth device named '$Name'; found $($matches.Count)" }
-$device = $matches[0]
+$candidates = @($matches | ForEach-Object {
+    $identityBytes = [Text.Encoding]::UTF8.GetBytes($_.Id)
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $identity = ([BitConverter]::ToString($sha256.ComputeHash($identityBytes))).Replace('-', '')
+    } finally {
+        $sha256.Dispose()
+        [Array]::Clear($identityBytes, 0, $identityBytes.Length)
+    }
+    [PSCustomObject]@{ Device = $_; IdSha256 = $identity }
+})
+$expectedIdentity = $ExpectedDeviceIdSha256.ToUpperInvariant()
+$selected = @($candidates | Where-Object { $_.IdSha256 -ceq $expectedIdentity })
+if ($selected.Count -ne 1) {
+    throw "Expected one exact Bluetooth device matching the authorized identity; found $($selected.Count)"
+}
+$device = $selected[0].Device
 $initial = [bool]$device.Pairing.IsPaired
+$protection = 'Unverified'
+$rollbackStatus = 'NotRequired'
 $status = 'AlreadyPaired'
-if (-not $initial) {
+if ($initial) {
+    throw 'Existing pairing cannot prove the requested encryption; unpair it explicitly before qualification.'
+}
+else {
     $pairOperation = $device.Pairing.PairAsync(
         [Windows.Devices.Enumeration.DevicePairingProtectionLevel]::Encryption)
     $pairResult = Convert-AsyncOperationToResult `
         -Operation $pairOperation `
         -ResultType ([Windows.Devices.Enumeration.DevicePairingResult])
     $status = $pairResult.Status.ToString()
+    $protection = $pairResult.ProtectionLevelUsed.ToString()
+    if ($status -in @('Paired', 'AlreadyPaired') -and $protection -ne 'Encryption') {
+        $unpairOperation = $device.Pairing.UnpairAsync()
+        $unpairResult = Convert-AsyncOperationToResult `
+            -Operation $unpairOperation `
+            -ResultType ([Windows.Devices.Enumeration.DeviceUnpairingResult])
+        $rollbackStatus = $unpairResult.Status.ToString()
+        throw "Pairing protection was '$protection'; insecure pairing was rolled back with status '$rollbackStatus'."
+    }
 }
 $result = [ordered]@{
     device_name = $Name
+    expected_id_sha256 = $expectedIdentity
+    selected_id_sha256 = $selected[0].IdSha256
     initial_paired = $initial
     pairing_status = $status
+    protection_level_used = $protection
+    encryption_verified = ($protection -eq 'Encryption')
+    pairing_rollback_status = $rollbackStatus
     paired = [bool]$device.Pairing.IsPaired
     session_id = [Diagnostics.Process]::GetCurrentProcess().SessionId
 }

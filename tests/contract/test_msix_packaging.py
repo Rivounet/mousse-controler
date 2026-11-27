@@ -7,6 +7,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "packaging" / "hogp" / "AppxManifest.xml"
+QUALIFICATION_MANIFEST = (
+    ROOT / "packaging" / "hogp-qualification" / "AppxManifest.xml"
+)
 FOUNDATION = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
 DESKTOP = "http://schemas.microsoft.com/appx/manifest/desktop/windows10"
 INSTALLED_BASELINE_VERSION = (1, 0, 0, 2)
@@ -34,6 +37,36 @@ class MsixPackagingTests(unittest.TestCase):
         aliases = root.findall(f".//{{{DESKTOP}}}ExecutionAlias")
         self.assertEqual([item.attrib["Alias"] for item in aliases],
                          ["mousse-hogp-packaged.exe"])
+
+    def test_qualification_package_has_a_distinct_identity_and_alias(self):
+        production = ET.parse(MANIFEST).getroot()
+        qualification = ET.parse(QUALIFICATION_MANIFEST).getroot()
+        production_identity = production.find(f"{{{FOUNDATION}}}Identity")
+        qualification_identity = qualification.find(f"{{{FOUNDATION}}}Identity")
+        assert production_identity is not None
+        assert qualification_identity is not None
+        self.assertNotEqual(
+            production_identity.attrib["Name"],
+            qualification_identity.attrib["Name"],
+        )
+        self.assertEqual(
+            qualification_identity.attrib["Name"],
+            "Rivounet.MousseControler.Hogp.Qualification",
+        )
+        aliases = qualification.findall(f".//{{{DESKTOP}}}ExecutionAlias")
+        self.assertEqual(
+            [item.attrib["Alias"] for item in aliases],
+            ["mousse-hogp-qualification.exe"],
+        )
+        self.assertNotEqual(
+            aliases[0].attrib["Alias"], "mousse-hogp-packaged.exe")
+
+    def test_build_script_selects_the_qualification_manifest_explicitly(self):
+        source = (ROOT / "scripts" / "build" / "Build-HogpPackage.ps1").read_text(
+            encoding="utf-8")
+        self.assertIn("[switch]$Qualification", source)
+        self.assertIn("packaging\\hogp-qualification\\AppxManifest.xml", source)
+        self.assertIn("MousseControler.Hogp.Qualification.msix", source)
 
 
 if __name__ == "__main__":

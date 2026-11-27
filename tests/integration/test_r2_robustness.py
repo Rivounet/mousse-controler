@@ -111,7 +111,8 @@ else:
         command = raw.strip()
         with log_path.open("a", encoding="utf-8") as log:
             log.write(command + "\n")
-        if mode in ("command-silent", "button-silent"):
+        if mode in ("command-silent", "button-silent") or (
+                mode == "stop-silent" and command == "stop"):
             time.sleep(60)
         elif mode == "command-partial":
             sys.stdout.write('{"event":"report","ok":')
@@ -155,7 +156,7 @@ def wait_terminal(registry: ActionRegistry, action_id: str, timeout: float = 2.0
 
 class HogpDeadlineTests(unittest.TestCase):
     def make_transport(self, mode: str, log_path: Path, *,
-                       startup_timeout: float = 1.5) -> FakeEngineTransport:
+                       startup_timeout: float = 15.0) -> FakeEngineTransport:
         # Process creation is not the behavior under test in command/recovery
         # cases. Leave enough budget for a loaded Windows host; the dedicated
         # startup-deadline test below keeps the strict 300 ms contract.
@@ -196,6 +197,22 @@ class HogpDeadlineTests(unittest.TestCase):
             transport.stop()
             recovered = transport.recovery_status()
             self.assertEqual(recovered["channel_state"], "stopped")
+            self.assertEqual(recovered["last_stop_outcome"], "clean")
+            self.assertEqual(recovered["lingering_workers"], 0)
+
+    def test_silent_protocol_stop_is_forced_and_observable_but_successful(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            transport = self.make_transport(
+                "stop-silent", Path(directory) / "commands.log")
+            transport.start()
+
+            transport.stop()
+
+            recovered = transport.recovery_status()
+            self.assertEqual(recovered["channel_state"], "stopped")
+            self.assertEqual(recovered["last_stop_outcome"], "forced")
+            self.assertFalse(recovered["termination_failed"])
+            self.assertFalse(recovered["recovery_required"])
             self.assertEqual(recovered["lingering_workers"], 0)
 
     def test_command_in_progress_and_concurrent_stops_are_bounded(self) -> None:
@@ -240,7 +257,8 @@ class HogpDeadlineTests(unittest.TestCase):
             self.assertTrue(command_errors)
             self.assertLessEqual(len(stop_errors), 1)
             status = transport.recovery_status()
-            self.assertEqual(status["channel_state"], "invalid")
+            self.assertEqual(status["channel_state"], "stopped")
+            self.assertEqual(status["last_stop_outcome"], "forced")
             self.assertEqual(status["lingering_workers"], 0)
 
     def test_partial_response_and_process_exit_during_command_invalidate_channel(self) -> None:

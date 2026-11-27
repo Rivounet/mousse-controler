@@ -11,7 +11,7 @@ sont :
 | `fast` | tests unitaires, contrats et outillage de qualification | diagnostics matériels, processus d'intégration, installation, déploiement |
 | `integration` | processus, sockets, fichiers, concurrence, rollbacks simulés et assemblage système hermétique | diagnostics matériels, SSH réel, installation, déploiement |
 | `software` | `fast` puis `integration` | mêmes exclusions |
-| `build` | mesure d'architecture, compilation Python, référence API, syntaxe PowerShell, PositionAgent, PairingTool, MouseWitness et MSIX HOGP non signé | exécution des scripts analysés, signature et installation |
+| `build` | mesure d'architecture, compilation Python, référence API, syntaxe PowerShell, PositionAgent, PairingTool, MouseWitness et MSIX HOGP production + qualification non signés | exécution des scripts analysés, signature et installation |
 | `full-local` | `software` puis `build` | mêmes exclusions |
 
 Commande de référence :

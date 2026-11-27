@@ -190,6 +190,7 @@ def build_runtime(
         command_timeout=float(config.get("hogp_command_timeout_seconds", 3.0)),
         stop_timeout=float(config.get("hogp_stop_timeout_seconds", 3.0)),
         termination_timeout=float(config.get("hogp_termination_timeout_seconds", 2.0)),
+        authorized_client_sha256=config.get("hogp_authorized_client_sha256"),
     )
     controller = MouseController(transport, store)
     command_token = bytearray(selected.unprotect_secret(config["command_token_dpapi"]))
@@ -319,7 +320,10 @@ def serve(config_path: Path) -> int:
                     return
                 try:
                     status = transport.status()
-                    if status.get("subscribed", "").lower() == "true":
+                    subscriber_health = status.get(
+                        "authorized_subscriber", status.get("subscribed", ""),
+                    )
+                    if subscriber_health.lower() == "true":
                         disconnected_since = None
                         last_fault_recovery = None
                         continue

@@ -38,6 +38,9 @@ class TargetUpdateContractTests(unittest.TestCase):
         source = (ROOT / "scripts" / "qualification" /
                   "Start-InteractiveMouseQualification.ps1").read_text(encoding="utf-8")
         self.assertIn("MousseControler-MouseWitness-Qualification", source)
+        self.assertIn("MousseControler-MC-HID-EXEC-001-PositionAgent", source)
+        self.assertIn("Assert-TargetLease", source)
+        self.assertIn("Active target qualification lease does not match", source)
         self.assertIn("-LogonType Interactive -RunLevel Limited", source)
         self.assertIn("Register-ScheduledTask -TaskName $QualificationTaskName", source)
         self.assertIn("Unregister-ScheduledTask -TaskName $QualificationTaskName", source)
@@ -53,6 +56,9 @@ class TargetUpdateContractTests(unittest.TestCase):
         self.assertIn("capture_delete", source)
         self.assertIn("for attempt in range(3)", source)
         self.assertIn("finally:\n                deleted = invoke", source)
+        self.assertIn("validate_qualification_lease_pair", source)
+        self.assertIn("--backend-lease", source)
+        self.assertIn("--target-lease-status", source)
         exporter = (ROOT / "scripts" / "qualification" /
                     "Export-CaptureEvidence.ps1").read_text(encoding="utf-8")
         self.assertIn("Capture evidence crop exceeds source image bounds", exporter)

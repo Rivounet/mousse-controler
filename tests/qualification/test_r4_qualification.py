@@ -42,7 +42,7 @@ class QualificationProfileTests(unittest.TestCase):
                 ["fast-tests", "integration-tests", "test-architecture-measurement",
                  "python-compilation", "api-reference-check", "powershell-syntax",
                  "position-agent-build", "pairing-tool-build", "mouse-witness-build",
-                 "hogp-package-build"],
+                 "hogp-package-build", "hogp-qualification-package-build"],
             )
 
     def test_build_profile_only_builds_into_qualification_output(self):
@@ -55,7 +55,7 @@ class QualificationProfileTests(unittest.TestCase):
             self.assertEqual(
                 [phase.name for phase in build_phases],
                 ["position-agent-build", "pairing-tool-build", "mouse-witness-build",
-                 "hogp-package-build"],
+                 "hogp-package-build", "hogp-qualification-package-build"],
             )
             for phase in phases:
                 with self.subTest(phase=phase.name):

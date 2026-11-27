@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,69 @@ import uuid
 
 from mousse_controler.command_client import invoke
 from mousse_controler.dpapi import unprotect
+
+
+def _utc_instant(value: object, field: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError(f"qualification lease {field} is missing")
+    try:
+        instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"qualification lease {field} is invalid") from exc
+    if instant.tzinfo is None:
+        raise ValueError(f"qualification lease {field} must contain a UTC offset")
+    return instant.astimezone(timezone.utc)
+
+
+def validate_qualification_lease_pair(
+        backend_path: Path, target_status_path: Path, run_id: str,
+        git_sha: str) -> dict:
+    try:
+        normalized_run_id = str(uuid.UUID(run_id))
+    except ValueError as exc:
+        raise ValueError("qualification run id must be a canonical UUID") from exc
+    normalized_git_sha = git_sha.lower()
+    if len(normalized_git_sha) not in {40, 64} or any(
+            character not in "0123456789abcdef" for character in normalized_git_sha):
+        raise ValueError("qualification Git SHA must contain 40 or 64 hex characters")
+    backend = json.loads(backend_path.read_text(encoding="utf-8"))
+    target = json.loads(target_status_path.read_text(encoding="utf-8"))
+    if not isinstance(backend, dict) or not isinstance(target, dict):
+        raise ValueError("qualification lease evidence must contain JSON objects")
+    now = datetime.now(timezone.utc)
+    target_observed = _utc_instant(target.get("observed_at_utc"), "observed_at_utc")
+    if abs((now - target_observed).total_seconds()) > 30:
+        raise ValueError("target qualification lease status is stale")
+    for role, state in (("backend", backend), ("target", target)):
+        if state.get("schema") != "mousse-qualification-lease-v1":
+            raise ValueError(f"{role} qualification lease schema is invalid")
+        if state.get("role") != role:
+            raise ValueError(f"{role} qualification lease role is invalid")
+        if state.get("run_id") != normalized_run_id:
+            raise ValueError(f"{role} qualification lease belongs to another run")
+        if state.get("git_sha") != normalized_git_sha:
+            raise ValueError(f"{role} qualification lease uses another Git SHA")
+        if _utc_instant(state.get("expires_at_utc"), "expires_at_utc") <= now:
+            raise ValueError(f"{role} qualification lease has expired")
+        if not isinstance(state.get("machine"), str) or not state["machine"]:
+            raise ValueError(f"{role} qualification lease machine is invalid")
+    if target.get("active") is not True:
+        raise ValueError("target qualification lease is not active")
+    if (backend.get("peer_host") != target.get("machine") or
+            target.get("peer_host") != backend.get("machine")):
+        raise ValueError("qualification lease peers do not match each other")
+    owner_hash = backend.get("owner_token_sha256")
+    if not isinstance(owner_hash, str) or len(owner_hash) != 64:
+        raise ValueError("backend qualification lease owner hash is invalid")
+    return {
+        "run_id": normalized_run_id,
+        "git_sha": normalized_git_sha,
+        "backend": backend["machine"],
+        "target": target["machine"],
+        "backend_expires_at_utc": backend["expires_at_utc"],
+        "target_expires_at_utc": target["expires_at_utc"],
+        "target_observed_at_utc": target["observed_at_utc"],
+    }
 
 
 class EventClient:
@@ -253,7 +317,13 @@ def main() -> int:
                         default="actions")
     parser.add_argument("--bounds", nargs=4, type=int, metavar=("X", "Y", "WIDTH", "HEIGHT"))
     parser.add_argument("--evidence-directory", type=Path)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--git-sha", required=True)
+    parser.add_argument("--backend-lease", type=Path, required=True)
+    parser.add_argument("--target-lease-status", type=Path, required=True)
     args = parser.parse_args()
+    lease_pair = validate_qualification_lease_pair(
+        args.backend_lease, args.target_lease_status, args.run_id, args.git_sha)
     if args.phase in {"actions", "captures"}:
         if not args.bounds:
             parser.error("--bounds is required for actions and captures")
@@ -261,6 +331,7 @@ def main() -> int:
                          evidence_directory=args.evidence_directory)
     else:
         result = emergency(args.config)
+    result["qualification_lease"] = lease_pair
     print(json.dumps(result, indent=2))
     return 0
 

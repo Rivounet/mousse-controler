@@ -15,7 +15,7 @@ mini-pc-backend
     → IHogpTransport / moteur PowerShell/WinRT packagé MSIX
            │ Bluetooth LE HOGP
            ▼
-MonOrdinateur : pile Bluetooth et souris HID natives Windows
+PC cible Windows : pile Bluetooth et souris HID natives Windows
   PositionAgent visible (C# .NET Framework 4.8, session utilisateur)
            │ GetCursorPos / écrans / session / capture explicitement demandée
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
@@ -43,9 +43,10 @@ Le retour cible est publié par `PositionStore` sous forme d'un couple atomique
 position/topologie de même génération. Aucun consommateur ne doit maintenir une
 copie de topologie séparée ni combiner deux générations.
 
-Codex travaille **directement sur mini-pc-backend**. L'accès OpenSSH à clé et
-host key stricte vers MonOrdinateur est qualifié pour la maintenance ; l'agent
-de position s'exécute séparément dans la session interactive.
+Le backend et la cible restent deux hôtes distincts. L'agent de position
+s'exécute séparément dans la session interactive de la cible. Les anciens
+canaux de maintenance de `MonOrdinateur` sont des preuves historiques et ne
+qualifient pas `DESKTOP-NPIHO8K`.
 
 ## Contrats et limites
 
@@ -57,11 +58,15 @@ de position s'exécute séparément dans la session interactive.
   fine plafonnée après dépassement, arrêt si donnée obsolète, session/topologie
   modifiée, écart concurrent anormal ou timeout. Ne jamais présenter une
   estimation comme une mesure.
-- **IHogpTransport** : start/stop/state/send_relative/release_all ; HOGP conforme, pairing volontaire, chiffrement, notifications, relâchement boutons, aucun rejeu après reconnexion. Doubles simulés pour tests.
+- **IHogpTransport** : start/stop/state/send_relative/release_all ; HOGP conforme,
+  pairage volontaire, chiffrement vérifié, exactement un abonné actif autorisé,
+  notification ciblée, relâchement boutons et aucun rejeu après reconnexion.
+  Doubles simulés pour tests.
 - **Agent cible** : lit curseur, topologie, DPI et état de session ; publie les
   mesures et réalise seulement les captures avant/après explicitement liées à
   une action. Il ne reçoit aucune commande souris et n'est pas un service caché.
-- **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu, séquence, horodatage, secrets protégés, aucun port entrant sur MonOrdinateur.
+- **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
+  séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
 
 ## Priorités et alternatives
 
@@ -123,7 +128,7 @@ La réalisation sépare quatre responsabilités :
 - `HogpTransport` : processus PowerShell/WinRT sous identité MSIX, hébergé par le
   binaire Windows Microsoft-signé, services HID `0x1812` et Battery
   `0x180F`, rapports relatifs de six octets, chiffrement obligatoire et aucune
-  émission sans abonnement du Host ;
+  émission sans l'unique abonnement actif dont l'identité hachée est autorisée ;
 - `PositionController` : sérialisation des commandes, mesures fraîches de moins
   de 150 ms, correction adaptative tenant compte de l'accélération, plafonnée à
   48 puis mode fin plafonné à 8, changement de session/topologie fail-closed ;
@@ -133,11 +138,16 @@ La réalisation sépare quatre responsabilités :
 - `SequenceRunner` : zones rectangle/cercle/polygone, graine reproductible,
   modes automatique/commandé et états `IDLE` à `ERROR`.
 
-L'agent .NET Framework 4.8 de `MonOrdinateur` s'exécute visiblement dans la
+L'agent .NET Framework 4.8 du PC cible s'exécute visiblement dans la
 session console, lit position physique/DPI/topologie et ne possède aucune API
 d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 épinglé, HMAC-SHA-256, séquence et horodatage. L'API de commande reste sur
 `127.0.0.1`, avec bearer DPAPI, TTL, idempotence et limite de débit.
+
+Le mode de télémétrie `PositionAgent --config` n'ouvre aucun service HOGP et ne
+surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
+`--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
+l'empreinte de l'identité WinRT attendue.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat

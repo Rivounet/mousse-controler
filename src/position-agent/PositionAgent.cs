@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Runtime.InteropServices;
@@ -27,7 +28,6 @@ namespace MousseControler.PositionAgent
         public string CertificateSha256 { get; set; }
         public int IntervalMilliseconds { get; set; }
         public int RequestTimeoutMilliseconds { get; set; }
-        public string HogpDeviceName { get; set; }
     }
 
     internal sealed class CaptureRequest
@@ -89,9 +89,12 @@ namespace MousseControler.PositionAgent
         private BluetoothLEDevice device;
         private IReadOnlyList<GattDeviceService> services;
 
-        internal HogpReconnectMonitor(string exactName)
+        private readonly string expectedIdSha256;
+
+        internal HogpReconnectMonitor(string exactName, string expectedIdSha256)
         {
             this.exactName = exactName;
+            this.expectedIdSha256 = NormalizeSha256(expectedIdSha256);
             worker = new Thread(Run) { IsBackground = true, Name = "HOGP reconnect monitor" };
         }
 
@@ -140,6 +143,7 @@ namespace MousseControler.PositionAgent
             foreach (DeviceInformation candidate in candidates)
             {
                 if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
+                    !string.Equals(Hash(candidate.Id), expectedIdSha256, StringComparison.Ordinal) ||
                     !candidate.Pairing.IsPaired ||
                     !GetBoolean(candidate, "System.Devices.Aep.IsPresent") ||
                     !GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable"))
@@ -176,6 +180,23 @@ namespace MousseControler.PositionAgent
         {
             object value;
             return candidate.Properties.TryGetValue(name, out value) && value is bool && (bool)value;
+        }
+
+        private static string NormalizeSha256(string value)
+        {
+            string normalized = (value ?? "").Trim().ToUpperInvariant();
+            if (normalized.Length != 64 || normalized.Any(character =>
+                !((character >= '0' && character <= '9') ||
+                  (character >= 'A' && character <= 'F'))))
+                throw new ArgumentException("HOGP device identity must contain 64 hex characters");
+            return normalized;
+        }
+
+        private static string Hash(string value)
+        {
+            using (SHA256 sha = SHA256.Create())
+                return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value))
+                    .Select(part => part.ToString("X2", CultureInfo.InvariantCulture)));
         }
 
         private void ReleaseConnection()
@@ -272,7 +293,6 @@ namespace MousseControler.PositionAgent
         private long sequence;
         private string previousTopology;
         private uint previousSession = uint.MaxValue;
-        private readonly HogpReconnectMonitor reconnectMonitor;
 
         internal Agent(AgentConfig config)
         {
@@ -282,13 +302,10 @@ namespace MousseControler.PositionAgent
                 DataProtectionScope.CurrentUser);
             certificatePin = NormalizeHex(config.CertificateSha256);
             if (certificatePin.Length != 64) throw new InvalidDataException("certificate SHA-256 must contain 64 hex characters");
-            if (!string.IsNullOrWhiteSpace(config.HogpDeviceName))
-                reconnectMonitor = new HogpReconnectMonitor(config.HogpDeviceName);
         }
 
         public void Dispose()
         {
-            if (reconnectMonitor != null) reconnectMonitor.Dispose();
             if (secret != null) Array.Clear(secret, 0, secret.Length);
         }
 
@@ -296,7 +313,6 @@ namespace MousseControler.PositionAgent
         {
             Console.WriteLine("Mousse Position Agent — visible, outbound-only. Ctrl+C to stop.");
             Console.WriteLine("Endpoint: " + config.Endpoint);
-            if (reconnectMonitor != null) reconnectMonitor.Start();
             while (!token.IsCancellationRequested)
             {
                 Stopwatch cycle = Stopwatch.StartNew();
@@ -584,19 +600,19 @@ namespace MousseControler.PositionAgent
                     finally { Array.Clear(clear, 0, clear.Length); }
                     return 0;
                 }
-                if ((args.Length == 2 || args.Length == 3) && args[0] == "--hogp-reconnect")
+                if ((args.Length == 3 || args.Length == 4) && args[0] == "--hogp-reconnect")
                 {
                     if (string.IsNullOrWhiteSpace(args[1]))
                         throw new InvalidDataException("HOGP device name was empty");
-                    if (args.Length == 3)
+                    if (args.Length == 4)
                     {
-                        StreamWriter log = new StreamWriter(args[2], true, new UTF8Encoding(false));
+                        StreamWriter log = new StreamWriter(args[3], true, new UTF8Encoding(false));
                         log.AutoFlush = true;
                         Console.SetOut(log);
                         Console.SetError(log);
                     }
                     using (CancellationTokenSource cancellation = new CancellationTokenSource())
-                    using (HogpReconnectMonitor monitor = new HogpReconnectMonitor(args[1]))
+                    using (HogpReconnectMonitor monitor = new HogpReconnectMonitor(args[1], args[2]))
                     {
                         Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs) {
                             eventArgs.Cancel = true;
@@ -610,7 +626,7 @@ namespace MousseControler.PositionAgent
                 if (args.Length != 2 || args[0] != "--config")
                 {
                     Console.Error.WriteLine("Usage: PositionAgent.exe --config <agent.json>");
-                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> [log-path]");
+                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> <expected-id-sha256> [log-path]");
                     Console.Error.WriteLine("       PositionAgent.exe --protect-secret  (reads one line from stdin)");
                     return 2;
                 }

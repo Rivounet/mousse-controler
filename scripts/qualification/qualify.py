@@ -96,6 +96,7 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
     pairing_tool = artifacts / "PairingTool"
     mouse_witness = artifacts / "MouseWitness"
     hogp_package = artifacts / "HogpPackage"
+    hogp_qualification_package = artifacts / "HogpQualificationPackage"
     manifest = artifacts / "position-agent-build.json"
     build = [
         Phase(
@@ -167,6 +168,20 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
             ),
             "build",
             required_artifact=hogp_package / "MousseControler.Hogp.msix",
+        ),
+        Phase(
+            "hogp-qualification-package-build",
+            (
+                "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
+                str(ROOT / "scripts/build/Build-HogpPackage.ps1"),
+                "-OutputDirectory", str(hogp_qualification_package),
+                "-Qualification",
+            ),
+            "build",
+            required_artifact=(
+                hogp_qualification_package /
+                "MousseControler.Hogp.Qualification.msix"
+            ),
         ),
     ]
     if profile == "fast":

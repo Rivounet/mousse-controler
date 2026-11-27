@@ -116,9 +116,15 @@ class _EngineChannel:
 class NativeHogpTransport(HidTransport):
     """Deadline-bounded line protocol for the foreground packaged WinRT engine."""
 
+    _PACKAGED_ENGINES = {
+        "mousse-hogp-packaged.exe",
+        "mousse-hogp-qualification.exe",
+    }
+
     def __init__(self, executable: Path, startup_timeout: float = 15.0,
                  command_timeout: float = 3.0, stop_timeout: float = 3.0,
-                 termination_timeout: float = 2.0):
+                 termination_timeout: float = 2.0,
+                 authorized_client_sha256: str | None = None):
         for name, value, maximum in (
             ("startup_timeout", startup_timeout, 60.0),
             ("command_timeout", command_timeout, 10.0),
@@ -132,6 +138,21 @@ class NativeHogpTransport(HidTransport):
         self._command_timeout = command_timeout
         self._stop_timeout = stop_timeout
         self._termination_timeout = termination_timeout
+        if authorized_client_sha256 is not None:
+            normalized_client = authorized_client_sha256.strip().upper()
+            if (len(normalized_client) != 64 or
+                    any(character not in "0123456789ABCDEF"
+                        for character in normalized_client)):
+                raise ValueError(
+                    "authorized_client_sha256 must contain exactly 64 hex characters"
+                )
+            if self._executable.name.lower() not in self._PACKAGED_ENGINES:
+                raise ValueError(
+                    "authorized HOGP clients require the packaged WinRT engine"
+                )
+            self._authorized_client_sha256: str | None = normalized_client
+        else:
+            self._authorized_client_sha256 = None
         self._process: subprocess.Popen[str] | None = None
         self._channel: _EngineChannel | None = None
         self._failed_channel: _EngineChannel | None = None
@@ -145,16 +166,24 @@ class NativeHogpTransport(HidTransport):
         self._last_stderr_lines = 0
         self._lingering_workers = 0
         self._termination_failed = False
+        self._last_stop_outcome: str | None = None
 
     def _engine_command(self) -> list[str]:
-        if self._executable.name.lower() != "mousse-hogp-packaged.exe":
+        if self._executable.name.lower() not in self._PACKAGED_ENGINES:
             return [str(self._executable), "--stdio"]
+        authorization = (
+            " -AuthorizedClientSha256 '"
+            + self._authorized_client_sha256
+            + "'"
+            if self._authorized_client_sha256 is not None else ""
+        )
         package_script = (
             "$utf8=[System.Text.UTF8Encoding]::new($false);"
             "[Console]::InputEncoding=$utf8;[Console]::OutputEncoding=$utf8;"
             "$OutputEncoding=$utf8;"
             "$p=[Windows.ApplicationModel.Package,Windows,ContentType=WindowsRuntime]::"
             "Current.InstalledLocation.Path; & (Join-Path $p 'hogp.ps1') -Stdio"
+            + authorization
         )
         return [
             str(self._executable),
@@ -378,6 +407,7 @@ class NativeHogpTransport(HidTransport):
                 "stderr_lines_drained": stderr_lines,
                 "lingering_workers": self._lingering_workers,
                 "termination_failed": self._termination_failed,
+                "last_stop_outcome": self._last_stop_outcome,
                 "recovery_required": (
                     self._failed_channel is not None and
                     self._failed_channel.process.poll() is None
@@ -408,6 +438,7 @@ class NativeHogpTransport(HidTransport):
             self._last_stderr_lines = 0
             self._lingering_workers = 0
             self._termination_failed = False
+            self._last_stop_outcome = None
         try:
             process = subprocess.Popen(
                 self._engine_command(),
@@ -464,7 +495,12 @@ class NativeHogpTransport(HidTransport):
                 with self._lifecycle_lock:
                     if not termination_failed and self._failed_channel is failed_channel:
                         self._failed_channel = None
+                        self._channel_state = "stopped"
+                        self._last_stop_outcome = "forced"
                 if termination_failed:
+                    with self._lifecycle_lock:
+                        self._channel_state = "invalid"
+                        self._last_stop_outcome = "failed"
                     raise TransportError(
                         "HOGP stop failed: process termination requires recovery"
                     )
@@ -487,16 +523,29 @@ class NativeHogpTransport(HidTransport):
                 if self._channel is channel:
                     self._channel = None
                     self._process = None
-                    self._channel_state = "stopped" if error is None else "invalid"
-                    self._last_error = None if error is None else str(error)
             termination_failed = self._shutdown_channel(channel)
             with self._lifecycle_lock:
                 if termination_failed:
                     self._failed_channel = channel
+                    self._channel_state = "invalid"
+                    self._last_stop_outcome = "failed"
+                    self._last_error = (
+                        str(error) if error is not None
+                        else "HOGP process termination failed"
+                    )
                 elif self._failed_channel is channel:
                     self._failed_channel = None
-            if error is not None:
-                raise TransportError(f"HOGP stop failed: {error}") from error
+                if not termination_failed:
+                    self._channel_state = "stopped"
+                    self._last_stop_outcome = "clean" if error is None else "forced"
+                    self._last_error = None if error is None else str(error)
+            if termination_failed:
+                detail = f": {error}" if error is not None else ""
+                raise TransportError(
+                    f"HOGP stop failed: process termination requires recovery{detail}"
+                ) from error
+            if error is not None and not isinstance(error, Exception):
+                raise error
 
     def move(self, dx: int, dy: int) -> None:
         self._command(f"move {dx} {dy}", {"report"})

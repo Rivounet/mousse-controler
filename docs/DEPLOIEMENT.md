@@ -175,7 +175,8 @@ Après qualification du SHA exact et autorisation opérationnelle distincte :
    manifeste, la configuration référencée et l'unicité du processus ;
 3. arrêter le contrôleur par la procédure qualifiée, repointer uniquement sa
    tâche vers cette release, puis redémarrer et contrôler position fraîche,
-   `subscribed=True`, `buttons=0` et aucune action active ;
+   `authorized_subscriber=True`, `subscriber_count=1`, l'empreinte attendue,
+   une session `Active`, `buttons=0` et aucune action active ;
 4. ne lancer le scénario matériel minimal qu'après un nouvel accord explicite.
 
 Rollback : arrêter le candidat, repointer la tâche vers la release précédente,
@@ -193,5 +194,45 @@ sauvegardés ensemble. Le rollback contrôleur repointe vers le worktree
 Après un arrêt global dont le canal HOGP n'acquitte pas la fermeture dans le
 délai, ne pas réutiliser le processus : exécuter le gestionnaire de tâche
 qualifié, vérifier `Running`, une seule instance, les trois ports, position
-fraîche, `subscribed=True`, `buttons=0` et zéro action active. Vérifier ensuite
+fraîche, `authorized_subscriber=True`, `subscriber_count=1`, l'empreinte
+attendue, une session `Active`, `buttons=0` et zéro action active. Vérifier ensuite
 que l'identifiant annulé est toujours refusé comme doublon.
+
+## Qualification like-prod distincte — DESKTOP-NPIHO8K
+
+Cette qualification ne repointe pas `MousseControler-HOGP` de production. Elle
+utilise une release immuable du `main` retenu, une configuration HOGP dédiée et
+des tâches `MC-HID-EXEC-001`. Avant toute action matérielle, acquérir sur chaque
+machine un bail via `scripts/qualification/Manage-QualificationLease.ps1` avec
+le même `run_id` et le même SHA. Les rôles `backend` et `target`, machines et
+`peer_host` doivent se correspondre exactement.
+
+Le pairage et la reconnexion refusent désormais le nom seul : l'inspection
+retourne une empreinte d'identité, puis `Pair`/`Connect` et le moniteur de
+reconnexion exigent cette empreinte. L'agent de télémétrie ne gère plus la
+reconnexion HOGP. Le moteur backend exige de son côté exactement un abonné actif
+dont l'identité hachée est autorisée et emploie l'overload de notification ciblé.
+
+`Start-InteractiveMouseQualification.ps1` refuse de démarrer la surface sûre si
+le bail cible ne correspond pas au run, au SHA et au backend. Le pilote matériel
+refuse à son tour toute action sans le bail backend actif et un statut cible de
+moins de 30 secondes. `Stop` reste toujours disponible pour le nettoyage, même
+si un bail a expiré.
+
+Après l'essai, arrêter tous les composants de qualification et vérifier
+`last_stop_outcome`. `clean` et `forced` signifient que le processus est confirmé
+terminé ; `failed` ou `recovery_required=True` interdisent toute reprise avant
+diagnostic. Libérer enfin les deux baux avec leur jeton propriétaire.
+
+Références Microsoft qui fondent ce protocole :
+
+- [pairage de périphériques Windows](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices) ;
+- [niveau de protection du pairage](https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.devicepairingprotectionlevel) ;
+- [notification GATT ciblée](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattlocalcharacteristic.notifyvalueasync) ;
+- [serveur GATT et clients abonnés](https://learn.microsoft.com/en-us/windows/uwp/devices-sensors/gatt-server) ;
+- [limite IoT Core du gestionnaire global de pairage entrant](https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.deviceinformationpairing.tryregisterforallinboundpairingrequests).
+
+Sur Windows Desktop, la cible initie donc le pairage pendant une fenêtre courte
+où le backend est explicitement découvrable et connectable. Le résultat doit
+indiquer `ProtectionLevelUsed=Encryption`; sinon le pairage est annulé et la
+qualification s'arrête.

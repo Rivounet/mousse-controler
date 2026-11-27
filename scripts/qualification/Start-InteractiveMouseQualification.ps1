@@ -1,8 +1,12 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Start', 'Status', 'Stop')][string]$Action = 'Start',
-    [string]$TaskName = 'MousseControler-PositionAgent',
-    [string]$QualificationTaskName = 'MousseControler-MouseWitness-Qualification'
+    [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-PositionAgent',
+    [string]$QualificationTaskName = 'MousseControler-MouseWitness-Qualification',
+    [string]$LeasePath,
+    [string]$RunId,
+    [string]$GitSha,
+    [string]$BackendHost = 'MINI-PC-BACKEND'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +15,31 @@ $updater = Join-Path $PSScriptRoot 'Update-InteractivePositionAgent.ps1'
 $witness = Join-Path $PSScriptRoot 'MouseWitness.exe'
 $events = Join-Path $PSScriptRoot 'witness-events.jsonl'
 $state = Join-Path $PSScriptRoot 'witness-state.json'
+$leaseManager = Join-Path $PSScriptRoot 'Manage-QualificationLease.ps1'
+
+function Get-QualificationLeaseStatus {
+    if (-not $LeasePath) { return $null }
+    if (-not (Test-Path -LiteralPath $leaseManager -PathType Leaf)) {
+        throw "Missing qualification file: $leaseManager"
+    }
+    & $leaseManager -Action Status -LeasePath $LeasePath | ConvertFrom-Json
+}
+
+function Assert-TargetLease {
+    if (-not $LeasePath -or -not $RunId -or
+            $GitSha -notmatch '^[0-9A-Fa-f]{40}([0-9A-Fa-f]{24})?$') {
+        throw 'Start requires -LeasePath, -RunId and a 40- or 64-hex -GitSha'
+    }
+    $leaseStatus = Get-QualificationLeaseStatus
+    if (-not $leaseStatus.active -or $leaseStatus.role -ne 'target' -or
+            $leaseStatus.run_id -cne $RunId.ToLowerInvariant() -or
+            $leaseStatus.git_sha -cne $GitSha.ToLowerInvariant() -or
+            $leaseStatus.machine -cne [Environment]::MachineName.ToUpperInvariant() -or
+            $leaseStatus.peer_host -cne $BackendHost.ToUpperInvariant()) {
+        throw 'Active target qualification lease does not match this run and peer'
+    }
+    return $leaseStatus
+}
 
 function Get-WitnessProcesses {
     @(Get-CimInstance Win32_Process -Filter "Name = 'MouseWitness.exe'" -ErrorAction SilentlyContinue |
@@ -50,12 +79,14 @@ if ($Action -eq 'Stop') {
 if ($Action -eq 'Status') {
     $task = Get-QualificationTask
     $processes = @(Get-WitnessProcesses)
+    $leaseStatus = Get-QualificationLeaseStatus
     [ordered]@{
         task_present = ($null -ne $task)
         task_state = if ($task) { $task.State.ToString() } else { $null }
         process_ids = @($processes | ForEach-Object { $_.ProcessId })
         session_ids = @($processes | ForEach-Object { $_.SessionId } | Sort-Object -Unique)
         state_present = Test-Path -LiteralPath $state -PathType Leaf
+        lease = $leaseStatus
     } | ConvertTo-Json
     exit 0
 }
@@ -63,6 +94,8 @@ if ($Action -eq 'Status') {
 foreach ($required in @($agent, $updater, $witness)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Missing qualification file: $required" }
 }
+
+$leaseStatus = Assert-TargetLease
 
 $update = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updater `
     -Action Install -ArtifactPath $agent -TaskName $TaskName | ConvertFrom-Json
@@ -105,5 +138,6 @@ $witnessState = Get-Content -Raw -LiteralPath $state | ConvertFrom-Json
         width = $witnessState.width
         height = $witnessState.height
     }
+    qualification_lease = $leaseStatus
     instruction = 'Keep the SAFE MOUSE TEST SURFACE visible until qualification completes.'
 } | ConvertTo-Json -Depth 5

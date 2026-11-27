@@ -96,7 +96,7 @@ class TransportCharacterizationTests(unittest.TestCase):
             with self.assertRaisesRegex(TransportError, "exit=23"):
                 transport.start()
 
-    def test_T04_saturated_stderr_is_drained(self):
+    def test_T04_saturated_stderr_is_drained_and_forced_stop_is_observable(self):
         stdout = io.StringIO('{"ok":true,"event":"prepared"}\n')
         stderr = SaturatingStderr()
         process = ProcessDouble(stdout, stderr=stderr)
@@ -107,8 +107,11 @@ class TransportCharacterizationTests(unittest.TestCase):
             transport.start()
         self.assertTrue(stderr.finished.wait(0.5))
         self.assertGreaterEqual(stderr.read_calls, 2)
-        with self.assertRaises(TransportError):
-            transport.stop()
+        transport.stop()
+        status = transport.recovery_status()
+        self.assertEqual(status["channel_state"], "stopped")
+        self.assertEqual(status["last_stop_outcome"], "forced")
+        self.assertFalse(status["recovery_required"])
 
 
 class ActionCharacterizationTests(unittest.TestCase):

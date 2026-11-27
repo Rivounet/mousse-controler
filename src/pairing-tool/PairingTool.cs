@@ -31,41 +31,53 @@ internal static class PairingTool
     private static int Main(string[] args)
     {
         var inspectOnly = args.Length == 3 && args[0] == "--inspect-name";
-        var connectOnly = args.Length == 3 && args[0] == "--connect-name";
-        var pair = args.Length == 3 && args[0] == "--name";
-        if ((!inspectOnly && !connectOnly && !pair) || args[2].Length == 0)
+        var connectOnly = args.Length == 4 && args[0] == "--connect-name";
+        var pair = args.Length == 4 && args[0] == "--name";
+        if (!inspectOnly && !connectOnly && !pair)
         {
             Console.Error.WriteLine(
-                "Usage: PairingTool (--name|--inspect-name|--connect-name) <exact-name> <result-json>");
+                "Usage: PairingTool --inspect-name <exact-name> <result-json>");
+            Console.Error.WriteLine(
+                "       PairingTool (--name|--connect-name) <exact-name> <expected-id-sha256> <result-json>");
             return 2;
         }
+        var exactName = args[1];
+        string expectedIdSha256 = null;
+        var resultPath = inspectOnly ? args[2] : args[3];
+        if (exactName.Length == 0 || resultPath.Length == 0)
+            return 2;
         try
         {
-            return Run(args[1], args[2], inspectOnly, connectOnly);
+            expectedIdSha256 = inspectOnly ? null : NormalizeSha256(args[2]);
+            return Run(exactName, expectedIdSha256, resultPath, inspectOnly, connectOnly);
         }
         catch (Exception ex)
         {
             var failure = new Dictionary<string, object>(Diagnostics)
             {
-                { "device_name", args[1] },
+                { "device_name", exactName },
+                { "expected_id_sha256", expectedIdSha256 },
                 { "paired", false },
                 { "error_type", ex.GetType().Name },
                 { "error_hresult", string.Format("0x{0:X8}", ex.HResult) },
                 { "session_id", Process.GetCurrentProcess().SessionId }
             };
-            WriteResult(args[2], failure);
+            WriteResult(resultPath, failure);
             Console.Error.WriteLine(ex.GetType().Name + ": " + ex.Message);
             return 1;
         }
     }
 
-    private static int Run(string exactName, string resultPath, bool inspectOnly, bool connectOnly)
+    private static int Run(string exactName, string expectedIdSha256, string resultPath,
+        bool inspectOnly, bool connectOnly)
     {
-        var device = DiscoverLiveEndpoint(exactName, TimeSpan.FromSeconds(35));
+        var device = DiscoverLiveEndpoint(
+            exactName, expectedIdSha256, TimeSpan.FromSeconds(35));
         var initiallyPaired = device.Pairing.IsPaired;
         var ceremonies = new List<string>();
         var status = initiallyPaired ? "AlreadyPaired" : "NotStarted";
         var protection = "None";
+        var pairingRollbackStatus = "NotRequired";
         if (!initiallyPaired && !inspectOnly && !connectOnly)
         {
             var custom = device.Pairing.Custom;
@@ -93,8 +105,18 @@ internal static class PairingTool
             }
         }
 
-        var paired = initiallyPaired || status == DevicePairingResultStatus.Paired.ToString() ||
-            status == DevicePairingResultStatus.AlreadyPaired.ToString();
+        var newlyPaired = status == DevicePairingResultStatus.Paired.ToString();
+        var encryptionVerified = newlyPaired &&
+            protection == DevicePairingProtectionLevel.Encryption.ToString();
+        if (!inspectOnly && !connectOnly && initiallyPaired)
+            status = "ExistingPairingRequiresExplicitUnpair";
+        if (!inspectOnly && !connectOnly && newlyPaired && !encryptionVerified)
+        {
+            var rollback = device.Pairing.UnpairAsync().AsTask().GetAwaiter().GetResult();
+            pairingRollbackStatus = rollback.Status.ToString();
+            status = "RejectedProtectionLevel";
+        }
+        var paired = device.Pairing.IsPaired && pairingRollbackStatus == "NotRequired";
         var connectionStatus = "NotRequested";
         var hidServiceCount = 0;
         if (connectOnly)
@@ -115,9 +137,12 @@ internal static class PairingTool
         var resultFields = new Dictionary<string, object>(Diagnostics)
         {
             { "device_name", exactName },
+            { "expected_id_sha256", expectedIdSha256 },
             { "initial_paired", initiallyPaired },
             { "pairing_status", status },
             { "protection_level_used", protection },
+            { "encryption_verified", encryptionVerified },
+            { "pairing_rollback_status", pairingRollbackStatus },
             { "ceremonies", ceremonies },
             { "paired", paired },
             { "session_id", Process.GetCurrentProcess().SessionId }
@@ -128,15 +153,18 @@ internal static class PairingTool
         resultFields["hid_service_count"] = hidServiceCount;
         WriteResult(resultPath, resultFields);
         Console.WriteLine((inspectOnly ? "Inspection" : "Pairing") + " status: " + status);
-        return inspectOnly || (connectOnly && connectionStatus == "Success") || paired ? 0 : 1;
+        return inspectOnly || (connectOnly && connectionStatus == "Success") ||
+            (paired && encryptionVerified) ? 0 : 1;
     }
 
-    private static DeviceInformation DiscoverLiveEndpoint(string exactName, TimeSpan timeout)
+    private static DeviceInformation DiscoverLiveEndpoint(
+        string exactName, string expectedIdSha256, TimeSpan timeout)
     {
         var gate = new ManualResetEventSlim(false);
         var sync = new object();
         var devices = new Dictionary<string, DeviceInformation>(StringComparer.Ordinal);
         var candidates = new Dictionary<string, Dictionary<string, object>>(StringComparer.Ordinal);
+        var liveCandidates = new Dictionary<string, DeviceInformation>(StringComparer.Ordinal);
         DeviceInformation selected = null;
         var added = 0;
         var updated = 0;
@@ -147,15 +175,22 @@ internal static class PairingTool
             if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal))
                 return;
             var state = Snapshot(candidate);
-            candidates[(string)state["id_sha256"]] = state;
+            var identity = (string)state["id_sha256"];
+            candidates[identity] = state;
             var present = GetBoolean(candidate, "System.Devices.Aep.IsPresent");
             var connectable = GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable");
             if (present && connectable &&
                 (candidate.Pairing.CanPair || candidate.Pairing.IsPaired))
             {
-                selected = candidate;
-                gate.Set();
+                liveCandidates[identity] = candidate;
+                if (expectedIdSha256 != null && identity == expectedIdSha256)
+                {
+                    selected = candidate;
+                    gate.Set();
+                }
             }
+            else
+                liveCandidates.Remove(identity);
         };
 
         var watcher = DeviceInformation.CreateWatcher(
@@ -184,7 +219,16 @@ internal static class PairingTool
         };
         TypedEventHandler<DeviceWatcher, object> completedHandler = (sender, ignored) =>
         {
-            lock (sync) enumerationCompleted = true;
+            lock (sync)
+            {
+                enumerationCompleted = true;
+                if (expectedIdSha256 == null)
+                {
+                    if (liveCandidates.Count == 1)
+                        selected = liveCandidates.Values.Single();
+                    gate.Set();
+                }
+            }
         };
         watcher.Added += addedHandler;
         watcher.Updated += updatedHandler;
@@ -211,6 +255,8 @@ internal static class PairingTool
             Diagnostics["watcher_updated"] = updated;
             Diagnostics["watcher_enumeration_completed"] = enumerationCompleted;
             Diagnostics["matching_candidates"] = candidates.Values.ToArray();
+            Diagnostics["live_matching_candidates"] = liveCandidates.Count;
+            Diagnostics["expected_id_sha256"] = expectedIdSha256;
             if (selected != null)
             {
                 var state = Snapshot(selected);
@@ -223,8 +269,20 @@ internal static class PairingTool
         }
         if (selected == null)
             throw new InvalidOperationException(
-                "No live, connectable and pairable Bluetooth LE endpoint matched the exact name");
+                expectedIdSha256 == null
+                    ? "Expected exactly one live, connectable and pairable Bluetooth LE endpoint during inspection"
+                    : "No live Bluetooth LE endpoint matched the exact name and expected identity");
         return selected;
+    }
+
+    private static string NormalizeSha256(string value)
+    {
+        var normalized = (value ?? "").Trim().ToUpperInvariant();
+        if (normalized.Length != 64 || normalized.Any(character =>
+            !((character >= '0' && character <= '9') ||
+              (character >= 'A' && character <= 'F'))))
+            throw new ArgumentException("expected device identity must contain 64 hex characters");
+        return normalized;
     }
 
     private static Dictionary<string, object> Snapshot(DeviceInformation candidate)

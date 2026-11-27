@@ -1,4 +1,7 @@
-param([switch]$Stdio)
+param(
+    [switch]$Stdio,
+    [string]$AuthorizedClientSha256
+)
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
@@ -6,6 +9,13 @@ Add-Type -AssemblyName System.Runtime.WindowsRuntime
 if (-not $Stdio) {
     [Console]::Error.WriteLine('Usage: hogp.ps1 --stdio')
     exit 2
+}
+
+if ($AuthorizedClientSha256) {
+    $AuthorizedClientSha256 = $AuthorizedClientSha256.Trim().ToUpperInvariant()
+    if ($AuthorizedClientSha256 -notmatch '^[0-9A-F]{64}$') {
+        throw 'AuthorizedClientSha256 must contain exactly 64 hex characters'
+    }
 }
 
 function Wait-WinRtOperation {
@@ -42,6 +52,63 @@ function Write-Event {
     if ($Detail) { $message.detail = $Detail }
     [Console]::Out.WriteLine(($message | ConvertTo-Json -Compress))
     [Console]::Out.Flush()
+}
+
+function Get-SubscriberIdentity {
+    param([Parameter(Mandatory)]$Client)
+
+    $deviceId = [string]$Client.Session.DeviceId.Id
+    if ([string]::IsNullOrWhiteSpace($deviceId)) {
+        throw 'subscribed client has no stable WinRT device identity'
+    }
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($deviceId))
+        ([BitConverter]::ToString($digest) -replace '-', '')
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Get-SubscriberState {
+    $clients = if ($null -eq $script:InputReport) {
+        @()
+    }
+    else {
+        @($script:InputReport.SubscribedClients)
+    }
+    $identities = @($clients | ForEach-Object { Get-SubscriberIdentity $_ })
+    $statuses = @($clients | ForEach-Object { [string]$_.Session.SessionStatus })
+    $authorized = (
+        $clients.Count -eq 1 -and
+        -not [string]::IsNullOrWhiteSpace($script:AuthorizedClientSha256) -and
+        $identities[0] -ceq $script:AuthorizedClientSha256 -and
+        $statuses[0] -eq 'Active'
+    )
+    [pscustomobject]@{
+        Clients = $clients
+        Identities = $identities
+        Statuses = $statuses
+        Authorized = $authorized
+    }
+}
+
+function Get-AuthorizedSubscriber {
+    $state = Get-SubscriberState
+    if ($state.Clients.Count -ne 1) {
+        throw "expected exactly one subscribed HID host; observed $($state.Clients.Count)"
+    }
+    if ([string]::IsNullOrWhiteSpace($script:AuthorizedClientSha256)) {
+        throw 'no authorized HID host is configured'
+    }
+    if ($state.Identities[0] -cne $script:AuthorizedClientSha256) {
+        throw 'subscribed HID host is not authorized'
+    }
+    if ($state.Statuses[0] -ne 'Active') {
+        throw "authorized HID host session is not active: $($state.Statuses[0])"
+    }
+    $state.Clients[0]
 }
 
 function New-Buffer {
@@ -132,27 +199,22 @@ function Send-Report {
         [ValidateRange(-127, 127)][int]$Wheel
     )
 
-    if ($null -eq $script:InputReport -or $script:InputReport.SubscribedClients.Count -eq 0) {
-        throw 'no subscribed HID host'
-    }
+    $subscribedClient = Get-AuthorizedSubscriber
     $resultItemType = [Windows.Devices.Bluetooth.GenericAttributeProfile.GattClientNotificationResult, Windows, ContentType=WindowsRuntime]
-    $resultType = [System.Collections.Generic.IReadOnlyList``1].MakeGenericType($resultItemType)
     $bufferType = [Windows.Storage.Streams.IBuffer, Windows, ContentType=WindowsRuntime]
+    $subscribedClientType = [Windows.Devices.Bluetooth.GenericAttributeProfile.GattSubscribedClient, Windows, ContentType=WindowsRuntime]
     $notifyMethod = $script:InputReport.GetType().GetMethod(
-        'NotifyValueAsync', [Type[]]@($bufferType))
+        'NotifyValueAsync', [Type[]]@($bufferType, $subscribedClientType))
     if ($null -eq $notifyMethod) {
-        throw 'Unable to locate the one-buffer NotifyValueAsync overload.'
+        throw 'Unable to locate the targeted NotifyValueAsync overload.'
     }
     $reportBuffer = New-ReportBuffer $Buttons $Dx $Dy $Wheel
-    $operation = $notifyMethod.Invoke($script:InputReport, @($reportBuffer))
-    $results = Wait-WinRtOperation $operation $resultType
-    if ($null -eq $results -or $results.Count -eq 0) {
-        throw 'notification reached no clients'
-    }
-    foreach ($result in $results) {
-        if ([string]$result.Status -ne 'Success') {
-            throw "notification status: $($result.Status)"
-        }
+    $operation = $notifyMethod.Invoke(
+        $script:InputReport, @($reportBuffer, $subscribedClient))
+    $result = Wait-WinRtOperation $operation $resultItemType
+    if ($null -eq $result -or [string]$result.Status -ne 'Success') {
+        $status = if ($null -eq $result) { 'NoResult' } else { [string]$result.Status }
+        throw "notification status: $status"
     }
     Write-Event 'report' $true
 }
@@ -171,6 +233,7 @@ $script:HidProvider = $null
 $script:BatteryProvider = $null
 $script:InputReport = $null
 $script:Buttons = 0
+$script:AuthorizedClientSha256 = $AuthorizedClientSha256
 
 try {
     $adapterType = [Windows.Devices.Bluetooth.BluetoothAdapter, Windows, ContentType=WindowsRuntime]
@@ -245,8 +308,11 @@ try {
             if ($parts.Count -eq 0 -or -not $parts[0]) { continue }
             switch ($parts[0]) {
                 'status' {
-                    $subscribed = $null -ne $script:InputReport -and $script:InputReport.SubscribedClients.Count -gt 0
-                    Write-Event 'status' $true "prepared=True,advertising=$(Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus),advertisement_status=$($script:HidProvider.AdvertisementStatus),subscribed=$subscribed,buttons=$script:Buttons"
+                    $subscriberState = Get-SubscriberState
+                    $subscribed = $subscriberState.Clients.Count -gt 0
+                    $subscriberIds = $subscriberState.Identities -join ';'
+                    $sessionStatuses = $subscriberState.Statuses -join ';'
+                    Write-Event 'status' $true "prepared=True,advertising=$(Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus),advertisement_status=$($script:HidProvider.AdvertisementStatus),subscribed=$subscribed,authorized_subscriber=$($subscriberState.Authorized),subscriber_count=$($subscriberState.Clients.Count),subscriber_id_sha256=$subscriberIds,subscriber_session_status=$sessionStatuses,buttons=$script:Buttons"
                 }
                 'advertise' {
                     if ($parts.Count -ne 2 -or $parts[1] -notin @('start', 'pairable', 'stop')) {
@@ -290,10 +356,14 @@ try {
                     $script:Buttons = $mask
                 }
                 'release' {
-                    if ($script:InputReport.SubscribedClients.Count -gt 0) {
-                        Send-Report 0 0 0 0
+                    try {
+                        if ($script:InputReport.SubscribedClients.Count -gt 0) {
+                            Send-Report 0 0 0 0
+                        }
                     }
-                    $script:Buttons = 0
+                    finally {
+                        $script:Buttons = 0
+                    }
                     Write-Event 'release' $true
                 }
                 'stop' {

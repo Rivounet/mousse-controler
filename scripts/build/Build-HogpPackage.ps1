@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$CertificateThumbprint,
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [switch]$Qualification
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +12,17 @@ $tools = Resolve-MousseBuildTools -RequirePackagingTools
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'out\HogpPackage' }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 $stage = [IO.Path]::GetFullPath((Join-Path $output ('.stage-' + [Guid]::NewGuid().ToString('N'))))
-$package = Join-Path $output 'MousseControler.Hogp.msix'
+$packageName = if ($Qualification) {
+    'MousseControler.Hogp.Qualification.msix'
+} else {
+    'MousseControler.Hogp.msix'
+}
+$manifest = if ($Qualification) {
+    Join-Path $root 'packaging\hogp-qualification\AppxManifest.xml'
+} else {
+    Join-Path $root 'packaging\hogp\AppxManifest.xml'
+}
+$package = Join-Path $output $packageName
 $qualifiedOutputRoot = [IO.Path]::GetFullPath($output)
 if (-not $qualifiedOutputRoot.EndsWith([string][IO.Path]::DirectorySeparatorChar)) {
     $qualifiedOutputRoot += [IO.Path]::DirectorySeparatorChar
@@ -31,7 +42,7 @@ try {
 
     Copy-Item -LiteralPath $powerShell -Destination (Join-Path $stage 'powershell.exe') -Force
     Copy-Item (Join-Path $root 'src\hogp-powershell\hogp.ps1') (Join-Path $stage 'hogp.ps1') -Force
-    Copy-Item (Join-Path $root 'packaging\hogp\AppxManifest.xml') (Join-Path $stage 'AppxManifest.xml') -Force
+    Copy-Item -LiteralPath $manifest -Destination (Join-Path $stage 'AppxManifest.xml') -Force
 
     Add-Type -AssemblyName System.Drawing
     foreach ($asset in @(

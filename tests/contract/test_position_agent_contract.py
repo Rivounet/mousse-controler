@@ -14,6 +14,8 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         self.assertIn("candidate.Pairing.IsPaired", source)
         self.assertIn('System.Devices.Aep.IsPresent', source)
         self.assertIn('System.Devices.Aep.Bluetooth.Le.IsConnectable', source)
+        self.assertIn("Hash(candidate.Id)", source)
+        self.assertIn("expectedIdSha256", source)
 
     def test_reconnect_opens_uncached_hid_service(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
@@ -47,7 +49,15 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         source = MANAGER.read_text(encoding="utf-8")
         self.assertIn("HogpReconnect", source)
         self.assertIn("--hogp-reconnect", source)
+        self.assertIn("HogpDeviceIdSha256", source)
         self.assertIn("New-ScheduledTaskTrigger -AtLogOn", source)
+
+    def test_position_telemetry_mode_does_not_start_hogp_reconnect(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+        agent = source[source.index("internal sealed class Agent :"):
+                       source.index("internal static class Program")]
+        self.assertNotIn("HogpReconnectMonitor", agent)
+        self.assertNotIn("HogpDeviceName", agent)
 
 
 if __name__ == "__main__":

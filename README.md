@@ -1,17 +1,16 @@
 # Mousse-controler
 
-Mousse-controler pilote la souris de **MonOrdinateur** depuis
+Mousse-controler pilote la souris d'un **PC cible Windows** depuis
 **mini-pc-backend** par Bluetooth LE HID (HOGP). Un agent Windows visible sur
 la cible publie la position réelle et les captures explicitement demandées par
 un canal LAN HTTPS/HMAC sortant ; il ne reçoit aucune commande souris.
 
-## État courant vérifié — 27 novembre 2026
+## État courant — 28 novembre 2026
 
 - Base de fusion auditée : `origin/main` après la PR #26, commit de fusion
   `5ed7045823a0d7b8c7c6418ca5586008e35ba2d2`.
-- La validation fonctionnelle de la PR #26 reste la dernière preuve matérielle
-  publiée ; aucune nouvelle action HID ou capture n'est incluse dans le chantier
-  d'architecture.
+- Les preuves matérielles réalisées avec `MonOrdinateur` sont historiques et ne
+  qualifient pas la nouvelle cible `DESKTOP-NPIHO8K`.
 - L'audit du 27 novembre a constaté que la tâche contrôleur exécutait un
   worktree modifié, donc non reproductible par un SHA. Ce runtime a depuis été
   remplacé par une release immuable vérifiée ; les preuves sont publiées dans
@@ -22,6 +21,9 @@ un canal LAN HTTPS/HMAC sortant ; il ne reçoit aucune commande souris.
   restent trois décisions et preuves distinctes.
 - Aucun GitHub Actions ni service CI externe. La qualification officielle reste
   locale sous Windows.
+- La qualification like-prod emploie une instance HOGP, une configuration et des
+  tâches dédiées. La production `mini-pc-backend` reste préservée et une release
+  active plus ancienne que `main` n'est jamais assimilée au SHA à qualifier.
 
 L'état détaillé, les commits de fusion, la matrice C-01 à C-17 et les réserves
 sont centralisés dans [Robustesse R0–R6](docs/ROBUSTESSE.md).
@@ -33,7 +35,7 @@ mini-pc-backend : API → service applicatif → coordinateur exclusif
                          ├─ actions/séquences → contrôleur → HOGP BLE
                          └─ requêtes d'état ← feedback position/topologie atomique
                                                                     │
-MonOrdinateur : pile HID Windows native ←───────────────────────────┘
+PC cible Windows : pile HID Windows native ←────────────────────────┘
        agent visible : position/capture → HTTPS + HMAC → mini-pc-backend
 ```
 
@@ -41,6 +43,10 @@ Le moteur HOGP actif est PowerShell/WinRT dans un MSIX. Les sources C++ HOGP
 sont historiques et conservées faute de preuve d'absence totale d'usage. Le
 descripteur actuel expose cinq boutons et une roulette verticale ; la roulette
 horizontale n'est pas disponible.
+
+Chaque émission HOGP exige exactement un abonné actif dont l'identité WinRT
+hachée correspond à la configuration ; l'envoi utilise la notification ciblée,
+jamais une diffusion à tous les abonnés. L'identité brute n'est pas journalisée.
 
 ## Qualification officielle
 
@@ -51,6 +57,9 @@ python -B scripts/qualification/qualify.py --profile full-local
 Les profils fermés `software`, `build` et `full-local` ne déclenchent ni HID,
 ni capture réelle, ni accès distant, ni installation ou déploiement. Les sept
 diagnostics matériels sont séparés et exigent une autorisation explicite.
+Une qualification matérielle exige en plus deux baux frais portant le même
+`run_id` et le même SHA : rôle `backend` sur `mini-pc-backend`, rôle `target`
+sur la cible, avec désignation croisée des deux machines.
 
 ## Documentation
 

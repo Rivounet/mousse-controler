@@ -238,3 +238,23 @@ possibles.
 source mutable reste limité au développement manuel ; toute activation de la
 nouvelle release conserve une porte distincte de qualification, sauvegarde,
 rollback et décision de fusion.
+
+## D-072 — Identités HOGP et qualification inter-machine exclusive (28 novembre 2026)
+
+**Décision :** une émission HOGP n'est permise que vers l'unique abonné actif
+dont l'identité WinRT hachée est configurée. Le pairage et la reconnexion de la
+cible exigent eux aussi une empreinte attendue et ne sélectionnent jamais par le
+seul nom. La télémétrie PositionAgent et la supervision de reconnexion restent
+deux processus et deux responsabilités distinctes.
+
+**Décision de qualification :** tout essai matériel like-prod utilise une
+instance HOGP et des tâches dédiées. Un bail à durée limitée est acquis sur le
+backend et un autre sur la cible ; ils doivent partager le même `run_id`, le
+même SHA et se désigner mutuellement. La surface sûre et le pilote d'actions
+refusent de démarrer si ces preuves ne sont pas fraîches et cohérentes.
+
+**Conséquence :** une ancienne cible connectée, un second client, un nom BLE
+dupliqué, un statut cible périmé ou un run concurrent provoquent un refus
+fail-closed. La production `mini-pc-backend` et les preuves historiques de
+`MonOrdinateur` ne sont ni utilisées ni présentées comme qualification de
+`DESKTOP-NPIHO8K`.

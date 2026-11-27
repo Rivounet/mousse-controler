@@ -26,7 +26,7 @@ elseif (-not $AllowMutableSource) {
 }
 $env:PYTHONPATH = Join-Path $root 'src'
 for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
-    & $PythonPath -m mousse_controler.app serve --config $config
+    & $PythonPath -B -m mousse_controler.app serve --config $config
     $exitCode = $LASTEXITCODE
     if ($exitCode -eq 0) { exit 0 }
     if ($attempt -eq $MaximumAttempts) { exit $exitCode }
