@@ -13,6 +13,7 @@ from mousse_controler.capture import CaptureBroker, CaptureQuotaError
 from mousse_controler.controller import PositionStore
 from mousse_controler.position_server import PositionReceiver
 from mousse_controler.security import HmacVerifier, sign
+from tests.support.waiting import wait_until
 
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"bounded-test-image"
@@ -39,13 +40,10 @@ class CaptureBrokerTests(unittest.TestCase):
 
         thread = threading.Thread(target=run)
         thread.start()
-        deadline = time.monotonic() + 1
-        request = None
-        while request is None and time.monotonic() < deadline:
-            request = self.broker.next_request()
-            if request is None:
-                time.sleep(0.005)
-        self.assertIsNotNone(request)
+        request = wait_until(
+            self.broker.next_request,
+            description="capture request delivery",
+        )
         return thread, outcome, request
 
     @staticmethod

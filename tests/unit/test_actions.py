@@ -10,6 +10,7 @@ from unittest import mock
 from mousse_controler.actions import ActionExecutor, ActionRegistry, ActionState
 from mousse_controler.controller import MouseController, PositionSnapshot, PositionStore
 from mousse_controler.transport import SimulatedHidTransport, TransportError
+from tests.support.waiting import wait_until
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
@@ -75,13 +76,15 @@ class ActionExecutorTests(unittest.TestCase):
         self.executor.close()
 
     def wait(self, action_id, timeout=2):
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
+        def terminal():
             record = self.registry.get(action_id)
-            if record["state"] in TERMINAL:
-                return record
-            time.sleep(0.005)
-        self.fail("action did not finish")
+            return record if record["state"] in TERMINAL else None
+
+        return wait_until(
+            terminal,
+            timeout=timeout,
+            description=f"action {action_id} terminal state",
+        )
 
     def submit_wait(self, spec, action_id=None):
         accepted = self.executor.submit(spec, action_id=action_id)
@@ -106,8 +109,10 @@ class ActionExecutorTests(unittest.TestCase):
 
     def test_hold_is_interruptible_and_releases_button(self):
         accepted = self.executor.submit({"kind": "hold", "button": "left", "duration_seconds": 2})
-        while self.controller.buttons_mask() != 1:
-            time.sleep(0.005)
+        wait_until(
+            lambda: self.controller.buttons_mask() == 1,
+            description="hold button press",
+        )
         self.executor.cancel(accepted["action_id"])
         result = self.wait(accepted["action_id"])
         self.assertEqual(result["state"], "CANCELLED")
@@ -132,8 +137,10 @@ class ActionExecutorTests(unittest.TestCase):
         accepted = self.executor.submit({
             "kind": "scroll", "duration_seconds": 5, "step": -1, "interval_seconds": 0.01,
         })
-        while not any(event[0] == "scroll" for event in self.transport.events):
-            time.sleep(0.005)
+        wait_until(
+            lambda: any(event[0] == "scroll" for event in self.transport.events),
+            description="continuous scroll report",
+        )
         self.executor.cancel(accepted["action_id"])
         self.assertEqual(self.wait(accepted["action_id"])["state"], "CANCELLED")
 
@@ -200,12 +207,17 @@ class ActionExecutorTests(unittest.TestCase):
                 {"kind": "scroll", "delta": 1},
             ],
         })
-        deadline = time.monotonic() + 1
-        while time.monotonic() < deadline:
-            children = [item for item in self.registry.list() if item["parent_id"] == parent["action_id"]]
-            if len(children) >= 2:
-                break
-            time.sleep(0.005)
+        children = wait_until(
+            lambda: (
+                current
+                if len(current := [
+                    item for item in self.registry.list()
+                    if item["parent_id"] == parent["action_id"]
+                ]) >= 2
+                else None
+            ),
+            description="sequence child creation",
+        )
         self.executor.advance(parent["action_id"])
         result = self.wait(parent["action_id"])
         self.assertEqual(result["state"], "EXECUTED")
@@ -246,10 +258,10 @@ class ActionExecutorTests(unittest.TestCase):
                 "kind": "click", "button": "left", "hold_seconds": 0,
                 "error_policy": "retry", "max_attempts": 3,
             })
-            deadline = time.monotonic() + 1
-            while registry.get(accepted["action_id"])["state"] not in TERMINAL:
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: registry.get(accepted["action_id"])["state"] in TERMINAL,
+                description="uncertain click terminal state",
+            )
             result = registry.get(accepted["action_id"])
             self.assertEqual(result["state"], "UNKNOWN")
             self.assertEqual(len([event for event in transport.events if event == ("buttons", 1)]), 1)
@@ -307,10 +319,10 @@ class ActionExecutorTests(unittest.TestCase):
                 "error_policy": "retry",
                 "max_attempts": 3,
             })
-            deadline = time.monotonic() + 1
-            while registry.get(accepted["action_id"])["state"] not in TERMINAL:
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: registry.get(accepted["action_id"])["state"] in TERMINAL,
+                description="uncertain positioning terminal state",
+            )
             result = registry.get(accepted["action_id"])
             self.assertEqual(result["state"], "UNKNOWN")
             self.assertEqual(result["error_code"], "POSITION_EMISSION_UNCERTAIN")

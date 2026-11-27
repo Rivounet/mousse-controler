@@ -8,6 +8,7 @@ from mousse_controler.command_server import CommandError, CommandGateway
 from mousse_controler.controller import MouseController, PositionStore
 from mousse_controler.controller import PositionSnapshot
 from mousse_controler.transport import SimulatedHidTransport
+from tests.support.waiting import wait_until
 
 
 class ReceiverStub:
@@ -62,10 +63,11 @@ class CommandGatewayTests(unittest.TestCase):
             action={"kind": "click", "button": "middle", "hold_seconds": 0},
         ))
         self.assertEqual(submitted["action"]["action_id"], "new-action")
-        deadline = time.monotonic() + 1
-        while self.registry.get("new-action")["state"] not in {"EXECUTED", "FAILED", "UNKNOWN"}:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: self.registry.get("new-action")["state"]
+            in {"EXECUTED", "FAILED", "UNKNOWN"},
+            description="new action terminal state",
+        )
         status = self.gateway.execute(self.envelope(
             "action_status", "status-new", action_id="new-action"))
         self.assertEqual(status["action"]["state"], "EXECUTED")

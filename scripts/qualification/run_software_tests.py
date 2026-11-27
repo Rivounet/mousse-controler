@@ -55,6 +55,10 @@ TIERS: dict[str, tuple[SuiteSpec, ...]] = {
             directories=(ROOT / "tests" / "integration",),
         ),
         SuiteSpec(
+            "system",
+            directories=(ROOT / "tests" / "system",),
+        ),
+        SuiteSpec(
             "remote-deployment-simulation",
             directories=(REMOTE,),
         ),

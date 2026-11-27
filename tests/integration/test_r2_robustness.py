@@ -27,6 +27,7 @@ from mousse_controler.transport import (
     NativeHogpTransport, TransportError, TransportTimeoutError,
 )
 from tests.support.r0_doubles import BlockingLineStream, ProcessDouble
+from tests.support.waiting import wait_until
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
@@ -141,13 +142,15 @@ class FakeEngineTransport(NativeHogpTransport):
 
 
 def wait_terminal(registry: ActionRegistry, action_id: str, timeout: float = 2.0) -> dict:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    def terminal() -> dict | None:
         result = registry.get(action_id)
-        if result["state"] in TERMINAL:
-            return result
-        time.sleep(0.005)
-    raise AssertionError(f"action {action_id} did not terminate")
+        return result if result["state"] in TERMINAL else None
+
+    return wait_until(
+        terminal,
+        timeout=timeout,
+        description=f"action {action_id} terminal state",
+    )
 
 
 class HogpDeadlineTests(unittest.TestCase):
@@ -210,10 +213,11 @@ class HogpDeadlineTests(unittest.TestCase):
 
             command_thread = threading.Thread(target=command)
             command_thread.start()
-            deadline = time.monotonic() + 1
-            while (not log_path.exists() or "move" not in log_path.read_text(encoding="utf-8")):
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: log_path.exists()
+                and "move" in log_path.read_text(encoding="utf-8"),
+                description="native command dispatch",
+            )
 
             stop_errors: list[BaseException] = []
 
@@ -325,11 +329,16 @@ class HogpDeadlineTests(unittest.TestCase):
                 }, action_id="uncertain-native-button")
                 result = wait_terminal(registry, "uncertain-native-button")
                 self.assertEqual(result["state"], "UNKNOWN")
-                deadline = time.monotonic() + 1
-                while "safety_stop" not in result["result"]:
-                    self.assertLess(time.monotonic(), deadline)
-                    time.sleep(0.005)
-                    result = registry.get("uncertain-native-button")
+                result = wait_until(
+                    lambda: (
+                        current
+                        if "safety_stop" in (current := registry.get(
+                            "uncertain-native-button"
+                        ))["result"]
+                        else None
+                    ),
+                    description="native safety-stop evidence",
+                )
                 self.assertFalse(result["result"]["safety_stop"]["release_confirmed"])
                 self.assertEqual(
                     [line for line in log_path.read_text(encoding="utf-8").splitlines()
@@ -512,10 +521,10 @@ class LanBoundTests(unittest.TestCase):
         slow_body.close()
         self.assertEqual(receiver.bodies, [])
 
-        deadline = time.monotonic() + 1
-        while server.limits_status()["active_connections"]:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: server.limits_status()["active_connections"] == 0,
+            description="stalled connection release",
+        )
         self.assertEqual(self.post(server), 202)
 
     def test_full_size_capture_progressing_normally_is_accepted(self) -> None:
@@ -587,25 +596,26 @@ class LanBoundTests(unittest.TestCase):
         clients = [threading.Thread(target=post) for _ in range(2)]
         for client in clients:
             client.start()
-        deadline = time.monotonic() + 1
-        while receiver.max_active < 2:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: receiver.max_active >= 2,
+            description="connection limit saturation",
+        )
         excess = threading.Thread(target=post)
         excess.start()
-        while server.limits_status()["rejected_connections"] < 1:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: server.limits_status()["rejected_connections"] >= 1,
+            description="excess connection rejection",
+        )
         receiver.release.set()
         for client in [*clients, excess]:
             client.join(1)
         self.assertEqual(receiver.max_active, 2)
         self.assertGreaterEqual(server.limits_status()["rejected_connections"], 1)
         self.assertEqual(self.post(server), 202)
-        deadline = time.monotonic() + 1
-        while server.limits_status()["active_connections"]:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: server.limits_status()["active_connections"] == 0,
+            description="connection saturation cleanup",
+        )
         self.assertEqual(server.limits_status()["active_connections"], 0)
 
     def test_tls_handshake_timeout_is_applied_before_headers(self) -> None:
@@ -656,10 +666,10 @@ class LanBoundTests(unittest.TestCase):
             )
 
             stalled = socket.create_connection(server.server_address, timeout=1)
-            deadline = time.monotonic() + 1
-            while server.limits_status()["active_connections"] != 1:
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: server.limits_status()["active_connections"] == 1,
+                description="stalled TLS admission",
+            )
 
             client_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             client_context.check_hostname = False
@@ -681,10 +691,10 @@ class LanBoundTests(unittest.TestCase):
             stalled.settimeout(1)
             self.assertEqual(stalled.recv(1), b"")
             stalled.close()
-            deadline = time.monotonic() + 1
-            while server.limits_status()["active_connections"]:
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: server.limits_status()["active_connections"] == 0,
+                description="TLS connection cleanup",
+            )
             self.assertEqual(server.limits_status()["active_connections"], 0)
             self.assertEqual(server_context.minimum_version, ssl.TLSVersion.TLSv1_2)
 
