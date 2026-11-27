@@ -15,6 +15,7 @@ from mousse_controler.orchestration import (
     OperationCoordinator,
 )
 from mousse_controler.transport import SimulatedHidTransport
+from tests.support.waiting import wait_until
 
 
 class ReceiverStub:
@@ -43,18 +44,19 @@ class ArchitectureConvergenceTests(unittest.TestCase):
             {"kind": "hold", "button": "left", "duration_seconds": 0.15},
             action_id="modern-hold",
         )
-        deadline = time.monotonic() + 1
-        while self.controller.buttons_mask() != 1:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: self.controller.buttons_mask() == 1,
+            description="modern hold acquisition",
+        )
 
         with self.assertRaisesRegex(OperationBusyError, "mouse operation busy"):
             self.application.move("legacy-move", 7, 0)
 
         self.assertFalse(any(event[0] == "move" for event in self.transport.events))
-        while self.controller.buttons_mask() != 0:
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: self.controller.buttons_mask() == 0,
+            description="modern hold release",
+        )
         result = self.application.move("legacy-after", 7, 0)
         self.assertEqual(result["state"], "EXECUTED")
         self.assertEqual(self.transport.events[-1], ("move", 7, 0, 0))

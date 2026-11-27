@@ -46,6 +46,7 @@ from tests.support.r0_doubles import (
     ControllerStopDouble,
     SequenceDouble,
 )
+from tests.support.waiting import wait_until
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
@@ -54,13 +55,15 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def wait_for_record(registry: ActionRegistry, action_id: str, timeout: float = 1.0) -> dict:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    def terminal() -> dict | None:
         record = registry.get(action_id)
-        if record["state"] in TERMINAL:
-            return record
-        time.sleep(0.005)
-    raise AssertionError(f"action {action_id} did not become terminal")
+        return record if record["state"] in TERMINAL else None
+
+    return wait_until(
+        terminal,
+        timeout=timeout,
+        description=f"action {action_id} terminal state",
+    )
 
 
 class TransportCharacterizationTests(unittest.TestCase):
@@ -152,10 +155,10 @@ class ActionCharacterizationTests(unittest.TestCase):
         transport, controller, registry, executor = self.make_executor()
         try:
             accepted = executor.submit({"kind": "wait", "duration_seconds": 5})
-            deadline = time.monotonic() + 1
-            while registry.get(accepted["action_id"])["state"] != "RUNNING":
-                self.assertLess(time.monotonic(), deadline)
-                time.sleep(0.005)
+            wait_until(
+                lambda: registry.get(accepted["action_id"])["state"] == "RUNNING",
+                description="paused action start",
+            )
             executor.pause(accepted["action_id"])
             executor.emergency_stop()
             self.assertEqual(wait_for_record(registry, accepted["action_id"])["state"], "CANCELLED")
@@ -169,10 +172,10 @@ class ActionCharacterizationTests(unittest.TestCase):
     def test_A04_close_cancels_queued_action(self):
         _transport, _controller, registry, executor = self.make_executor()
         first = executor.submit({"kind": "wait", "duration_seconds": 5}, action_id="running")
-        deadline = time.monotonic() + 1
-        while registry.get(first["action_id"])["state"] != "RUNNING":
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.005)
+        wait_until(
+            lambda: registry.get(first["action_id"])["state"] == "RUNNING",
+            description="running action start",
+        )
         executor.submit({"kind": "wait", "duration_seconds": 0}, action_id="queued")
         executor.close()
         self.assertEqual(registry.get("running")["state"], "CANCELLED")
@@ -289,14 +292,16 @@ class NetworkCharacterizationTests(unittest.TestCase):
         clients = [threading.Thread(target=post) for _ in range(2)]
         for client in clients:
             client.start()
-        deadline = time.monotonic() + 1
-        while receiver.max_active < 2 and time.monotonic() < deadline:
-            time.sleep(0.005)
+        wait_until(
+            lambda: receiver.max_active >= 2,
+            description="characterized connection saturation",
+        )
         excess = threading.Thread(target=post)
         excess.start()
-        while (server.limits_status()["rejected_connections"] < 1 and
-               time.monotonic() < deadline):
-            time.sleep(0.005)
+        wait_until(
+            lambda: server.limits_status()["rejected_connections"] >= 1,
+            description="characterized excess connection rejection",
+        )
         receiver.release.set()
         for client in [*clients, excess]:
             client.join(2)
@@ -325,13 +330,10 @@ class StorageCharacterizationTests(unittest.TestCase):
 
         thread = threading.Thread(target=request)
         thread.start()
-        deadline = time.monotonic() + 1
-        queued = None
-        while queued is None and time.monotonic() < deadline:
-            queued = broker.next_request()
-            if queued is None:
-                time.sleep(0.005)
-        self.assertIsNotNone(queued)
+        queued = wait_until(
+            broker.next_request,
+            description="characterized capture request delivery",
+        )
         return thread, outcome, queued
 
     @staticmethod

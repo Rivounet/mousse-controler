@@ -18,6 +18,7 @@ from unittest import mock
 
 from mousse_controler import app
 from mousse_controler.capture import CaptureBroker, CaptureQuotaError
+from tests.support.waiting import wait_until
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -46,14 +47,10 @@ class CaptureHarness:
 
         thread = threading.Thread(target=run)
         thread.start()
-        deadline = time.monotonic() + 1
-        request = None
-        while request is None:
-            if time.monotonic() >= deadline:
-                raise AssertionError("capture request was not delivered")
-            request = self.broker.next_request()
-            if request is None:
-                time.sleep(0.005)
+        request = wait_until(
+            self.broker.next_request,
+            description="capture request delivery",
+        )
         return thread, outcome, request
 
     @staticmethod

@@ -9,7 +9,7 @@ sont :
 | Profil | Contenu | Exclusions structurelles |
 |---|---|---|
 | `fast` | tests unitaires, contrats et outillage de qualification | diagnostics matériels, processus d'intégration, installation, déploiement |
-| `integration` | processus, sockets, fichiers, concurrence et rollbacks simulés | diagnostics matériels, SSH réel, installation, déploiement |
+| `integration` | processus, sockets, fichiers, concurrence, rollbacks simulés et assemblage système hermétique | diagnostics matériels, SSH réel, installation, déploiement |
 | `software` | `fast` puis `integration` | mêmes exclusions |
 | `build` | compilation Python, référence API, syntaxe PowerShell, PositionAgent | exécution des scripts analysés et installation |
 | `full-local` | `software` puis `build` | mêmes exclusions |
@@ -46,6 +46,21 @@ L'organisation et les responsabilités des niveaux sont détaillées dans
 vérifie dépôt sale refusé, extraction des seuls objets sélectionnés, réutilisation
 identique, exécution autonome du vérificateur, altération et fichier inattendu
 refusés. Ces tests ne créent ni tâche ni processus applicatif persistant.
+
+## Assemblage système hermétique
+
+`tests/system/test_runtime_composition.py` construit le même graphe d'objets que
+le runtime de production via `build_runtime`. Il démarre les vrais serveurs de
+position, commande et événements sur des ports éphémères, puis vérifie :
+
+- l'acceptation d'une position signée et sa lecture par la commande locale ;
+- le refus d'une commande sans jeton ;
+- la soumission d'une action sans effet HID et ses transitions WebSocket ;
+- la fermeture de toutes les ressources et l'absence de rapport souris.
+
+Seules les frontières matérielles (DPAPI, TLS déjà couvert en intégration et
+transport HOGP) sont remplacées. Les attentes asynchrones partagées utilisent
+`tests/support/waiting.py`, avec échéance et diagnostic explicites.
 
 ## Dernières qualifications du programme
 
