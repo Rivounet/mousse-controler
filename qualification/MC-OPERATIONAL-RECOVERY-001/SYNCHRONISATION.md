@@ -15,7 +15,7 @@ propre. Ses fichiers ignorés ont été sauvegardés avant le `fetch`.
 ## Diff logiciel
 
 - `scripts/qualification/qualify.py` : cache Python temporaire court et nettoyé ;
-- `tests/test_r4_qualification.py` : test de régression du chemin et nettoyage.
+- `tests/qualification/test_r4_qualification.py` : test de régression du chemin et nettoyage.
 
 Aucun code applicatif, contrat de sécurité, descripteur HID ou comportement
 fonctionnel n'a été modifié.

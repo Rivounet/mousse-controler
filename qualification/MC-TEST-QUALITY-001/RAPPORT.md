@@ -37,19 +37,25 @@ introduire de CI externe.
   commandes ferme immédiatement le runtime partiellement composé : worker
   d'actions, contrôleur et secrets mutables sont tous nettoyés ;
 - les 18 tests ciblés d'orchestration et de cycle de vie passent, avec les
-  chemins vide/périmé et les deux constructeurs couverts.
+  chemins vide/périmé et les deux constructeurs couverts ;
+- le point d'entrée historique `run_r0_software_tests.py` initialise désormais
+  explicitement la racine du dépôt avant son import et une régression le lance
+  depuis un répertoire externe ;
+- les commandes opératoires ont été réalignées sur les niveaux `unit`,
+  `contract`, `integration` et `qualification`, sans réécrire les preuves
+  historiques.
 
 ## Mesures de développement
 
 - modules Python de production avec propriétaire direct : 18/18 ;
 - cas découverts dans `unit`, `contract`, `qualification`, `integration` et
-  `system` : 253 ;
+  `system` : 254 ;
 - micro-pollings `time.sleep` de 10 ms ou moins : 0 ;
 - lectures de source dans les tests : 36 ; attentes `time.sleep` restantes :
   11, réservées aux fenêtres négatives et deadlines ;
 - tests ciblés client, DPAPI et mesure : 6/6 PASS ;
 - tests contrôleur, trajectoire et mesure : 46/46 PASS ;
-- profil `fast` final de développement : 147/147 PASS ;
+- profil `fast` final de développement : 148/148 PASS ;
 - profil `integration` final de développement : 180/180 PASS.
 
 Les quatre builds de développement ont réussi. Les empreintes officielles sont
