@@ -15,6 +15,21 @@ $ErrorActionPreference = 'Stop'
 $launcher = Join-Path $PSScriptRoot 'Start-MousseController.ps1'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 
+function Resolve-PythonExecutable([string]$RequestedPath) {
+    if ([IO.Path]::IsPathRooted($RequestedPath)) {
+        $resolved = [IO.Path]::GetFullPath($RequestedPath)
+    }
+    else {
+        $command = Get-Command -Name $RequestedPath -CommandType Application -ErrorAction Stop |
+            Select-Object -First 1
+        $resolved = [IO.Path]::GetFullPath($command.Source)
+    }
+    if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+        throw "Python executable not found: $RequestedPath"
+    }
+    return $resolved
+}
+
 function Stop-ManagedRuntime($Task, [scriptblock]$EmergencyStopCommand, [bool]$AllowLegacyMigration = $false) {
     $taskAction = @($Task.Actions)[0]
     $launcherMatch = [regex]::Match($taskAction.Arguments, '-File\s+"([^"]+Start-MousseController\.ps1)"')
@@ -38,7 +53,7 @@ function Stop-ManagedRuntime($Task, [scriptblock]$EmergencyStopCommand, [bool]$A
         throw 'Managed task arguments are incomplete'
     }
     $managedConfig = [IO.Path]::GetFullPath($configMatch.Groups[1].Value)
-    $managedPython = [IO.Path]::GetFullPath($pythonMatch.Groups[1].Value)
+    $managedPython = Resolve-PythonExecutable $pythonMatch.Groups[1].Value
     if (Test-Path -LiteralPath $managedConfig -PathType Leaf) {
         $priorPythonPath = $env:PYTHONPATH
         try {
@@ -87,14 +102,15 @@ if ($Action -eq 'Start') {
         -not (Test-Path -LiteralPath $releaseVerifier -PathType Leaf)) {
         throw 'Controller release is incomplete'
     }
-    & $PythonPath -B $releaseVerifier verify --release $release | Out-Null
+    $resolvedPython = Resolve-PythonExecutable $PythonPath
+    & $resolvedPython -B $releaseVerifier verify --release $release | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Controller release integrity verification failed' }
     $old = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if ($old) {
         Stop-ManagedRuntime $old $null $AllowLegacyTaskMigration
     }
     $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}" -PythonPath "{2}"' -f `
-        $releaseLauncher, $config, $PythonPath
+        $releaseLauncher, $config, $resolvedPython
     $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments `
         -WorkingDirectory ([IO.Path]::GetDirectoryName($releaseLauncher))
     $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME

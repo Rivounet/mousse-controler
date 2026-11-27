@@ -1,8 +1,8 @@
 # État officiel du programme de robustesse R0–R6
 
-**Référence locale auditée :** `origin/main`
-`ff94a765da0a6f0f01276366662eed180e8fad61`, le 27 novembre 2026. Les travaux
-de convergence restent sur une branche dédiée jusqu'à qualification et fusion.
+**Base de fusion auditée :** `origin/main` après la PR #26, commit de fusion
+`5ed7045823a0d7b8c7c6418ca5586008e35ba2d2`, le 27 novembre 2026. Les travaux
+de convergence sont livrés et qualifiés par la PR #27.
 
 Ce document est la source unique pour l'état des constats C-01 à C-17. Les
 rapports R0–R5 et les audits originaux restent des preuves historiques et ne
@@ -50,8 +50,8 @@ change pas le statut propre de la PR #11.
 | C-08 | mise à jour agent sans récupération sûre | P2 | R3 | `CORRIGÉ_LOGICIEL` | PR #16 ; rollback borné et `RECOVERY_REQUIRED` | tâches/ACL/disque réels non requalifiés ; récupération limitée | mandat opérationnel distinct si déploiement |
 | C-09 | sources C++ HOGP historiques parallèles | P2 | R5 | `DIFFÉRÉ` | PR #18 ; inventaire HOGP | absence totale d'usage manuel non démontrée | reprendre seulement avec preuve d'inutilité |
 | C-10 | tests de panne et séparation matériel insuffisants | P2 | R4 | `QUALIFIÉ_LOCAL` | PR #17 ; `full-local` 269/269 final | 7 diagnostics matériels exclus ; aucune CI externe | conserver profils locaux fermés |
-| C-11 | deux séquenceurs pouvaient émettre par des voies concurrentes | P3, réévaluée P1 | convergence | `CORRIGÉ_SUR_BRANCHE` | test maintien moderne + déplacement historique ; bail exclusif partagé | deux modèles d'état restent publics pour compatibilité | qualifier puis fusionner avant activation |
-| C-12 | responsabilités concentrées dans deux gros composants | P3 | convergence | `CORRIGÉ_SUR_BRANCHE` partiel | couche `application`, coordinateur et stockage feedback extraits | `actions.py` et PositionAgent restent volumineux | extraire seulement sur gain mesuré |
+| C-11 | deux séquenceurs pouvaient émettre par des voies concurrentes | P3, réévaluée P1 | convergence | `QUALIFIÉ_LOCAL` | PR #27 ; test maintien moderne + déplacement historique ; bail exclusif partagé | deux modèles d'état restent publics pour compatibilité | aucune sans rupture de contrat explicitement décidée |
+| C-12 | responsabilités concentrées dans deux gros composants | P3 | convergence | `QUALIFIÉ_LOCAL` partiel | PR #27 ; couche `application`, coordinateur et stockage feedback extraits | `actions.py` et PositionAgent restent volumineux | extraire seulement sur gain mesuré |
 | C-13 | polygones extrêmes parfois non échantillonnables | P3 | R5 | `QUALIFIÉ_LOCAL` | PR #18 ; 271/271 final, graines extrêmes | repli borné non uniforme vers un sommet | aucune sans nouveau contrat d'échantillonnage |
 | C-14 | doublon catalogue écrasé avant contrôle | P3 | R5 | `QUALIFIÉ_LOCAL` | PR #18 ; commandes/actions/événements protégés | paramètres inconnus toujours tolérés par compatibilité | versionner le contrat avant rejet strict |
 | C-15 | chemins Build Tools/SDK non découvrables | P2/P3 | R4 | `QUALIFIÉ_LOCAL` | PR #17 ; builds et outils découverts | build bit-à-bit non garanti | aucune exigence CI externe |
@@ -62,8 +62,8 @@ change pas le statut propre de la PR #11.
 
 ### Code et conception
 
-- C-11 est corrigé sur la branche de convergence ; C-12 est réduit sans
-  réécriture générale. C-09 et C-17 restent différés.
+- C-11 est corrigé et qualifié par la PR #27 ; C-12 est réduit sans réécriture
+  générale. C-09 et C-17 restent différés.
 - L'annulation WinRT demeure best-effort ; la terminaison défaillante impose une
   récupération explicite.
 - Le quota de capture n'est pas une transaction entre processus indépendants.
@@ -86,9 +86,8 @@ change pas le statut propre de la PR #11.
   `RECOVERY_REQUIRED`.
 - La latence LAN aller simple absolue reste inconnue sans synchronisation
   d'horloges ; une reprise GATT transitoire peut précéder l'abonnement stable.
-- Le processus observé le 27 novembre chargeait un worktree modifié et n'est
-  pas une release reproductible. Il doit être remplacé seulement après
-  qualification d'une release immuable et contrôle du rollback.
+- Le processus mutable observé au début de l'audit du 27 novembre a été remplacé
+  par une release immuable vérifiée, après sauvegarde et contrôle du rollback.
 
 ## Qualification et gouvernance
 

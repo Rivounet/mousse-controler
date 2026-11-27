@@ -1,11 +1,22 @@
+import math
 from pathlib import Path
 import unittest
+
+from mousse_controler.app import _bounded_interval
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class StartupContractTests(unittest.TestCase):
+    def test_hogp_maintenance_intervals_are_finite_and_bounded(self) -> None:
+        self.assertEqual(30.0, _bounded_interval({}, "interval", 30.0, 60.0))
+        self.assertEqual(0.1, _bounded_interval({"interval": 0.1}, "interval", 30.0, 60.0))
+        for invalid in (0, -1, 61, math.nan, math.inf, -math.inf):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValueError):
+                    _bounded_interval({"interval": invalid}, "interval", 30.0, 60.0)
+
     def test_runtime_advertises_after_preparing_gatt(self) -> None:
         source = (ROOT / "src" / "mousse_controler" / "app.py").read_text(encoding="utf-8")
         self.assertLess(source.index("controller.start()"), source.index("transport.advertise()"))

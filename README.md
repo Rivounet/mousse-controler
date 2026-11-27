@@ -7,17 +7,19 @@ un canal LAN HTTPS/HMAC sortant ; il ne reçoit aucune commande souris.
 
 ## État courant vérifié — 27 novembre 2026
 
-- Référence locale `origin/main` : `ff94a765da0a6f0f01276366662eed180e8fad61`.
+- Base de fusion auditée : `origin/main` après la PR #26, commit de fusion
+  `5ed7045823a0d7b8c7c6418ca5586008e35ba2d2`.
 - La validation fonctionnelle de la PR #26 reste la dernière preuve matérielle
   publiée ; aucune nouvelle action HID ou capture n'est incluse dans le chantier
   d'architecture.
 - L'audit du 27 novembre a constaté que la tâche contrôleur exécutait un
-  worktree modifié, donc non reproductible par un SHA. Ce runtime reste actif
-  mais n'est plus considéré comme une release qualifiée.
+  worktree modifié, donc non reproductible par un SHA. Ce runtime a depuis été
+  remplacé par une release immuable vérifiée ; les preuves sont publiées dans
+  la PR #27.
 - Le chantier `MC-ARCHITECTURE-CONVERGENCE-001` introduit une couche
   applicative, un coordinateur exclusif des opérations, un feedback atomique et
-  des releases contrôleur immuables. Son activation reste distincte de sa
-  qualification et de sa publication.
+  des releases contrôleur immuables. Qualification, activation et publication
+  restent trois décisions et preuves distinctes.
 - Aucun GitHub Actions ni service CI externe. La qualification officielle reste
   locale sous Windows.
 

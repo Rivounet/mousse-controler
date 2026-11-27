@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import signal
 import sys
@@ -33,6 +34,17 @@ class RuntimeCleanupError(RuntimeError):
             parts.append(f"primary failure: {primary}")
         parts.extend(f"{label}: {error}" for label, error in cleanup_errors)
         super().__init__("runtime cleanup failed; " + "; ".join(parts))
+
+
+def _bounded_interval(
+    config: dict[str, object], name: str, default: float, maximum: float,
+) -> float:
+    value = float(config.get(name, default))
+    if not math.isfinite(value) or not 0.1 <= value <= maximum:
+        raise ValueError(
+            f"{name} must be finite and between 0.1 and {maximum} seconds"
+        )
+    return value
 
 
 class _RuntimeLifecycle:
@@ -148,6 +160,15 @@ def serve(config_path: Path) -> int:
     lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
     primary_error: BaseException | None = None
     try:
+        refresh_seconds = _bounded_interval(
+            config, "hogp_reconnect_refresh_seconds", 30.0, 3600.0,
+        )
+        fault_recovery_seconds = _bounded_interval(
+            config, "hogp_fault_recovery_seconds", 5.0, 3600.0,
+        )
+        health_poll_seconds = _bounded_interval(
+            config, "hogp_health_poll_seconds", 30.0, 300.0,
+        )
         controller.start()
         transport.advertise()
         application = MouseApplicationService(
@@ -199,9 +220,6 @@ def serve(config_path: Path) -> int:
         def maintain_hogp() -> None:
             disconnected_since: float | None = None
             last_fault_recovery: float | None = None
-            refresh_seconds = float(config.get("hogp_reconnect_refresh_seconds", 30.0))
-            fault_recovery_seconds = float(config.get("hogp_fault_recovery_seconds", 5.0))
-            health_poll_seconds = float(config.get("hogp_health_poll_seconds", 30.0))
             while not lifecycle.stopped.wait(health_poll_seconds):
                 if controller.is_stopped():
                     return
