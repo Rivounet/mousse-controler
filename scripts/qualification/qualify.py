@@ -293,7 +293,17 @@ def run_qualification(
     which: Callable[[str], str | None] = shutil.which,
     git_provenance: Callable[[], dict[str, object]] = _git_provenance,
 ) -> tuple[int, dict[str, object]]:
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_precondition_error: str | None = None
+    owns_output_dir = False
+    try:
+        # Creating the directory atomically gives this run exclusive ownership
+        # of every result it will later inspect.  Accepting even an empty
+        # existing directory would leave a race in which concurrent runs could
+        # consume each other's result metadata.
+        output_dir.mkdir(parents=True, exist_ok=False)
+        owns_output_dir = True
+    except FileExistsError:
+        output_precondition_error = "qualification output path already exists"
     started = time.monotonic()
     precondition_error: str | None = None
     try:
@@ -301,6 +311,8 @@ def run_qualification(
     except QualificationPreconditionError as exc:
         git = exc.git
         precondition_error = str(exc)
+    if output_precondition_error is not None:
+        precondition_error = output_precondition_error
     summary: dict[str, object] = {
         "schema": "mousse-qualification-v2",
         "contract": "MC-ROBUSTNESS-R4-001",
@@ -345,9 +357,11 @@ def run_qualification(
         }
         summary["artifacts"] = []
         summary["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
-        (output_dir / "summary.json").write_text(
-            json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        if owns_output_dir:
+            (output_dir / "summary.json").write_text(
+                json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
         return 2, summary
     if sys.version_info < MINIMUM_PYTHON:
         summary["verdict"] = "BLOCKED"
@@ -469,7 +483,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--profile", choices=PROFILES, required=True)
     parser.add_argument(
         "--output-dir", type=Path,
-        help="log/artifact directory (default: out/qualification/<UTC timestamp>)",
+        help=(
+            "new log/artifact directory; the path must not already exist "
+            "(default: out/qualification/<UTC timestamp>)"
+        ),
     )
     arguments = parser.parse_args(argv)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

@@ -210,23 +210,29 @@ def build_runtime(
         coordinator=coordinator,
     )
     lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
-    application = MouseApplicationService(
-        controller,
-        transport,
-        receiver,
-        actions,
-        capture_broker,
-        coordinator,
-    )
-    gateway = CommandGateway(
-        command_token,
-        controller,
-        transport,
-        receiver,
-        actions,
-        capture_broker,
-        application,
-    )
+    try:
+        application = MouseApplicationService(
+            controller,
+            transport,
+            receiver,
+            actions,
+            capture_broker,
+            coordinator,
+        )
+        gateway = CommandGateway(
+            command_token,
+            controller,
+            transport,
+            receiver,
+            actions,
+            capture_broker,
+            application,
+        )
+    except BaseException as exc:
+        cleanup_errors = lifecycle.close()
+        if cleanup_errors:
+            raise RuntimeCleanupError(exc, cleanup_errors) from exc
+        raise
     return RuntimeAssembly(
         config=config,
         store=store,
