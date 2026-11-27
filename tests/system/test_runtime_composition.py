@@ -291,6 +291,10 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
             self.assertEqual(cleanup_errors, [])
             self.assertTrue(runtime.transport.advertised)
             self.assertFalse(runtime.transport.started)
+            self.assertFalse(any(runtime.lifecycle.command_token))
+            self.assertTrue(all(
+                not any(secret) for secret in runtime.lifecycle.keys.values()
+            ))
             self.assertFalse(any(
                 event[0] in {"move", "buttons", "scroll"}
                 for event in runtime.transport.events

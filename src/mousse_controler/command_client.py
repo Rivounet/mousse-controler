@@ -15,7 +15,7 @@ from .dpapi import unprotect
 
 def invoke(config_path: Path, command: str, arguments: dict | None = None) -> dict:
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    token = unprotect(config["command_token_dpapi"])
+    token = bytearray(unprotect(config["command_token_dpapi"]))
     payload = json.dumps({
         "command_id": str(uuid.uuid4()),
         "issued_at_ms": int(time.time() * 1000),
@@ -40,7 +40,7 @@ def invoke(config_path: Path, command: str, arguments: dict | None = None) -> di
             detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"command rejected ({exc.code}): {detail}") from exc
     finally:
-        token = b"\0" * len(token)
+        token[:] = b"\0" * len(token)
 
 
 def main() -> int:

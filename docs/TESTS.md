@@ -11,7 +11,7 @@ sont :
 | `fast` | tests unitaires, contrats et outillage de qualification | diagnostics matériels, processus d'intégration, installation, déploiement |
 | `integration` | processus, sockets, fichiers, concurrence, rollbacks simulés et assemblage système hermétique | diagnostics matériels, SSH réel, installation, déploiement |
 | `software` | `fast` puis `integration` | mêmes exclusions |
-| `build` | compilation Python, référence API, syntaxe PowerShell, PositionAgent | exécution des scripts analysés et installation |
+| `build` | mesure d'architecture, compilation Python, référence API, syntaxe PowerShell, PositionAgent, PairingTool, MouseWitness et MSIX HOGP non signé | exécution des scripts analysés, signature et installation |
 | `full-local` | `software` puis `build` | mêmes exclusions |
 
 Commande de référence :
@@ -32,6 +32,33 @@ explicitement sorti de la porte rend le profil logiciel non favorable.
 
 L'organisation et les responsabilités des niveaux sont détaillées dans
 [`tests/README.md`](../tests/README.md).
+
+## Mesure de qualité sans dépendance externe
+
+Le profil `build` exécute
+`scripts/qualification/measure_test_architecture.py`. Son artefact JSON associe
+chaque module Python de production aux fichiers de test qui l'importent
+directement, compte les cas par niveau et refuse :
+
+- un module de production sans propriétaire de test direct ;
+- un retour des boucles de micro-polling par `time.sleep` de 10 ms ou moins.
+
+Cette mesure est une porte d'architecture, pas une couverture de lignes ou de
+branches. Les appels `read_text` et les attentes temporelles restantes sont
+comptés pour rendre visible la dette de contrats statiques et de tests de
+deadline. L'ajout d'un outil de couverture ou de mutation reste une décision de
+dépendance distincte ; aucun pourcentage n'est inventé par cette porte.
+
+## Gouvernance sans CI externe
+
+`main` exige une pull request, refuse force-push et suppression, impose la
+résolution des conversations et un historique linéaire. Aucun statut GitHub
+Actions n'est requis puisque l'option retenue exclut toute CI externe.
+
+Le modèle `.github/PULL_REQUEST_TEMPLATE.md` exige la preuve locale : commit et
+arbre propres, profil, compteurs, builds, exclusions et lien vers le rapport.
+Une PR reste Draft jusqu'à publication de cette preuve. Qualification favorable
+et fusion restent deux décisions différentes ; aucune fusion n'est automatique.
 
 ## Contrats de convergence architecturale
 
