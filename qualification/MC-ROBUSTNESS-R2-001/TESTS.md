@@ -4,7 +4,7 @@
 
 ```powershell
 $env:PYTHONPATH = 'src'
-python -B -m unittest tests.test_r2_robustness tests.test_native_transport -v
+python -B -m unittest tests.integration.test_r2_robustness tests.contract.test_native_transport -v
 ```
 
 Couverture HOGP :

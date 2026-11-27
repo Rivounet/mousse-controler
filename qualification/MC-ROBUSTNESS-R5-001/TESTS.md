@@ -14,7 +14,7 @@ Résultat : **PASS**, 269/269 tests, 127,843 s, base
 ## Tests ciblés
 
 ```powershell
-python -B -m unittest tests.test_trajectory.GeometryTests tests.test_api_catalog -v
+python -B -m unittest tests.unit.test_trajectory.GeometryTests tests.contract.test_api_catalog -v
 ```
 
 Résultat : **15/15 PASS**, 9,277 s.

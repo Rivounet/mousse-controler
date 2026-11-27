@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from scripts.qualification import run_software_tests as runner
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _test_ids(suite: unittest.TestSuite) -> set[str]:
@@ -16,6 +23,26 @@ def _test_ids(suite: unittest.TestSuite) -> set[str]:
 
 
 class TestSuiteArchitectureTests(unittest.TestCase):
+    def test_legacy_runner_starts_outside_the_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(ROOT / "scripts/qualification/run_r0_software_tests.py"),
+                    "--help",
+                ],
+                cwd=directory,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=15,
+                check=False,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stdout)
+        self.assertIn("Run explicitly tiered", completed.stdout)
+
     def test_fast_and_integration_tiers_are_nonempty_and_disjoint(self) -> None:
         fast = set().union(*(
             _test_ids(runner._load(spec)) for spec in runner.TIERS["fast"]

@@ -6,7 +6,7 @@ Commande :
 
 ```powershell
 $env:PYTHONPATH = 'src'
-python -B -m unittest tests.test_r1_safety tests.test_trajectory -v
+python -B -m unittest tests.integration.test_r1_safety tests.unit.test_trajectory -v
 ```
 
 Couverture ajoutée :
