@@ -144,9 +144,11 @@ class SequenceTests(unittest.TestCase):
         ]
         runner, _ = self.make_runner(steps)
         runner.start()
-        deadline = time.time() + 2
-        while runner.status().state != SequenceState.WAITING and time.time() < deadline:
-            time.sleep(0.01)
+        wait_until(
+            lambda: runner.status().state == SequenceState.WAITING,
+            timeout=2,
+            description="commanded sequence waiting state",
+        )
         self.assertEqual(runner.status().state, SequenceState.WAITING)
         runner.next_target(); runner.join(2)
         self.assertEqual(runner.status().state, SequenceState.COMPLETED)
@@ -160,9 +162,11 @@ class SequenceTests(unittest.TestCase):
         runner.start()
         with self.assertRaisesRegex(RuntimeError, "not awaiting"):
             runner.next_target()
-        deadline = time.time() + 3
-        while runner.status().state != SequenceState.WAITING and time.time() < deadline:
-            time.sleep(0.01)
+        wait_until(
+            lambda: runner.status().state == SequenceState.WAITING,
+            timeout=3,
+            description="advanced sequence waiting state",
+        )
         self.assertEqual(runner.status().state, SequenceState.WAITING)
         runner.next_target(); runner.join(3)
         self.assertEqual(runner.status().state, SequenceState.COMPLETED)

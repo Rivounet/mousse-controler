@@ -12,6 +12,7 @@ from mousse_controler.controller import (
     PositionStore,
 )
 from mousse_controler.transport import SimulatedHidTransport
+from tests.support.waiting import wait_until
 
 
 class ControllerTests(unittest.TestCase):
@@ -82,8 +83,10 @@ class ControllerTests(unittest.TestCase):
         self.store.update(self.sample(x=0, y=0))
 
         def feedback():
-            while not any(event[0] == "move" for event in self.transport.events):
-                time.sleep(0.001)
+            wait_until(
+                lambda: any(event[0] == "move" for event in self.transport.events),
+                description="bounded correction before feedback",
+            )
             self.store.update(self.sample(x=100, y=0, sequence=2))
 
         thread = threading.Thread(target=feedback)
@@ -97,8 +100,10 @@ class ControllerTests(unittest.TestCase):
         self.store.update(self.sample(x=0, y=0))
 
         def feedback():
-            while not any(event[0] == "move" for event in self.transport.events):
-                time.sleep(0.001)
+            wait_until(
+                lambda: any(event[0] == "move" for event in self.transport.events),
+                description="accelerated correction before feedback",
+            )
             self.store.update(self.sample(x=100, y=0, sequence=2))
 
         thread = threading.Thread(target=feedback)
@@ -112,8 +117,10 @@ class ControllerTests(unittest.TestCase):
         self.store.update(self.sample(x=0, y=0))
 
         def feedback():
-            while not any(event[0] == "move" for event in self.transport.events):
-                time.sleep(0.001)
+            wait_until(
+                lambda: any(event[0] == "move" for event in self.transport.events),
+                description="capped correction before feedback",
+            )
             self.store.update(self.sample(x=100, y=0, sequence=2))
 
         thread = threading.Thread(target=feedback)
@@ -272,8 +279,10 @@ class ControllerTests(unittest.TestCase):
         self.store.update(self.sample())
 
         def feedback():
-            while not any(event[0] == "move" for event in self.transport.events):
-                time.sleep(0.001)
+            wait_until(
+                lambda: any(event[0] == "move" for event in self.transport.events),
+                description="movement before fresh feedback",
+            )
             self.store.update(self.sample(x=100, y=200, sequence=2))
 
         thread = threading.Thread(target=feedback)
@@ -290,8 +299,10 @@ class ControllerTests(unittest.TestCase):
         self.store.update(self.sample())
 
         def feedback():
-            while not any(event[0] == "move" for event in self.transport.events):
-                time.sleep(0.001)
+            wait_until(
+                lambda: any(event[0] == "move" for event in self.transport.events),
+                description="movement before session change",
+            )
             self.store.update(self.sample(sequence=2, session=8))
 
         thread = threading.Thread(target=feedback)
@@ -437,10 +448,10 @@ class ControllerTests(unittest.TestCase):
         thread = threading.Thread(target=position)
         started = time.monotonic()
         thread.start()
-        deadline = time.monotonic() + 1
-        while not any(event[0] == "move" for event in self.transport.events):
-            self.assertLess(time.monotonic(), deadline)
-            time.sleep(0.001)
+        wait_until(
+            lambda: any(event[0] == "move" for event in self.transport.events),
+            description="movement before emergency stop",
+        )
         self.controller.emergency_stop()
         thread.join(1)
 
