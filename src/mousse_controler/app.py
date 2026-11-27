@@ -53,7 +53,8 @@ class _RuntimeLifecycle:
     """Small, idempotent resource stack for the foreground runtime."""
 
     def __init__(self, actions: ActionExecutor, controller: MouseController,
-                 command_token: bytes, keys: dict[str, bytes]) -> None:
+                 command_token: bytes | bytearray,
+                 keys: dict[str, bytes | bytearray]) -> None:
         self.actions = actions
         self.controller = controller
         self.command_token = command_token
@@ -172,7 +173,7 @@ def build_runtime(
     config = json.loads(config_path.read_text(encoding="utf-8"))
     store = PositionStore()
     keys = {
-        key_id: selected.unprotect_secret(value)
+        key_id: bytearray(selected.unprotect_secret(value))
         for key_id, value in config["agent_keys_dpapi"].items()
     }
     capture_broker = CaptureBroker(
@@ -191,7 +192,7 @@ def build_runtime(
         termination_timeout=float(config.get("hogp_termination_timeout_seconds", 2.0)),
     )
     controller = MouseController(transport, store)
-    command_token = selected.unprotect_secret(config["command_token_dpapi"])
+    command_token = bytearray(selected.unprotect_secret(config["command_token_dpapi"]))
     registry = ActionRegistry(
         max_records=int(config.get("action_max_records", 2048)),
         max_subscribers=int(config.get("event_max_subscribers", 16)),

@@ -42,6 +42,7 @@ class Phase:
     category: str
     result_path: Path | None = None
     timeout_seconds: int = 900
+    required_artifact: Path | None = None
 
 
 class QualificationPreconditionError(RuntimeError):
@@ -89,9 +90,23 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
         ),
     ]
     software = fast + integration
-    artifact_dir = output_dir / "artifacts" / "PositionAgent"
-    manifest = output_dir / "artifacts" / "position-agent-build.json"
+    artifacts = output_dir / "artifacts"
+    architecture_measurement = artifacts / "test-architecture.json"
+    position_agent = artifacts / "PositionAgent"
+    pairing_tool = artifacts / "PairingTool"
+    mouse_witness = artifacts / "MouseWitness"
+    hogp_package = artifacts / "HogpPackage"
+    manifest = artifacts / "position-agent-build.json"
     build = [
+        Phase(
+            "test-architecture-measurement",
+            _python(
+                "-B", str(ROOT / "scripts/qualification/measure_test_architecture.py"),
+                "--output", str(architecture_measurement),
+            ),
+            "quality",
+            required_artifact=architecture_measurement,
+        ),
         Phase(
             "python-compilation",
             _python("-m", "compileall", "-q", "-f", "src", "scripts", "tests"),
@@ -117,10 +132,41 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
             (
                 "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
                 str(ROOT / "scripts/build/Build-PositionAgent.ps1"),
-                "-OutputDirectory", str(artifact_dir),
+                "-OutputDirectory", str(position_agent),
                 "-QualificationManifestPath", str(manifest),
             ),
             "build",
+            required_artifact=position_agent / "PositionAgent.exe",
+        ),
+        Phase(
+            "pairing-tool-build",
+            (
+                "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
+                str(ROOT / "scripts/build/Build-PairingTool.ps1"),
+                "-OutputDirectory", str(pairing_tool),
+            ),
+            "build",
+            required_artifact=pairing_tool / "PairingTool.exe",
+        ),
+        Phase(
+            "mouse-witness-build",
+            (
+                "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
+                str(ROOT / "scripts/build/Build-MouseWitness.ps1"),
+                "-OutputDirectory", str(mouse_witness),
+            ),
+            "build",
+            required_artifact=mouse_witness / "MouseWitness.exe",
+        ),
+        Phase(
+            "hogp-package-build",
+            (
+                "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
+                str(ROOT / "scripts/build/Build-HogpPackage.ps1"),
+                "-OutputDirectory", str(hogp_package),
+            ),
+            "build",
+            required_artifact=hogp_package / "MousseControler.Hogp.msix",
         ),
     ]
     if profile == "fast":
@@ -368,6 +414,12 @@ def run_qualification(
                         summary["verdict"] = "FAIL"
                         exit_code = 1
                         break
+                    if (phase.required_artifact is not None and
+                            not phase.required_artifact.is_file()):
+                        raise RuntimeError(
+                            "required phase artifact is missing: "
+                            f"{phase.required_artifact.name}"
+                        )
                     if phase.result_path:
                         result["tests"] = _read_test_result(phase.result_path)
                 except KeyboardInterrupt:

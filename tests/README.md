@@ -42,8 +42,13 @@ suite complète.
 - un test appartient à un seul niveau ;
 - aucun skip ou `expectedFailure` silencieux dans une qualification officielle ;
 - préférer événements, barrières et horloges contrôlées aux délais arbitraires ;
+- conserver zéro boucle de micro-polling `time.sleep` de 10 ms ou moins ;
 - réserver les assertions sur le texte source aux invariants réellement
   statiques ; tester le comportement dès qu'une frontière est exécutable ;
 - conserver sorties, certificats, dépôts et états dans des répertoires
   temporaires dédiés ;
 - ne jamais transformer une preuve simulée en revendication matérielle.
+
+`scripts/qualification/measure_test_architecture.py` vérifie l'attribution
+directe des modules aux tests et produit les métriques de dette. Cette
+attribution ne remplace pas une mesure d'exécution de lignes ou de branches.
