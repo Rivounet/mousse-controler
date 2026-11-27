@@ -30,6 +30,10 @@ empreinte d'arbre, branche, propreté, compteurs de tests, skips, erreurs
 attendues, durées et empreintes des artefacts. Tout skip ou échec attendu non
 explicitement sorti de la porte rend le profil logiciel non favorable.
 
+Un chemin fourni avec `--output-dir` doit être nouveau. L'orchestrateur le crée
+de manière exclusive et bloque avant toute phase s'il existe déjà, même vide,
+afin qu'aucun résultat périmé ou concurrent ne puisse être accepté comme preuve.
+
 L'organisation et les responsabilités des niveaux sont détaillées dans
 [`tests/README.md`](../tests/README.md).
 
