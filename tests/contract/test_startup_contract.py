@@ -5,7 +5,7 @@ import unittest
 from mousse_controler.app import _bounded_interval
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class StartupContractTests(unittest.TestCase):

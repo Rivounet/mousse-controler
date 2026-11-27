@@ -25,7 +25,7 @@ from mousse_controler.controller import MouseController, PositionStore
 from mousse_controler.transport import SimulatedHidTransport
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class ReceiverStub:

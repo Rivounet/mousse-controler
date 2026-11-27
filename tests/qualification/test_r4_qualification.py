@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import asdict
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -25,12 +26,20 @@ class QualificationProfileTests(unittest.TestCase):
                 self.assertNotIn("manage-moussecontrollertask", rendered)
                 self.assertNotIn("ssh", rendered)
             self.assertEqual(
+                [phase.name for phase in qualify.phases_for("fast", output)],
+                ["fast-tests"],
+            )
+            self.assertEqual(
+                [phase.name for phase in qualify.phases_for("integration", output)],
+                ["integration-tests"],
+            )
+            self.assertEqual(
                 [phase.name for phase in qualify.phases_for("software", output)],
-                ["software-tests"],
+                ["fast-tests", "integration-tests"],
             )
             self.assertEqual(
                 [phase.name for phase in qualify.phases_for("full-local", output)],
-                ["software-tests", "python-compilation", "api-reference-check",
+                ["fast-tests", "integration-tests", "python-compilation", "api-reference-check",
                  "powershell-syntax", "position-agent-build"],
             )
 
@@ -54,8 +63,28 @@ class QualificationProfileTests(unittest.TestCase):
 
 
 class QualificationOutcomeTests(unittest.TestCase):
+    PROVENANCE = {
+        "commit": "a" * 40,
+        "tree": "b" * 40,
+        "branch": "test/mc-test-strategy-001",
+        "clean": True,
+    }
+
     @staticmethod
     def _success(command, **_kwargs):
+        if "--summary-path" in command:
+            path = Path(command[command.index("--summary-path") + 1])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({
+                "schema": "mousse-test-results-v1",
+                "tests_run": 1,
+                "failures": 0,
+                "errors": 0,
+                "skipped": 0,
+                "expected_failures": 0,
+                "unexpected_successes": 0,
+                "successful": True,
+            }), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, stdout="ok\n")
 
     def test_missing_required_tool_is_blocked_not_pass(self):
@@ -64,7 +93,7 @@ class QualificationOutcomeTests(unittest.TestCase):
             code, summary = qualify.run_qualification(
                 "build", output, command_runner=self._success,
                 which=lambda tool: None if tool == "pwsh" else tool,
-                git_sha=lambda: "a" * 40,
+                git_provenance=lambda: self.PROVENANCE,
             )
             self.assertEqual(code, 2)
             self.assertEqual(summary["verdict"], "BLOCKED")
@@ -78,13 +107,14 @@ class QualificationOutcomeTests(unittest.TestCase):
             output = Path(temporary) / "result"
             code, summary = qualify.run_qualification(
                 "software", output, command_runner=fail,
-                git_sha=lambda: "b" * 40,
+                git_provenance=lambda: self.PROVENANCE,
             )
             self.assertEqual(code, 1)
             self.assertEqual(summary["verdict"], "FAIL")
-            self.assertEqual(summary["git_sha"], "b" * 40)
+            self.assertEqual(summary["git_sha"], "a" * 40)
+            self.assertEqual(summary["git"]["tree"], "b" * 40)
             self.assertEqual(summary["exclusions"], list(qualify.MATERIAL_EXCLUSIONS))
-            self.assertIn("deliberate failure", (output / "software-tests.log").read_text())
+            self.assertIn("deliberate failure", (output / "fast-tests.log").read_text())
 
     def test_interruption_is_observable_and_temporary_files_are_cleaned(self):
         def interrupt(_command, **kwargs):
@@ -95,7 +125,7 @@ class QualificationOutcomeTests(unittest.TestCase):
             output = Path(temporary) / "result"
             code, summary = qualify.run_qualification(
                 "software", output, command_runner=interrupt,
-                git_sha=lambda: "c" * 40,
+                git_provenance=lambda: self.PROVENANCE,
             )
             self.assertEqual(code, 130)
             self.assertEqual(summary["verdict"], "BLOCKED")
@@ -108,13 +138,13 @@ class QualificationOutcomeTests(unittest.TestCase):
 
         def capture_environment(command, **kwargs):
             observed["pycache"] = Path(kwargs["env"]["PYTHONPYCACHEPREFIX"])
-            return subprocess.CompletedProcess(command, 0, stdout="ok\n")
+            return self._success(command, **kwargs)
 
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "deep" / "qualification" / "result"
             code, summary = qualify.run_qualification(
                 "software", output, command_runner=capture_environment,
-                git_sha=lambda: "d" * 40,
+                git_provenance=lambda: self.PROVENANCE,
             )
             self.assertEqual(code, 0)
             self.assertEqual(summary["verdict"], "PASS")
@@ -122,6 +152,56 @@ class QualificationOutcomeTests(unittest.TestCase):
                              qualify.ROOT.parent / "t")
             self.assertFalse(observed["pycache"].exists())
             self.assertFalse((output / ".temporary").exists())
+
+    def test_dirty_repository_is_blocked_before_any_phase(self):
+        calls = []
+
+        def dirty():
+            raise qualify.QualificationPreconditionError(
+                "repository is dirty (1 changed path(s))",
+                {**self.PROVENANCE, "clean": False},
+            )
+
+        def should_not_run(*_args, **_kwargs):
+            calls.append(True)
+            raise AssertionError("phase must not run")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            code, summary = qualify.run_qualification(
+                "fast", Path(temporary) / "result",
+                command_runner=should_not_run, git_provenance=dirty,
+            )
+        self.assertEqual(2, code)
+        self.assertEqual("BLOCKED", summary["verdict"])
+        self.assertFalse(summary["git"]["clean"])
+        self.assertEqual([], calls)
+
+    def test_unavailable_git_identity_is_blocked_not_pass(self):
+        def unavailable():
+            raise qualify.QualificationPreconditionError("Git is unavailable")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            code, summary = qualify.run_qualification(
+                "fast", Path(temporary) / "result",
+                command_runner=self._success, git_provenance=unavailable,
+            )
+        self.assertEqual(2, code)
+        self.assertEqual("BLOCKED", summary["verdict"])
+        self.assertEqual("unavailable", summary["git_sha"])
+
+    def test_successful_test_process_without_metadata_is_failure(self):
+        def missing_metadata(command, **_kwargs):
+            return subprocess.CompletedProcess(command, 0, stdout="ok\n")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            code, summary = qualify.run_qualification(
+                "fast", Path(temporary) / "result",
+                command_runner=missing_metadata,
+                git_provenance=lambda: self.PROVENANCE,
+            )
+        self.assertEqual(1, code)
+        self.assertEqual("FAIL", summary["verdict"])
+        self.assertIn("metadata is missing", summary["phases"][0]["reason"])
 
 
 if __name__ == "__main__":

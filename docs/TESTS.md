@@ -2,12 +2,15 @@
 
 ## Qualification locale officielle
 
-La décision R4 exclut GitHub Actions et toute CI externe. Les trois profils
-fermés sont :
+La décision du propriétaire exclut GitHub Actions et toute CI externe. La porte
+reste locale sous Windows, avec provenance Git fail-closed. Les profils fermés
+sont :
 
 | Profil | Contenu | Exclusions structurelles |
 |---|---|---|
-| `software` | tests unitaires et intégrations simulées | diagnostics matériels, SSH, installation, déploiement |
+| `fast` | tests unitaires, contrats et outillage de qualification | diagnostics matériels, processus d'intégration, installation, déploiement |
+| `integration` | processus, sockets, fichiers, concurrence et rollbacks simulés | diagnostics matériels, SSH réel, installation, déploiement |
+| `software` | `fast` puis `integration` | mêmes exclusions |
 | `build` | compilation Python, référence API, syntaxe PowerShell, PositionAgent | exécution des scripts analysés et installation |
 | `full-local` | `software` puis `build` | mêmes exclusions |
 
@@ -21,16 +24,25 @@ Les sept diagnostics matériels exclus sont trois diagnostics Bluetooth et
 quatre diagnostics cible/session. Ils restent hors orchestrateur et exigent une
 autorisation explicite.
 
+Une qualification officielle refuse avant toute phase un dépôt sale, une
+identité Git indisponible ou un arbre non résolu. Son résumé v2 contient commit,
+empreinte d'arbre, branche, propreté, compteurs de tests, skips, erreurs
+attendues, durées et empreintes des artefacts. Tout skip ou échec attendu non
+explicitement sorti de la porte rend le profil logiciel non favorable.
+
+L'organisation et les responsabilités des niveaux sont détaillées dans
+[`tests/README.md`](../tests/README.md).
+
 ## Contrats de convergence architecturale
 
-`tests/test_architecture_convergence.py` vérifie notamment que :
+`tests/integration/test_architecture_convergence.py` vérifie notamment que :
 
 - une commande historique ne peut pas s'insérer pendant un maintien moderne ;
 - une action annulée en attente du coordinateur n'acquiert jamais le HID ;
 - position et topologie sont publiées sous la même génération ;
 - une génération incohérente est refusée avant publication.
 
-`tests/test_controller_release.py` construit de vrais dépôts Git temporaires et
+`tests/integration/test_controller_release.py` construit de vrais dépôts Git temporaires et
 vérifie dépôt sale refusé, extraction des seuls objets sélectionnés, réutilisation
 identique, exécution autonome du vérificateur, altération et fichier inattendu
 refusés. Ces tests ne créent ni tâche ni processus applicatif persistant.

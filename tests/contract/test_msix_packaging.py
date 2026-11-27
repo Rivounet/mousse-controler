@@ -5,7 +5,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "packaging" / "hogp" / "AppxManifest.xml"
 FOUNDATION = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
 DESKTOP = "http://schemas.microsoft.com/appx/manifest/desktop/windows10"

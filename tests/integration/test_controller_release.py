@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "scripts" / "runtime" / "controller_release.py"
 SPEC = importlib.util.spec_from_file_location("controller_release", MODULE_PATH)
 assert SPEC and SPEC.loader

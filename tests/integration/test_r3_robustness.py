@@ -20,7 +20,7 @@ from mousse_controler import app
 from mousse_controler.capture import CaptureBroker, CaptureQuotaError
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PNG = b"\x89PNG\r\n\x1a\n" + b"r3-bounded-capture"
 
 
@@ -500,7 +500,7 @@ class PositionAgentTransactionTests(unittest.TestCase):
         if cls.shell is None:
             raise unittest.SkipTest("PowerShell is required for transaction tests")
         cls.updater = ROOT / "scripts" / "target" / "Update-InteractivePositionAgent.ps1"
-        cls.harness = ROOT / "tests" / "position_agent_transaction_harness.ps1"
+        cls.harness = ROOT / "tests" / "support" / "position_agent_transaction_harness.ps1"
 
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
