@@ -18,9 +18,9 @@ QualificationError = controller_release.QualificationError
 
 class ControllerReleaseTests(unittest.TestCase):
     def setUp(self) -> None:
-        temporary_root = ROOT.parents[1] / ".runtime-tests"
+        temporary_root = ROOT.parent / "t"
         temporary_root.mkdir(exist_ok=True)
-        self.temporary = tempfile.TemporaryDirectory(prefix="mcr-", dir=temporary_root)
+        self.temporary = tempfile.TemporaryDirectory(prefix="m-", dir=temporary_root)
         self.root = Path(self.temporary.name)
         self.repository = self.root / "repository"
         self.releases = self.root / "releases"
@@ -46,10 +46,6 @@ class ControllerReleaseTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
-        try:
-            Path(self.temporary.name).parent.rmdir()
-        except OSError:
-            pass
 
     def git(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
