@@ -129,16 +129,20 @@ class EventWebSocketServer(socketserver.ThreadingTCPServer):
     block_on_close = False
     request_queue_size = 8
 
-    def __init__(self, address: tuple[str, int], token: bytes, registry: ActionRegistry):
+    def __init__(self, address: tuple[str, int], token: bytes | bytearray,
+                 registry: ActionRegistry):
         host, _ = address
         if host not in ("127.0.0.1", "::1", "localhost"):
             raise ValueError("event WebSocket must bind to loopback")
-        self.token = bytes(token)
+        # Keep the runtime-owned mutable token so lifecycle cleanup also
+        # invalidates the authentication secret held by this server.
+        self.token = token
         self.registry = registry
         super().__init__(address, EventWebSocketHandler)
 
 
-def make_event_server(port: int, token: bytes, registry: ActionRegistry) -> EventWebSocketServer:
+def make_event_server(port: int, token: bytes | bytearray,
+                      registry: ActionRegistry) -> EventWebSocketServer:
     if not 1 <= port <= 65_535:
         raise ValueError("invalid WebSocket port")
     return EventWebSocketServer(("127.0.0.1", port), token, registry)

@@ -292,6 +292,9 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
             self.assertTrue(runtime.transport.advertised)
             self.assertFalse(runtime.transport.started)
             self.assertFalse(any(runtime.lifecycle.command_token))
+            event_server = self._server(runtime, "events-websocket")
+            self.assertIs(event_server.token, runtime.lifecycle.command_token)
+            self.assertFalse(any(event_server.token))
             self.assertTrue(all(
                 not any(secret) for secret in runtime.lifecycle.keys.values()
             ))
