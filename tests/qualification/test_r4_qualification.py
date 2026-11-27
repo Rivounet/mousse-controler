@@ -39,18 +39,34 @@ class QualificationProfileTests(unittest.TestCase):
             )
             self.assertEqual(
                 [phase.name for phase in qualify.phases_for("full-local", output)],
-                ["fast-tests", "integration-tests", "python-compilation", "api-reference-check",
-                 "powershell-syntax", "position-agent-build"],
+                ["fast-tests", "integration-tests", "test-architecture-measurement",
+                 "python-compilation", "api-reference-check", "powershell-syntax",
+                 "position-agent-build", "pairing-tool-build", "mouse-witness-build",
+                 "hogp-package-build"],
             )
 
     def test_build_profile_only_builds_into_qualification_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary).resolve()
-            phase = qualify.phases_for("build", output)[-1]
-            self.assertEqual(phase.name, "position-agent-build")
-            output_argument = Path(phase.command[phase.command.index("-OutputDirectory") + 1])
-            self.assertTrue(output_argument.is_relative_to(output))
-            self.assertNotIn("Install", phase.command)
+            phases = qualify.phases_for("build", output)
+            build_phases = [
+                phase for phase in phases if "-OutputDirectory" in phase.command
+            ]
+            self.assertEqual(
+                [phase.name for phase in build_phases],
+                ["position-agent-build", "pairing-tool-build", "mouse-witness-build",
+                 "hogp-package-build"],
+            )
+            for phase in phases:
+                with self.subTest(phase=phase.name):
+                    self.assertNotIn("Install", phase.command)
+                    if phase.required_artifact is not None:
+                        self.assertTrue(phase.required_artifact.is_relative_to(output))
+            for phase in build_phases:
+                output_argument = Path(
+                    phase.command[phase.command.index("-OutputDirectory") + 1]
+                )
+                self.assertTrue(output_argument.is_relative_to(output))
 
     def test_profile_definition_survives_fresh_process_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -72,6 +88,10 @@ class QualificationOutcomeTests(unittest.TestCase):
 
     @staticmethod
     def _success(command, **_kwargs):
+        if "--output" in command:
+            path = Path(command[command.index("--output") + 1])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}", encoding="utf-8")
         if "--summary-path" in command:
             path = Path(command[command.index("--summary-path") + 1])
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -202,6 +222,20 @@ class QualificationOutcomeTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertEqual("FAIL", summary["verdict"])
         self.assertIn("metadata is missing", summary["phases"][0]["reason"])
+
+    def test_successful_build_process_without_artifact_is_failure(self):
+        def missing_artifact(command, **_kwargs):
+            return subprocess.CompletedProcess(command, 0, stdout="ok\n")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            code, summary = qualify.run_qualification(
+                "build", Path(temporary) / "result",
+                command_runner=missing_artifact,
+                git_provenance=lambda: self.PROVENANCE,
+            )
+        self.assertEqual(1, code)
+        self.assertEqual("FAIL", summary["verdict"])
+        self.assertIn("artifact is missing", summary["phases"][0]["reason"])
 
 
 if __name__ == "__main__":
