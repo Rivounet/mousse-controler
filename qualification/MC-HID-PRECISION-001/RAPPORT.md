@@ -47,7 +47,7 @@ rejeu.
 Commande ciblée :
 
 ```powershell
-python -B -m unittest tests.test_controller tests.test_actions tests.test_api_catalog -v
+python -B -m unittest tests.unit.test_controller tests.unit.test_actions tests.contract.test_api_catalog -v
 ```
 
 La porte finale est :

@@ -3,7 +3,7 @@
 ## Suite ciblée
 
 ```powershell
-python -B -m unittest tests.test_r3_robustness -v
+python -B -m unittest tests.integration.test_r3_robustness -v
 ```
 
 Couverture C-03 :
