@@ -49,13 +49,13 @@ class NativeHogpTransportCommandTests(unittest.TestCase):
                 NativeHogpTransport(Path("engine.exe"), **kwargs)
 
     def test_powershell_engine_waits_for_advertising_to_stop(self) -> None:
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(encoding="utf-8")
         self.assertIn("function Stop-AdvertisingAndWait", source)
         self.assertIn("advertising did not stop", source)
 
     def test_powershell_winrt_operations_have_explicit_deadline(self) -> None:
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(
             encoding="utf-8")
         self.assertIn("[int]$TimeoutMilliseconds = 5000", source)
@@ -64,7 +64,7 @@ class NativeHogpTransportCommandTests(unittest.TestCase):
         self.assertIn("$Operation.Cancel()", source)
 
     def test_pairability_is_an_explicit_command_mode(self) -> None:
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         source = (root / "src" / "hogp-powershell" / "hogp.ps1").read_text(encoding="utf-8")
         self.assertIn("@('start', 'pairable', 'stop')", source)
         self.assertIn("Incoming pairing is", source)

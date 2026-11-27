@@ -26,7 +26,7 @@ from mousse_controler.security import HmacVerifier, sign
 from mousse_controler.transport import (
     NativeHogpTransport, TransportError, TransportTimeoutError,
 )
-from tests.r0_doubles import BlockingLineStream, ProcessDouble
+from tests.support.r0_doubles import BlockingLineStream, ProcessDouble
 
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
@@ -182,7 +182,9 @@ class HogpDeadlineTests(unittest.TestCase):
     def test_stderr_is_drained_without_blocking_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             transport = self.make_transport(
-                "stderr-saturated", Path(directory) / "commands.log")
+                "stderr-saturated", Path(directory) / "commands.log",
+                startup_timeout=5.0,
+            )
             transport.start()
             status = transport.status()
             self.assertEqual(status["subscribed"], "True")

@@ -2,7 +2,7 @@ from pathlib import Path
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "src" / "position-agent" / "PositionAgent.cs"
 MANAGER = ROOT / "scripts" / "target" / "Manage-InteractivePositionAgent.ps1"
 

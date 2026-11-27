@@ -37,7 +37,7 @@ from mousse_controler.transport import (
     TransportTimeoutError,
 )
 
-from tests.r0_doubles import (
+from tests.support.r0_doubles import (
     ActionsDouble,
     BlockingLineStream,
     FailingAfterEffectTransport,
@@ -50,7 +50,7 @@ from tests.r0_doubles import (
 
 TERMINAL = {"EXECUTED", "CONFIRMED", "FAILED", "UNKNOWN", "CANCELLED"}
 PNG = b"\x89PNG\r\n\x1a\n" + b"r0-characterization"
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def wait_for_record(registry: ActionRegistry, action_id: str, timeout: float = 1.0) -> dict:
@@ -541,7 +541,7 @@ class LifecycleCharacterizationTests(unittest.TestCase):
             environment["MC_POSITION_AGENT_TRANSACTION_TEST"] = "1"
             result = subprocess.run([
                 shell, "-NoProfile", "-File",
-                str(ROOT / "tests" / "position_agent_transaction_harness.ps1"),
+                str(ROOT / "tests" / "support" / "position_agent_transaction_harness.ps1"),
                 "-Updater", str(ROOT / "scripts" / "target" /
                                  "Update-InteractivePositionAgent.ps1"),
                 "-Target", str(target), "-Artifact", str(artifact),
