@@ -1094,6 +1094,7 @@ Paramètres obligatoires : `kind`, `dx`, `dy`.
 | `max_step` | `integer` | non | `48` | {"maximum": 32767, "minimum": 1} |
 | `max_total_movement` | `number` | non | `—` | {"maximum": 262144, "minimum_exclusive": 0} |
 | `max_iterations` | `integer` | non | `64` | {"maximum": 256, "minimum": 1} |
+| `preflight_timeout_seconds` | `number` | non | `2.0` | {"maximum": 10, "minimum": 0.01} |
 | `feedback_timeout_seconds` | `number` | non | `0.25` | {"maximum": 5, "minimum": 0.01} |
 | `max_age_ms` | `integer` | non | `150` | {"maximum": 5000, "minimum": 1} |
 | `stagnation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |
@@ -1126,6 +1127,7 @@ Paramètres obligatoires : `kind`, `x`, `y`.
 | `max_step` | `integer` | non | `48` | {"maximum": 32767, "minimum": 1} |
 | `max_total_movement` | `number` | non | `—` | {"maximum": 262144, "minimum_exclusive": 0} |
 | `max_iterations` | `integer` | non | `64` | {"maximum": 256, "minimum": 1} |
+| `preflight_timeout_seconds` | `number` | non | `2.0` | {"maximum": 10, "minimum": 0.01} |
 | `feedback_timeout_seconds` | `number` | non | `0.25` | {"maximum": 5, "minimum": 0.01} |
 | `max_age_ms` | `integer` | non | `150` | {"maximum": 5000, "minimum": 1} |
 | `stagnation_limit` | `integer` | non | `3` | {"maximum": 32, "minimum": 1} |

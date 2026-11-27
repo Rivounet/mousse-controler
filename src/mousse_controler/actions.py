@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from .api_catalog import validate_action_contract
 from .controller import MouseController, PositionError, PositioningError
+from .orchestration import OperationCancelled, OperationCoordinator
 
 
 class ActionState(str, Enum):
@@ -422,10 +423,12 @@ class ActionExecutor:
     """Single-lane executor; accepted work is never replayed after restart."""
 
     def __init__(self, controller: MouseController, registry: ActionRegistry,
-                 capture_broker: Any | None = None, max_queue: int = 256):
+                 capture_broker: Any | None = None, max_queue: int = 256,
+                 coordinator: OperationCoordinator | None = None):
         self._controller = controller
         self.registry = registry
         self._captures = capture_broker
+        self._coordinator = coordinator or OperationCoordinator()
         self._queue: queue.Queue[tuple[str, dict[str, Any], _Control] | None] = queue.Queue(max_queue)
         self._controls: dict[str, _Control] = {}
         self._lock = threading.Lock()
@@ -433,6 +436,10 @@ class ActionExecutor:
         self._stopped = threading.Event()
         self._worker = threading.Thread(target=self._run, name="mousse-actions", daemon=True)
         self._worker.start()
+
+    @property
+    def coordinator(self) -> OperationCoordinator:
+        return self._coordinator
 
     def capabilities(self) -> dict[str, Any]:
         return {
@@ -584,6 +591,18 @@ class ActionExecutor:
             self.registry.transition(action_id, ActionState.CANCELLED,
                                      error_code="CANCELLED", error="cancelled before execution")
             return
+        try:
+            lease = self._coordinator.acquire(
+                f"action:{action_id}", wait=True, cancel_event=control.cancel,
+            )
+        except OperationCancelled as exc:
+            self.registry.transition(action_id, ActionState.CANCELLED,
+                                     error_code="CANCELLED", error=str(exc))
+            return
+        with lease:
+            self._execute_owned(action_id, spec, control)
+
+    def _execute_owned(self, action_id: str, spec: dict[str, Any], control: _Control) -> None:
         self.registry.transition(action_id, ActionState.RUNNING)
         captures: dict[str, Any] = {}
         capture_config = (spec.get("capture") or {}) if spec["kind"] in MOUSE_ACTION_KINDS else {}
@@ -908,6 +927,7 @@ class ActionExecutor:
             "tolerance_px": int(spec.get("tolerance_px", tolerance_default)),
             "timeout": float(spec.get("timeout_seconds", 5.0)),
             "max_step": int(spec.get("max_step", 48)),
+            "preflight_timeout": float(spec.get("preflight_timeout_seconds", 2.0)),
             "feedback_timeout": float(spec.get("feedback_timeout_seconds", 0.25)),
             "max_age_ms": int(spec.get("max_age_ms", 150)),
             "max_iterations": int(spec.get("max_iterations", 64)),
@@ -970,11 +990,14 @@ class ActionExecutor:
         state = ActionState.UNKNOWN if (
             button_state_uncertain or emitted and spec["kind"] in NON_IDEMPOTENT_KINDS
         ) else ActionState.FAILED
-        self.registry.transition(action_id, state, error_code=code, error=str(exc))
+        # Complete safety evidence before publishing the terminal state. Readers
+        # are allowed to return as soon as a state is terminal, so annotating
+        # afterwards exposes a transient, incomplete terminal record.
         if button_state_uncertain:
             self._enter_safety_stop(action_id, exc)
         elif ErrorPolicy(spec["error_policy"]) == ErrorPolicy.STOP:
             self._enter_safety_stop(action_id, exc)
+        self.registry.transition(action_id, state, error_code=code, error=str(exc))
 
     def _enter_safety_stop(self, action_id: str, exc: Exception) -> None:
         """Quarantine the executor; release is attempted but never treated as confirmation."""

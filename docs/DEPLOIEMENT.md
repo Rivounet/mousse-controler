@@ -26,6 +26,31 @@ clone Git, artefacts, releases actives, état et journaux.
 7. En cas d'échec, arrêter le candidat et rétablir la précédente.
 8. Publier code et preuves expurgées dans une PR Draft, sans fusion implicite.
 
+## Release contrôleur immuable
+
+Une tâche planifiée ne doit jamais pointer vers `source/` ni vers un worktree.
+Après qualification et commit du SHA exact, préparer la release :
+
+```powershell
+python -B scripts/runtime/controller_release.py prepare `
+  --repository . --ref <SHA_40> `
+  --releases-root C:\Projets\Mousse-controler\releases
+```
+
+Le préparateur refuse un dépôt sale, extrait uniquement
+`src/mousse_controler` et `scripts/runtime` depuis les objets Git, puis écrit
+une release `<SHA>-<HASH>` avec `.mousse-release.json`. Une release existante
+n'est réutilisée que si chaque taille, empreinte et fichier concorde ; tout
+fichier supplémentaire ou modifié est refusé.
+
+Le gestionnaire exige ensuite `-ReleasePath` pour `Start`. Il vérifie la
+release avant d'inscrire la tâche, et `Start-MousseController.ps1` la vérifie à
+nouveau à chaque démarrage. `-AllowMutableSource` existe seulement pour un
+lancement manuel de développement et ne doit pas apparaître dans une tâche.
+La première migration d'une tâche historique pointant vers `worktrees/` exige
+en plus `-AllowLegacyTaskMigration`; cette dérogation ne s'applique ni aux
+activations suivantes ni à un chemin extérieur à la racine des worktrees.
+
 Les scripts consolidés dans `scripts/remote/` implémentent déjà le modèle local
 d'artefact/release et ses tests. Leur transport SSH/SFTP n'est pas nécessaire au
 cycle courant ; voir le document d'accès distant pour son statut secondaire.
@@ -146,14 +171,14 @@ Après qualification du SHA exact et autorisation opérationnelle distincte :
 
 1. conserver le worktree actif et les persistences (`action_journal`, `.ids`,
    index de captures et configuration DPAPI) comme point de retour ;
-2. préparer un worktree immuable au SHA qualifié et vérifier arbre propre,
-   configuration référencée par la tâche et unicité du processus ;
+2. préparer une release contrôleur immuable au SHA qualifié et vérifier son
+   manifeste, la configuration référencée et l'unicité du processus ;
 3. arrêter le contrôleur par la procédure qualifiée, repointer uniquement sa
-   tâche vers ce worktree, puis redémarrer et contrôler position fraîche,
+   tâche vers cette release, puis redémarrer et contrôler position fraîche,
    `subscribed=True`, `buttons=0` et aucune action active ;
 4. ne lancer le scénario matériel minimal qu'après un nouvel accord explicite.
 
-Rollback : arrêter le candidat, repointer la tâche vers le worktree précédent,
+Rollback : arrêter le candidat, repointer la tâche vers la release précédente,
 redémarrer et répéter les mêmes contrôles de santé. Aucun rollback de MSIX,
 certificat, appairage ou PositionAgent n'est requis pour ce changement.
 

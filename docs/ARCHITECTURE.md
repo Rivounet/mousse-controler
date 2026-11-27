@@ -21,6 +21,28 @@ MonOrdinateur : pile Bluetooth et souris HID natives Windows
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
 ```
 
+## Couches et règles de dépendance
+
+L'architecture conserve un seul processus mais sépare les responsabilités :
+
+| Couche | Modules principaux | Responsabilité |
+|---|---|---|
+| Adaptateurs entrants | `command_server`, `position_server`, `event_server` | protocoles HTTP/WebSocket, authentification, enveloppes et sérialisation |
+| Application | `application`, `orchestration`, `actions`, `sequence` | cas d'usage, cycle de vie, coordination et attribution exclusive du périphérique |
+| Domaine | `geometry`, `trajectory`, types de `feedback` | règles pures, valeurs et invariants indépendants des protocoles |
+| Infrastructure | `controller`, `transport`, `capture`, `dpapi`, `security` | HID, processus WinRT, stockage privé et primitives de sécurité |
+
+Les adaptateurs ne pilotent plus directement le contrôleur. Ils appellent
+`MouseApplicationService`, qui partage un unique `OperationCoordinator` avec
+`ActionExecutor` et `SequenceRunner`. Le bail couvre une opération logique
+complète ; le verrou du contrôleur continue de protéger chaque émission. Les
+commandes d'arrêt restent hors bail afin de toujours pouvoir interrompre le
+propriétaire courant.
+
+Le retour cible est publié par `PositionStore` sous forme d'un couple atomique
+position/topologie de même génération. Aucun consommateur ne doit maintenir une
+copie de topologie séparée ni combiner deux générations.
+
 Codex travaille **directement sur mini-pc-backend**. L'accès OpenSSH à clé et
 host key stricte vers MonOrdinateur est qualifié pour la maintenance ; l'agent
 de position s'exécute séparément dans la session interactive.
@@ -326,6 +348,28 @@ pause/reprise/arrêt se ressemblent, mais leurs états publics, unités de trava
 et garanties d'échec diffèrent ; aucune fusion ni troisième ordonnanceur n'est
 introduit. Le catalogue refuse désormais un identifiant dupliqué avant
 insertion pour ses trois familles de ressources.
+
+## Convergence architecturale — MC-ARCHITECTURE-CONVERGENCE-001
+
+Les deux modèles de séquence sont conservés pour compatibilité fonctionnelle,
+mais ne constituent plus deux voies concurrentes vers le HID. Une séquence
+historique réserve le coordinateur avant de démarrer ; une action moderne
+attend ce même coordinateur dans sa file ; une commande historique synchrone
+est refusée explicitement si une autre opération possède déjà le périphérique.
+Ainsi, un déplacement ne peut plus s'insérer pendant un maintien de bouton.
+
+`CommandGateway` est ramené à son rôle d'adaptateur : authentification,
+idempotence, validation du contrat et traduction de réponse. La composition des
+cas d'usage, des requêtes et du cycle de séquence appartient à
+`MouseApplicationService`. Le stockage de feedback est extrait du contrôleur et
+publie position et topologie dans une transaction mémoire unique.
+
+Le runtime planifié doit provenir d'une release contrôleur préparée par
+`scripts/runtime/controller_release.py` depuis les blobs d'un commit exact et
+un dépôt propre. La release contient un manifeste et les empreintes de chaque
+fichier ; le gestionnaire de tâche et le lanceur vérifient son intégrité. Le
+mode source mutable n'est disponible que manuellement avec
+`-AllowMutableSource` et ne doit jamais servir à une tâche de production.
 
 ## Précision HID et boucle fermée — MC-HID-PRECISION-001
 

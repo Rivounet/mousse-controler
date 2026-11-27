@@ -203,3 +203,38 @@ Un arrêt HOGP non acquitté impose un redémarrage qualifié avant reprise. Les
 captures brutes restent privées et sont supprimées après empreinte ; l'export
 expurgé calcule son SHA-256 via .NET pour rester compatible avec le contexte
 Windows PowerShell réellement exécuté.
+
+## D-070 — Couche applicative et propriété exclusive du HID (27 novembre 2026)
+
+**Décision :** conserver les contrats publics des actions et des séquences,
+mais déplacer leur composition hors de l'adaptateur HTTP. Un
+`MouseApplicationService` porte les cas d'usage et partage un
+`OperationCoordinator` avec les deux moteurs. Toute action, séquence ou
+commande historique possède un bail exclusif pendant toute son opération
+logique ; l'arrêt reste prioritaire et ne dépend pas de ce bail.
+
+**Motivation :** le verrou du contrôleur protégeait les rapports individuels,
+pas leur intention. Un test simulé a démontré qu'un déplacement historique
+pouvait s'insérer pendant un maintien moderne et produire un glisser-déposer.
+
+**Conséquence :** une action moderne attend dans sa file, une séquence réserve
+le périphérique avant démarrage et une commande historique synchrone reçoit un
+refus explicite si le périphérique est occupé. Aucun troisième moteur de
+séquence ni changement de contrat matériel n'est introduit.
+
+## D-071 — Feedback atomique et releases contrôleur immuables (27 novembre 2026)
+
+**Décision :** publier position et topologie comme une même génération dans
+`PositionStore`. Exécuter les tâches contrôleur uniquement depuis une release
+extraite des objets Git d'un SHA propre, munie d'un manifeste et vérifiée avant
+inscription puis à chaque lancement.
+
+**Motivation :** la position et la topologie étaient mises à jour sous deux
+verrous distincts. Par ailleurs, le runtime observé chargeait quatre fichiers
+modifiés d'un worktree ; ni reproduction ni rollback par SHA n'étaient alors
+possibles.
+
+**Conséquence :** une génération incohérente est refusée fail-closed. Le mode
+source mutable reste limité au développement manuel ; toute activation de la
+nouvelle release conserve une porte distincte de qualification, sauvegarde,
+rollback et décision de fusion.

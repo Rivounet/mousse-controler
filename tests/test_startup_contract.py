@@ -34,6 +34,21 @@ class StartupContractTests(unittest.TestCase):
         self.assertIn("$RetryDelaySeconds = 30", launcher)
         self.assertIn("Start-Sleep -Seconds $RetryDelaySeconds", launcher)
 
+    def test_scheduled_runtime_requires_verified_immutable_release(self) -> None:
+        manager = (ROOT / "scripts" / "runtime" / "Manage-MousseControllerTask.ps1").read_text(
+            encoding="utf-8"
+        )
+        launcher = (ROOT / "scripts" / "runtime" / "Start-MousseController.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("-ReleasePath is required for Start", manager)
+        self.assertIn("AllowLegacyTaskMigration", manager)
+        self.assertIn("managedParent -ne $legacyWorktrees", manager)
+        self.assertIn("controller_release.py", manager)
+        self.assertIn("verify --release", manager)
+        self.assertIn("Mutable source launch refused", launcher)
+        self.assertIn("Controller release integrity verification failed", launcher)
+
     def test_runtime_cleans_transport_when_initialization_fails(self) -> None:
         source = (ROOT / "src" / "mousse_controler" / "app.py").read_text(encoding="utf-8")
         startup = source[source.index("controller = MouseController"):
