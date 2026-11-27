@@ -237,6 +237,35 @@ class QualificationOutcomeTests(unittest.TestCase):
         self.assertEqual("FAIL", summary["verdict"])
         self.assertIn("artifact is missing", summary["phases"][0]["reason"])
 
+    def test_existing_output_directory_is_blocked_before_any_phase(self):
+        calls = []
+
+        def should_not_run(*_args, **_kwargs):
+            calls.append(True)
+            raise AssertionError("phase must not run with stale output")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            for state in ("empty", "stale"):
+                with self.subTest(state=state):
+                    output = Path(temporary) / state
+                    output.mkdir()
+                    if state == "stale":
+                        stale = output / "artifacts" / "fast-tests.json"
+                        stale.parent.mkdir(parents=True)
+                        stale.write_text('{"successful":true}', encoding="utf-8")
+
+                    code, summary = qualify.run_qualification(
+                        "fast", output,
+                        command_runner=should_not_run,
+                        git_provenance=lambda: self.PROVENANCE,
+                    )
+
+                    self.assertEqual(2, code)
+                    self.assertEqual("BLOCKED", summary["verdict"])
+                    self.assertIn("output path already exists", summary["reason"])
+                    self.assertFalse((output / "summary.json").exists())
+        self.assertEqual([], calls)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,18 +25,32 @@ introduire de CI externe.
   couche, les assertions, lectures de source et attentes temporelles ;
 - le modèle de PR demande SHA, arbre, compteurs, builds, exclusions et rapport.
 
+## Corrections de contre-revue
+
+- une qualification acquiert désormais son répertoire de sortie par création
+  atomique et exclusive ; tout chemin préexistant, même vide, rend l'exécution
+  `BLOCKED` avant la première phase et n'est jamais modifié ;
+- cette précondition empêche une exécution de lire des métadonnées de tests ou
+  des artefacts périmés, ainsi que deux exécutions concurrentes de partager
+  leurs preuves ;
+- un échec de construction du service applicatif ou de la passerelle de
+  commandes ferme immédiatement le runtime partiellement composé : worker
+  d'actions, contrôleur et secrets mutables sont tous nettoyés ;
+- les 18 tests ciblés d'orchestration et de cycle de vie passent, avec les
+  chemins vide/périmé et les deux constructeurs couverts.
+
 ## Mesures de développement
 
 - modules Python de production avec propriétaire direct : 18/18 ;
 - cas découverts dans `unit`, `contract`, `qualification`, `integration` et
-  `system` : 251 ;
+  `system` : 253 ;
 - micro-pollings `time.sleep` de 10 ms ou moins : 0 ;
 - lectures de source dans les tests : 36 ; attentes `time.sleep` restantes :
   11, réservées aux fenêtres négatives et deadlines ;
 - tests ciblés client, DPAPI et mesure : 6/6 PASS ;
 - tests contrôleur, trajectoire et mesure : 46/46 PASS ;
-- profil `fast` final de développement : 146/146 PASS ;
-- profil `integration` final de développement : 179/179 PASS.
+- profil `fast` final de développement : 147/147 PASS ;
+- profil `integration` final de développement : 180/180 PASS.
 
 Les quatre builds de développement ont réussi. Les empreintes officielles sont
 publiées depuis la qualification du commit propre, et non depuis cet arbre de

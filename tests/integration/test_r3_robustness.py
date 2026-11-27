@@ -417,6 +417,41 @@ class LifecycleTests(unittest.TestCase):
                 self.assertIn("actions.close", self.calls)
                 self.assertIn("controller.stop", self.calls)
 
+    def test_composition_failure_closes_partial_runtime(self) -> None:
+        original_close = app._RuntimeLifecycle.close
+
+        for component in ("MouseApplicationService", "CommandGateway"):
+            with self.subTest(component=component):
+                self.calls.clear()
+                closed_lifecycles = []
+
+                def observe_close(lifecycle):
+                    result = original_close(lifecycle)
+                    closed_lifecycles.append(lifecycle)
+                    return result
+
+                patches = self.patches()
+                patches.append(mock.patch.object(
+                    app, component,
+                    side_effect=RuntimeError(f"{component} composition failure"),
+                ))
+                patches.append(mock.patch.object(
+                    app._RuntimeLifecycle, "close", new=observe_close,
+                ))
+
+                error = self.run_with(patches)
+
+                self.assertIsInstance(error, RuntimeError)
+                self.assertIn(f"{component} composition failure", str(error))
+                self.assertIn("actions.close", self.calls)
+                self.assertIn("controller.stop", self.calls)
+                self.assertEqual(len(closed_lifecycles), 1)
+                lifecycle = closed_lifecycles[0]
+                self.assertFalse(any(lifecycle.command_token))
+                self.assertTrue(all(
+                    not any(secret) for secret in lifecycle.keys.values()
+                ))
+
     def test_each_thread_start_failure_cleans_started_and_unstarted_servers(self) -> None:
         for failure in (1, 2, 3):
             with self.subTest(thread=failure):
