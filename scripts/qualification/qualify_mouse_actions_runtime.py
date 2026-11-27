@@ -12,6 +12,7 @@ import socket
 import struct
 import subprocess
 import time
+from typing import Callable
 import uuid
 
 from mousse_controler.command_client import invoke
@@ -32,7 +33,7 @@ def _utc_instant(value: object, field: str) -> datetime:
 
 def validate_qualification_lease_pair(
         backend_path: Path, target_status_path: Path, run_id: str,
-        git_sha: str) -> dict:
+        git_sha: str, *, require_fresh_target_observation: bool = True) -> dict:
     try:
         normalized_run_id = str(uuid.UUID(run_id))
     except ValueError as exc:
@@ -47,7 +48,8 @@ def validate_qualification_lease_pair(
         raise ValueError("qualification lease evidence must contain JSON objects")
     now = datetime.now(timezone.utc)
     target_observed = _utc_instant(target.get("observed_at_utc"), "observed_at_utc")
-    if abs((now - target_observed).total_seconds()) > 30:
+    if (require_fresh_target_observation and
+            abs((now - target_observed).total_seconds()) > 30):
         raise ValueError("target qualification lease status is stale")
     for role, state in (("backend", backend), ("target", target)):
         if state.get("schema") != "mousse-qualification-lease-v1":
@@ -79,6 +81,24 @@ def validate_qualification_lease_pair(
         "target_expires_at_utc": target["expires_at_utc"],
         "target_observed_at_utc": target["observed_at_utc"],
     }
+
+
+class QualificationLeaseGuard:
+    """Re-read both lease files before each externally visible action."""
+
+    def __init__(self, backend_path: Path, target_status_path: Path,
+                 run_id: str, git_sha: str):
+        self.backend_path = backend_path
+        self.target_status_path = target_status_path
+        self.run_id = run_id
+        self.git_sha = git_sha
+        self.initial = validate_qualification_lease_pair(
+            backend_path, target_status_path, run_id, git_sha)
+
+    def check(self) -> dict:
+        return validate_qualification_lease_pair(
+            self.backend_path, self.target_status_path, self.run_id, self.git_sha,
+            require_fresh_target_observation=False)
 
 
 class EventClient:
@@ -158,7 +178,8 @@ class EventClient:
 
 
 def qualify(config_path: Path, bounds: tuple[int, int, int, int], *, capture_only: bool = False,
-            evidence_directory: Path | None = None) -> dict:
+            evidence_directory: Path | None = None,
+            lease_validator: Callable[[], dict] | None = None) -> dict:
     x, y, width, height = bounds
     if width < 400 or height < 300:
         raise ValueError("witness surface is too small")
@@ -169,6 +190,8 @@ def qualify(config_path: Path, bounds: tuple[int, int, int, int], *, capture_onl
     all_event_ids: list[str] = []
 
     def run(label: str, spec: dict, *, confirmed: bool = False) -> dict:
+        if lease_validator is not None:
+            lease_validator()
         action_id = f"hardware-{label}-{uuid.uuid4()}"
         accepted = invoke(config_path, "action_submit", {
             "action_id": action_id, "action": spec,
@@ -285,10 +308,13 @@ def qualify(config_path: Path, bounds: tuple[int, int, int, int], *, capture_onl
         client.close()
 
 
-def emergency(config_path: Path) -> dict:
+def emergency(config_path: Path,
+              lease_validator: Callable[[], dict] | None = None) -> dict:
     client = EventClient(config_path)
     action_id = f"hardware-emergency-{uuid.uuid4()}"
     try:
+        if lease_validator is not None:
+            lease_validator()
         accepted = invoke(config_path, "action_submit", {
             "action_id": action_id,
             "action": {"kind": "sequence", "actions": [
@@ -322,15 +348,17 @@ def main() -> int:
     parser.add_argument("--backend-lease", type=Path, required=True)
     parser.add_argument("--target-lease-status", type=Path, required=True)
     args = parser.parse_args()
-    lease_pair = validate_qualification_lease_pair(
+    lease_guard = QualificationLeaseGuard(
         args.backend_lease, args.target_lease_status, args.run_id, args.git_sha)
+    lease_pair = lease_guard.initial
     if args.phase in {"actions", "captures"}:
         if not args.bounds:
             parser.error("--bounds is required for actions and captures")
         result = qualify(args.config, tuple(args.bounds), capture_only=args.phase == "captures",
-                         evidence_directory=args.evidence_directory)
+                         evidence_directory=args.evidence_directory,
+                         lease_validator=lease_guard.check)
     else:
-        result = emergency(args.config)
+        result = emergency(args.config, lease_validator=lease_guard.check)
     result["qualification_lease"] = lease_pair
     print(json.dumps(result, indent=2))
     return 0

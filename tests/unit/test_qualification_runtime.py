@@ -6,6 +6,7 @@ import unittest
 import uuid
 
 from scripts.qualification.qualify_mouse_actions_runtime import (
+    QualificationLeaseGuard,
     validate_qualification_lease_pair,
 )
 
@@ -60,6 +61,19 @@ class QualificationLeasePairTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "peers do not match"):
                 validate_qualification_lease_pair(backend, target, run_id, sha)
+
+    def test_guard_reloads_lease_state_before_later_actions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            backend, target, run_id, sha = self.write_pair(directory)
+            guard = QualificationLeaseGuard(backend, target, run_id, sha)
+            state = json.loads(backend.read_text(encoding="utf-8"))
+            state["expires_at_utc"] = (
+                datetime.now(timezone.utc) - timedelta(seconds=1)
+            ).isoformat()
+            backend.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "backend qualification lease has expired"):
+                guard.check()
 
 
 if __name__ == "__main__":

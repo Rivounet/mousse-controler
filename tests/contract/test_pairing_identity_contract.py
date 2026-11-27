@@ -29,6 +29,12 @@ class PairingIdentityContractTests(unittest.TestCase):
         self.assertIn("ExistingPairingRequiresExplicitUnpair", source)
         self.assertIn("RejectedProtectionLevel", source)
 
+    def test_connect_refuses_an_unpaired_endpoint_even_if_gatt_is_reachable(self) -> None:
+        source = TOOL.read_text(encoding="utf-8")
+        self.assertIn("if (!initiallyPaired)", source)
+        self.assertIn('connectionStatus = "NotPaired"', source)
+        self.assertIn("connectOnly && initiallyPaired && connectionStatus", source)
+
     def test_inspection_requires_one_live_candidate(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
         self.assertIn("liveCandidates.Count == 1", source)

@@ -220,13 +220,24 @@ function Send-Report {
 }
 
 function Stop-Hogp {
+    param([switch]$RequireAdvertisingStop)
+
+    $advertisingStopError = $null
     if ($null -ne $script:HidProvider -and (Test-AdvertisingStatus $script:HidProvider.AdvertisementStatus)) {
-        try { Stop-AdvertisingAndWait $script:HidProvider } catch {}
+        try {
+            Stop-AdvertisingAndWait $script:HidProvider
+        }
+        catch {
+            $advertisingStopError = $_
+        }
     }
     $script:Buttons = 0
     $script:InputReport = $null
     $script:BatteryProvider = $null
     $script:HidProvider = $null
+    if ($RequireAdvertisingStop -and $null -ne $advertisingStopError) {
+        throw $advertisingStopError
+    }
 }
 
 $script:HidProvider = $null
@@ -370,7 +381,7 @@ try {
                     if ($script:InputReport.SubscribedClients.Count -gt 0) {
                         try { Send-Report 0 0 0 0 } catch {}
                     }
-                    Stop-Hogp
+                    Stop-Hogp -RequireAdvertisingStop
                     Write-Event 'stopped' $true
                     exit 0
                 }

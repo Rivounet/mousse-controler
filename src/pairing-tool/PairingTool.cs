@@ -121,17 +121,24 @@ internal static class PairingTool
         var hidServiceCount = 0;
         if (connectOnly)
         {
-            using (var bluetoothDevice = BluetoothLEDevice.FromIdAsync(device.Id)
-                .AsTask().GetAwaiter().GetResult())
+            if (!initiallyPaired)
             {
-                if (bluetoothDevice == null)
-                    throw new InvalidOperationException("BluetoothLEDevice.FromIdAsync returned null");
-                var services = bluetoothDevice.GetGattServicesForUuidAsync(
-                    GattServiceUuids.HumanInterfaceDevice, BluetoothCacheMode.Uncached)
-                    .AsTask().GetAwaiter().GetResult();
-                connectionStatus = services.Status.ToString();
-                hidServiceCount = services.Services.Count;
-                foreach (var service in services.Services) service.Dispose();
+                connectionStatus = "NotPaired";
+            }
+            else
+            {
+                using (var bluetoothDevice = BluetoothLEDevice.FromIdAsync(device.Id)
+                    .AsTask().GetAwaiter().GetResult())
+                {
+                    if (bluetoothDevice == null)
+                        throw new InvalidOperationException("BluetoothLEDevice.FromIdAsync returned null");
+                    var services = bluetoothDevice.GetGattServicesForUuidAsync(
+                        GattServiceUuids.HumanInterfaceDevice, BluetoothCacheMode.Uncached)
+                        .AsTask().GetAwaiter().GetResult();
+                    connectionStatus = services.Status.ToString();
+                    hidServiceCount = services.Services.Count;
+                    foreach (var service in services.Services) service.Dispose();
+                }
             }
         }
         var resultFields = new Dictionary<string, object>(Diagnostics)
@@ -153,7 +160,7 @@ internal static class PairingTool
         resultFields["hid_service_count"] = hidServiceCount;
         WriteResult(resultPath, resultFields);
         Console.WriteLine((inspectOnly ? "Inspection" : "Pairing") + " status: " + status);
-        return inspectOnly || (connectOnly && connectionStatus == "Success") ||
+        return inspectOnly || (connectOnly && initiallyPaired && connectionStatus == "Success") ||
             (paired && encryptionVerified) ? 0 : 1;
     }
 
