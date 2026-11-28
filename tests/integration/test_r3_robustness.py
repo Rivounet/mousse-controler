@@ -372,7 +372,9 @@ class LifecycleTests(unittest.TestCase):
                 raise RuntimeError(f"{name} creation failure")
             return self.servers[name]
 
-        facade = types.SimpleNamespace(Thread=ThreadDouble, Event=ImmediateEvent)
+        facade = mock.Mock(wraps=threading)
+        facade.Thread = ThreadDouble
+        facade.Event = ImmediateEvent
         return [
             mock.patch.object(app, "unprotect", side_effect=lambda value: b"secret"),
             mock.patch.object(app, "CaptureBroker", return_value=object()),
