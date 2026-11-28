@@ -92,7 +92,9 @@ horloge monotone ; `not_required` prouve qu'une reprise devenue inutile n'est
 ni exécutée ni rejouée. L'écho d'un acquittement survit à la rotation ou au
 redémarrage backend ; un acquittement sans correspondance ne supprime jamais
 une autre commande et peut être confirmé avant sa livraison dans la même
-réponse. Le test système traverse réellement
+réponse. Un scénario distinct vérifie que l'expiration simultanée d'une autre
+commande ne remplace pas cet écho, tout en restant observable au cycle suivant.
+Le test système traverse réellement
 `POST /v1/hogp-control` avec TLS remplacé par un serveur hermétique, HMAC et
 anti-rejeu inchangés.
 Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de

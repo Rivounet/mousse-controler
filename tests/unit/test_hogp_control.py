@@ -213,6 +213,50 @@ class HogpControlCoordinatorTests(unittest.TestCase):
         self.assertEqual(response["last_acknowledgment"]["command_id"], unrelated)
         self.assertEqual(response["command"]["command_id"], issued["command_id"])
 
+    def test_received_ack_echo_wins_over_simultaneous_command_expiry(self) -> None:
+        now = [1_000_000]
+        coordinator = self.coordinator(
+            clock_ms=lambda: now[0],
+            monotonic_ms=lambda: now[0],
+        )
+        command_a = coordinator.accept(
+            "hogp-agent",
+            report(provider_generation="22222222-2222-4222-8222-222222222222"),
+        )["command"]
+        coordinator.rotate_provider_generation(
+            "33333333-3333-4333-8333-333333333333",
+        )
+        now[0] += 31_000
+        command_b = coordinator.accept(
+            "hogp-agent", report(provider_generation=GENERATION),
+        )["command"]
+        now[0] += 61_000
+
+        simultaneous = coordinator.accept(
+            "hogp-agent",
+            report(
+                provider_generation="33333333-3333-4333-8333-333333333333",
+                acknowledgment={
+                    "command_id": command_a["command_id"],
+                    "state": "outcome_unknown",
+                },
+            ),
+        )
+        next_cycle = coordinator.accept(
+            "hogp-agent",
+            report(provider_generation="33333333-3333-4333-8333-333333333333"),
+        )
+
+        self.assertEqual(simultaneous["last_acknowledgment"], {
+            "command_id": command_a["command_id"],
+            "state": "outcome_unknown",
+        })
+        self.assertIsNone(simultaneous["command"])
+        self.assertEqual(next_cycle["last_acknowledgment"], {
+            "command_id": command_b["command_id"],
+            "state": "expired",
+        })
+
     def test_radio_off_is_observable_but_never_restarts_the_wrong_node(self) -> None:
         response = self.coordinator().accept(
             "hogp-agent",

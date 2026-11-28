@@ -232,11 +232,13 @@ class HogpControlCoordinator:
             transport_available = False
         with self._lock:
             acknowledgment = report.get("acknowledgment")
+            received_acknowledgment: dict[str, str] | None = None
             if acknowledgment is not None:
-                self._last_ack = {
+                received_acknowledgment = {
                     "command_id": acknowledgment["command_id"],
                     "state": acknowledgment["state"],
                 }
+                self._last_ack = received_acknowledgment
                 if (self._outstanding is not None and
                         acknowledgment["command_id"] ==
                         self._outstanding["command_id"]):
@@ -300,8 +302,11 @@ class HogpControlCoordinator:
                     "advertising": str(transport.get("advertising", "")),
                 },
                 "command": dict(command) if command is not None else None,
-                "last_acknowledgment": dict(self._last_ack)
-                if self._last_ack is not None else None,
+                "last_acknowledgment": dict(
+                    received_acknowledgment
+                    if received_acknowledgment is not None else self._last_ack
+                ) if (received_acknowledgment is not None or
+                      self._last_ack is not None) else None,
             }
 
 

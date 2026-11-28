@@ -98,7 +98,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   l'effacer. Au chargement, il doit aussi référencer une commande de l'historique
   borné et une génération provider connue. Le backend renvoie l'écho de tout
   acquittement cible authentifié, y compris après rotation ou redémarrage, mais
-  ne retire sa commande courante que si leurs identifiants correspondent.
+  ne retire sa commande courante que si leurs identifiants correspondent. Dans
+  une même réponse, cet écho reçu est prioritaire sur une expiration simultanée
+  d'une autre commande ; l'expiration reste mémorisée pour le cycle suivant.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
   séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
   Toute identité de clé déclarée pour le plan de contrôle reste réservée à
