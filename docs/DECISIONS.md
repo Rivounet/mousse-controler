@@ -308,3 +308,21 @@ Windows manuelle reste le point de confiance humain du provisioning.
 L'adresse et son hachage restent des diagnostics de la tentative, jamais une
 identité transmissible. Après succès chiffré seulement, le hachage AEP durable
 devient l'unique identité acceptée par `Connect` et `--hogp-reconnect`.
+
+## D-076 — La présence AEP n'est pas une porte de reconnexion (28 novembre 2026)
+
+**Décision :** après un pairage chiffré, la sélection de reconnexion exige le
+nom exact, l'empreinte AEP durable et `Pairing.IsPaired`, mais ne refuse pas un
+endpoint uniquement parce que `System.Devices.Aep.IsPresent` vaut `false`.
+L'ouverture `BluetoothLEDevice.FromIdAsync` puis la découverte non cachée de
+l'unique service HID constituent la preuve autoritative de disponibilité.
+
+**Motif :** Windows peut conserver `IsPresent=false` sur l'Association Endpoint
+alors que le bond est chiffré, que le nœud HID PnP est sain et que la pile HOGP
+est déjà abonnée. Utiliser ce drapeau comme précondition créait un faux négatif
+et empêchait le moniteur de reconnexion d'atteindre la vérification GATT réelle.
+
+**Conséquence :** l'identité durable et l'état appairé restent fail-closed ; le
+client ne contourne ni le chiffrement ni l'unicité. Un endpoint absent échoue
+toujours lors de l'ouverture ou de la découverte GATT, puis le moniteur réessaie
+de façon bornée sans déclencher de nouvel appairage.

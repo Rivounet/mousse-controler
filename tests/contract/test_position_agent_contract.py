@@ -8,11 +8,11 @@ MANAGER = ROOT / "scripts" / "target" / "Manage-InteractivePositionAgent.ps1"
 
 
 class PositionAgentReconnectContractTests(unittest.TestCase):
-    def test_reconnect_uses_exact_paired_present_durable_aep_identity(self) -> None:
+    def test_reconnect_uses_exact_paired_durable_aep_identity(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
         self.assertIn("StringComparison.Ordinal", source)
         self.assertIn("candidate.Pairing.IsPaired", source)
-        self.assertIn('System.Devices.Aep.IsPresent', source)
+        self.assertNotIn('System.Devices.Aep.IsPresent', source)
         self.assertNotIn('System.Devices.Aep.DeviceAddress', source)
         self.assertNotIn("HashDeviceAddress(candidate)", source)
         self.assertIn("Hash(candidate.Id)", source)
