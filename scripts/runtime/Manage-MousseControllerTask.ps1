@@ -63,7 +63,7 @@ function Stop-ManagedRuntime($Task, [scriptblock]$EmergencyStopCommand, [bool]$A
                     & $EmergencyStopCommand $managedPython $managedConfig | Out-Null
                 }
                 else {
-                    & $managedPython -m mousse_controler.command_client `
+                    & $managedPython -B -m mousse_controler.command_client `
                         --config $managedConfig stop 2>$null | Out-Null
                 }
             }
