@@ -78,11 +78,7 @@ namespace MousseControler.PositionAgent
     {
         private const string Selector =
             "System.Devices.Aep.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\"";
-        private static readonly string[] RequestedProperties = {
-            "System.Devices.Aep.IsPresent",
-            "System.Devices.Aep.IsConnected",
-            "System.Devices.Aep.Bluetooth.Le.IsConnectable"
-        };
+        private static readonly string[] RequestedProperties = new string[0];
         private readonly string exactName;
         private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
         private readonly Thread worker;
@@ -144,8 +140,7 @@ namespace MousseControler.PositionAgent
             {
                 if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
                     !string.Equals(Hash(candidate.Id), expectedPairedAepIdSha256, StringComparison.Ordinal) ||
-                    !candidate.Pairing.IsPaired ||
-                    !GetBoolean(candidate, "System.Devices.Aep.IsPresent"))
+                    !candidate.Pairing.IsPaired)
                     continue;
                 selected = candidate;
                 break;
@@ -173,12 +168,6 @@ namespace MousseControler.PositionAgent
             device = candidateDevice;
             services = result.Services;
             Console.WriteLine("[{0:O}] HOGP link connected; native HID service active.", DateTimeOffset.Now);
-        }
-
-        private static bool GetBoolean(DeviceInformation candidate, string name)
-        {
-            object value;
-            return candidate.Properties.TryGetValue(name, out value) && value is bool && (bool)value;
         }
 
         private static string NormalizeSha256(string value)

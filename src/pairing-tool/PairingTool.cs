@@ -328,8 +328,6 @@ internal static class PairingTool
         if (matches.Length != 1)
             throw new InvalidOperationException(
                 "Expected exactly one paired endpoint with the authorized durable AEP identity");
-        if (!GetBoolean(matches[0], "System.Devices.Aep.IsPresent"))
-            throw new InvalidOperationException("The authorized paired endpoint is not present");
         PublishSelectedEndpointDiagnostics(matches[0]);
         return matches[0];
     }

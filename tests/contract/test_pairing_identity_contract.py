@@ -74,6 +74,10 @@ class PairingIdentityContractTests(unittest.TestCase):
         self.assertIn("candidate.Pairing.IsPaired", source)
         self.assertIn("Hash(candidate.Id), expectedPairedAepIdSha256", source)
         self.assertIn("matches.Length != 1", source)
+        self.assertNotIn(
+            'if (!GetBoolean(matches[0], "System.Devices.Aep.IsPresent"))',
+            source,
+        )
 
     def test_connect_refuses_an_unpaired_endpoint_even_if_gatt_is_reachable(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
