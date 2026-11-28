@@ -20,7 +20,7 @@
 - `PositionAgent --config` publie uniquement télémétrie et captures ; la
   reconnexion HOGP est un mode et une tâche distincts ;
 - toute sélection Bluetooth mutante exige le nom exact et l'empreinte SHA-256
-  de l'identité WinRT attendue ;
+  de l'adresse physique attendue, après regroupement des doublons AEP Windows ;
 - le moteur HOGP exige exactement un abonné actif autorisé et lui envoie la
   notification de manière ciblée ;
 - la release contrôleur est construite depuis les objets d'un SHA propre,

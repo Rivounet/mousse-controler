@@ -29,6 +29,7 @@ $null = [Windows.Devices.Enumeration.DeviceInformation,Windows.Devices.Enumerati
 $selector = 'System.Devices.Aep.ProtocolId:="{BB7BB05E-5972-42B5-94FC-76EAA7084D49}"'
 $properties = [System.Collections.Generic.List[string]]::new()
 $properties.Add('System.Devices.Aep.IsPaired')
+$properties.Add('System.Devices.Aep.DeviceAddress')
 $operation = [Windows.Devices.Enumeration.DeviceInformation]::FindAllAsync(
     $selector, $properties, [Windows.Devices.Enumeration.DeviceInformationKind]::AssociationEndpoint)
 $devices = Convert-AsyncOperationToResult `
@@ -36,7 +37,9 @@ $devices = Convert-AsyncOperationToResult `
     -ResultType ([Windows.Devices.Enumeration.DeviceInformationCollection])
 $matches = @($devices | Where-Object { $_.Name -ceq $Name })
 $candidates = @($matches | ForEach-Object {
-    $identityBytes = [Text.Encoding]::UTF8.GetBytes($_.Id)
+    $address = ([string]$_.Properties['System.Devices.Aep.DeviceAddress'] -replace '[:-]', '').ToUpperInvariant()
+    if ($address -notmatch '^[0-9A-F]{12}$') { return }
+    $identityBytes = [Text.Encoding]::ASCII.GetBytes($address)
     $sha256 = [Security.Cryptography.SHA256]::Create()
     try {
         $identity = ([BitConverter]::ToString($sha256.ComputeHash($identityBytes))).Replace('-', '')
@@ -47,9 +50,9 @@ $candidates = @($matches | ForEach-Object {
     [PSCustomObject]@{ Device = $_; IdSha256 = $identity }
 })
 $expectedIdentity = $ExpectedDeviceIdSha256.ToUpperInvariant()
-$selected = @($candidates | Where-Object { $_.IdSha256 -ceq $expectedIdentity })
+$selected = @($candidates | Where-Object { $_.IdSha256 -ceq $expectedIdentity } | Select-Object -First 1)
 if ($selected.Count -ne 1) {
-    throw "Expected one exact Bluetooth device matching the authorized identity; found $($selected.Count)"
+    throw 'No exact Bluetooth device matched the authorized physical identity.'
 }
 $device = $selected[0].Device
 $initial = [bool]$device.Pairing.IsPaired

@@ -18,10 +18,18 @@ class PairingIdentityContractTests(unittest.TestCase):
     def test_pair_and_connect_require_an_expected_identity(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
         self.assertIn("NormalizeSha256(args[2])", source)
-        self.assertIn("identity == expectedIdSha256", source)
-        self.assertIn("No live Bluetooth LE endpoint matched the exact name and expected identity", source)
+        self.assertIn("liveCandidates.TryGetValue(expectedIdSha256, out selected)", source)
+        self.assertIn("No live Bluetooth LE endpoint matched the exact name and expected physical identity", source)
         self.assertEqual(source.count('{ "expected_id_sha256", expectedIdSha256 }'), 2)
         self.assertNotIn('Diagnostics["expected_id_sha256"]', source)
+
+    def test_aep_duplicates_are_collapsed_by_hashed_physical_address(self) -> None:
+        source = TOOL.read_text(encoding="utf-8")
+        self.assertIn('"System.Devices.Aep.DeviceAddress"', source)
+        self.assertIn("HashDeviceAddress(candidate)", source)
+        self.assertIn('"identity_kind", "bluetooth_address_sha256"', source)
+        self.assertIn("liveCandidates[identity] = candidate", source)
+        self.assertNotIn("present && connectable", source)
 
     def test_new_pairing_requires_observed_encryption_and_rolls_back_otherwise(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
@@ -40,7 +48,7 @@ class PairingIdentityContractTests(unittest.TestCase):
     def test_inspection_requires_one_live_candidate(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
         self.assertIn("liveCandidates.Count == 1", source)
-        self.assertIn("Expected exactly one live, connectable and pairable Bluetooth LE endpoint", source)
+        self.assertIn("Expected exactly one live and pairable physical Bluetooth LE endpoint", source)
 
     def test_pairing_manager_passes_the_expected_identity(self) -> None:
         source = MANAGER.read_text(encoding="utf-8")
@@ -51,6 +59,7 @@ class PairingIdentityContractTests(unittest.TestCase):
     def test_direct_pairing_cannot_fall_back_to_name_only(self) -> None:
         source = DIRECT_PAIRING.read_text(encoding="utf-8")
         self.assertIn("ExpectedDeviceIdSha256", source)
+        self.assertIn("System.Devices.Aep.DeviceAddress", source)
         self.assertIn("ComputeHash($identityBytes)", source)
         self.assertIn("$_.IdSha256 -ceq $expectedIdentity", source)
         self.assertIn("ProtectionLevelUsed", source)

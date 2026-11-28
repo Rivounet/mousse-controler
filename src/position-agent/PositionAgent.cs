@@ -81,6 +81,7 @@ namespace MousseControler.PositionAgent
         private static readonly string[] RequestedProperties = {
             "System.Devices.Aep.IsPresent",
             "System.Devices.Aep.IsConnected",
+            "System.Devices.Aep.DeviceAddress",
             "System.Devices.Aep.Bluetooth.Le.IsConnectable"
         };
         private readonly string exactName;
@@ -143,10 +144,9 @@ namespace MousseControler.PositionAgent
             foreach (DeviceInformation candidate in candidates)
             {
                 if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
-                    !string.Equals(Hash(candidate.Id), expectedIdSha256, StringComparison.Ordinal) ||
+                    !string.Equals(HashDeviceAddress(candidate), expectedIdSha256, StringComparison.Ordinal) ||
                     !candidate.Pairing.IsPaired ||
-                    !GetBoolean(candidate, "System.Devices.Aep.IsPresent") ||
-                    !GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable"))
+                    !GetBoolean(candidate, "System.Devices.Aep.IsPresent"))
                     continue;
                 selected = candidate;
                 break;
@@ -197,6 +197,20 @@ namespace MousseControler.PositionAgent
             using (SHA256 sha = SHA256.Create())
                 return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value))
                     .Select(part => part.ToString("X2", CultureInfo.InvariantCulture)));
+        }
+
+        private static string HashDeviceAddress(DeviceInformation candidate)
+        {
+            object value;
+            if (!candidate.Properties.TryGetValue("System.Devices.Aep.DeviceAddress", out value))
+                return null;
+            string normalized = (value as string ?? "").Replace(":", "").Replace("-", "")
+                .Trim().ToUpperInvariant();
+            if (normalized.Length != 12 || normalized.Any(character =>
+                !((character >= '0' && character <= '9') ||
+                  (character >= 'A' && character <= 'F'))))
+                return null;
+            return Hash(normalized);
         }
 
         private void ReleaseConnection()

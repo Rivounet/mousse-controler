@@ -8,13 +8,14 @@ MANAGER = ROOT / "scripts" / "target" / "Manage-InteractivePositionAgent.ps1"
 
 
 class PositionAgentReconnectContractTests(unittest.TestCase):
-    def test_reconnect_uses_exact_paired_connectable_endpoint(self) -> None:
+    def test_reconnect_uses_exact_paired_present_physical_endpoint(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
         self.assertIn("StringComparison.Ordinal", source)
         self.assertIn("candidate.Pairing.IsPaired", source)
         self.assertIn('System.Devices.Aep.IsPresent', source)
-        self.assertIn('System.Devices.Aep.Bluetooth.Le.IsConnectable', source)
-        self.assertIn("Hash(candidate.Id)", source)
+        self.assertIn('System.Devices.Aep.DeviceAddress', source)
+        self.assertIn("HashDeviceAddress(candidate)", source)
+        self.assertNotIn("Hash(candidate.Id)", source)
         self.assertIn("expectedIdSha256", source)
 
     def test_reconnect_opens_uncached_hid_service(self) -> None:

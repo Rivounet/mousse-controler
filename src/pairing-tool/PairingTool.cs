@@ -23,6 +23,7 @@ internal static class PairingTool
     {
         "System.Devices.Aep.IsPresent",
         "System.Devices.Aep.IsConnected",
+        "System.Devices.Aep.DeviceAddress",
         "System.Devices.Aep.Bluetooth.Le.IsConnectable",
         "System.Devices.Aep.SignalStrength",
         "System.Devices.Aep.Bluetooth.LastSeenTime"
@@ -182,19 +183,14 @@ internal static class PairingTool
             if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal))
                 return;
             var state = Snapshot(candidate);
-            var identity = (string)state["id_sha256"];
+            var identity = state["id_sha256"] as string;
+            if (identity == null)
+                return;
             candidates[identity] = state;
             var present = GetBoolean(candidate, "System.Devices.Aep.IsPresent");
-            var connectable = GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable");
-            if (present && connectable &&
-                (candidate.Pairing.CanPair || candidate.Pairing.IsPaired))
+            if (present && (candidate.Pairing.CanPair || candidate.Pairing.IsPaired))
             {
                 liveCandidates[identity] = candidate;
-                if (expectedIdSha256 != null && identity == expectedIdSha256)
-                {
-                    selected = candidate;
-                    gate.Set();
-                }
             }
             else
                 liveCandidates.Remove(identity);
@@ -229,12 +225,11 @@ internal static class PairingTool
             lock (sync)
             {
                 enumerationCompleted = true;
-                if (expectedIdSha256 == null)
-                {
-                    if (liveCandidates.Count == 1)
-                        selected = liveCandidates.Values.Single();
-                    gate.Set();
-                }
+                if (expectedIdSha256 == null && liveCandidates.Count == 1)
+                    selected = liveCandidates.Values.Single();
+                else if (expectedIdSha256 != null)
+                    liveCandidates.TryGetValue(expectedIdSha256, out selected);
+                gate.Set();
             }
         };
         watcher.Added += addedHandler;
@@ -276,8 +271,8 @@ internal static class PairingTool
         if (selected == null)
             throw new InvalidOperationException(
                 expectedIdSha256 == null
-                    ? "Expected exactly one live, connectable and pairable Bluetooth LE endpoint during inspection"
-                    : "No live Bluetooth LE endpoint matched the exact name and expected identity");
+                    ? "Expected exactly one live and pairable physical Bluetooth LE endpoint during inspection"
+                    : "No live Bluetooth LE endpoint matched the exact name and expected physical identity");
         return selected;
     }
 
@@ -293,15 +288,31 @@ internal static class PairingTool
 
     private static Dictionary<string, object> Snapshot(DeviceInformation candidate)
     {
+        var identity = HashDeviceAddress(candidate);
         return new Dictionary<string, object>
         {
-            { "id_sha256", Hash(candidate.Id) },
+            { "id_sha256", identity },
+            { "identity_kind", "bluetooth_address_sha256" },
             { "is_present", GetBoolean(candidate, "System.Devices.Aep.IsPresent") },
             { "is_connectable", GetBoolean(candidate, "System.Devices.Aep.Bluetooth.Le.IsConnectable") },
             { "is_connected", GetBoolean(candidate, "System.Devices.Aep.IsConnected") },
             { "can_pair", candidate.Pairing.CanPair },
             { "is_paired", candidate.Pairing.IsPaired }
         };
+    }
+
+    private static string HashDeviceAddress(DeviceInformation candidate)
+    {
+        object value;
+        if (!candidate.Properties.TryGetValue("System.Devices.Aep.DeviceAddress", out value))
+            return null;
+        var normalized = (value as string ?? "").Replace(":", "").Replace("-", "")
+            .Trim().ToUpperInvariant();
+        if (normalized.Length != 12 || normalized.Any(character =>
+            !((character >= '0' && character <= '9') ||
+              (character >= 'A' && character <= 'F'))))
+            return null;
+        return Hash(normalized);
     }
 
     private static bool GetBoolean(DeviceInformation candidate, string name)

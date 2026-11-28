@@ -208,8 +208,11 @@ le même `run_id` et le même SHA. Les rôles `backend` et `target`, machines et
 `peer_host` doivent se correspondre exactement.
 
 Le pairage et la reconnexion refusent désormais le nom seul : l'inspection
-retourne une empreinte d'identité, puis `Pair`/`Connect` et le moniteur de
-reconnexion exigent cette empreinte. L'agent de télémétrie ne gère plus la
+regroupe les doublons AEP par empreinte SHA-256 d'adresse Bluetooth physique,
+puis `Pair`/`Connect` et le moniteur de reconnexion exigent cette empreinte.
+L'adresse brute n'est jamais publiée. `IsConnectable` reste diagnostique : les
+portes effectives sont une publicité brute connectable, `IsPresent`, `CanPair`,
+le pairage chiffré et le service HID. L'agent de télémétrie ne gère plus la
 reconnexion HOGP. Le moteur backend exige de son côté exactement un abonné actif
 dont l'identité hachée est autorisée et emploie l'overload de notification ciblé.
 
@@ -227,6 +230,8 @@ diagnostic. Libérer enfin les deux baux avec leur jeton propriétaire.
 Références Microsoft qui fondent ce protocole :
 
 - [pairage de périphériques Windows](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices) ;
+- [propriétés AEP et adresse physique](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/device-information-properties) ;
+- [client GATT et corrélation par adresse](https://learn.microsoft.com/en-us/windows/uwp/devices-sensors/gatt-client) ;
 - [niveau de protection du pairage](https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.devicepairingprotectionlevel) ;
 - [notification GATT ciblée](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattlocalcharacteristic.notifyvalueasync) ;
 - [serveur GATT et clients abonnés](https://learn.microsoft.com/en-us/windows/uwp/devices-sensors/gatt-server) ;

@@ -147,7 +147,11 @@ d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 Le mode de télémétrie `PositionAgent --config` n'ouvre aucun service HOGP et ne
 surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
 `--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
-l'empreinte de l'identité WinRT attendue.
+l'empreinte SHA-256 de l'adresse physique Bluetooth attendue. Les doublons AEP
+Windows sont regroupés par cette empreinte ; l'adresse brute n'est jamais
+journalisée. `IsPresent` et `CanPair` qualifient l'inspection, puis les portes
+`Pair` et `Connect` apportent la preuve effective de chiffrement et de service
+HID, car certains pilotes Windows 10 publient un `IsConnectable` AEP périmé.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
