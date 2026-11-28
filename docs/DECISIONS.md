@@ -346,3 +346,28 @@ Windows prévue pour attendre indéfiniment et reprendre dès disponibilité.
 **Conséquence :** le cycle radio ne déclenche ni nouvel appairage ni boucle de
 découverte GATT. Les transitions `Closed` puis `Active` sont journalisées et la
 reprise `Active` constitue la preuve de reconnexion de la même session maintenue.
+
+## D-078 — Propriété HOGP exclusive du pilote cible Windows (28 novembre 2026)
+
+**Décision propriétaire :** conserver exclusivement le transport Bluetooth sur
+les radios Windows existantes, sans matériel supplémentaire et sans changement
+de transport. SSH reste un moyen de maintenance de dernier recours et ne porte
+jamais les commandes souris. Après l'enrôlement chiffré, le pilote HID natif
+Windows est l'unique Report Host : `PositionAgent` redevient strictement un agent
+de télémétrie/capture et son mode `--hogp-reconnect` est supprimé.
+
+**Motif :** le moniteur applicatif ouvrait un second client GATT sur le service
+HID déjà possédé par Windows. Les essais sur `DESKTOP-NPIHO8K` ont montré qu'une
+session `MaintainConnection=true` restait `Closed` après cycle radio et qu'un
+probe distinct reproduisait ce défaut ; cette couche ne rétablissait donc pas la
+connexion et pouvait concurrencer le pilote HID. Les bibliothèques GATT tierces
+resteraient des enveloppes de la même pile Windows.
+
+**Conséquence :** D-074 à D-077 restent les traces historiques des hypothèses et
+essais, mais leurs prescriptions de moniteur persistant sont remplacées par la
+présente décision. `PairingTool Connect` demeure un diagnostic ponctuel fondé
+sur l'identité AEP durable et doit libérer toutes ses références avant un essai
+fonctionnel. La porte like-prod exige la reconnexion native après redémarrage du
+provider, cycle radio, redémarrage cible et mise à jour à identité/descripteur
+inchangés, sans nouveau consentement. L'instance HOGP de production reste hors
+qualification.

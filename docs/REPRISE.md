@@ -17,8 +17,8 @@
 
 - `MouseApplicationService` sépare les protocoles du métier ;
 - `OperationCoordinator` possède l'unique voie de commande locale ;
-- `PositionAgent --config` publie uniquement télémétrie et captures ; la
-  reconnexion HOGP est un mode et une tâche distincts ;
+- `PositionAgent --config` publie uniquement télémétrie et captures, sans code
+  Bluetooth ; le pilote HID Windows possède seul la connexion HOGP cible ;
 - l'enrôlement Bluetooth est une opération atomique : annonce unique au nom
   exact, connectable et HID, résolution immédiate de cette adresse rotative,
   pairage standard chiffré, puis émission de l'identité AEP durable ;
@@ -45,8 +45,10 @@
    qualification. Ne pas démarrer ni repointer la tâche de production.
 5. Exécuter le pairage atomique depuis la cible pendant la fenêtre interactive,
    conserver uniquement l'identité AEP produite après preuve du chiffrement et
-   l'imposer à `Connect` puis à la reconnexion. Enrôler séparément l'empreinte de
-   la cible observée par le moteur HOGP côté backend.
+   l'imposer au diagnostic ponctuel `Connect`. Fermer ensuite cet outil et
+   prouver la reconnexion par le pilote HID Windows sans client GATT applicatif.
+   Enrôler séparément l'empreinte de la cible observée par le moteur HOGP côté
+   backend.
 6. Exiger `authorized_subscriber=True`, `subscriber_count=1`, l'empreinte
    attendue, une session `Active`, `buttons=0`, une position fraîche et aucune
    action active.

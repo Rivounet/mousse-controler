@@ -120,6 +120,17 @@ les commentaires des PR #13–#18. La matrice des défauts est dans
 - Aucune de ces mentions ne vaut qualification matérielle post-R1–R5,
   synchronisation des machines ou déploiement.
 
+### Porte de reconnexion HOGP native
+
+La qualification courante interdit tout moniteur GATT persistant sur la cible.
+Après le diagnostic ponctuel de la paire, toutes ses références sont libérées et
+les preuves de reprise proviennent du pilote HID Windows et du fournisseur
+backend : retour de l'unique abonné autorisé, session active, boutons à zéro et
+absence de nouveau consentement. Les cas obligatoires sont le redémarrage du
+provider, le cycle radio cible, le redémarrage cible et la mise à jour du runtime
+à identité/descripteur inchangés. Un succès obtenu seulement pendant l'exécution
+de `PairingTool Connect` ne qualifie pas la reconnexion native.
+
 ## Preuves matérielles historiques
 
 MC-HID-EXEC-001 et MC-MOUSE-ACTIONS-001 ont qualifié antérieurement, dans leurs

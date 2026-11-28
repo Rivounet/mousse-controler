@@ -207,20 +207,25 @@ machine un bail via `scripts/qualification/Manage-QualificationLease.ps1` avec
 le même `run_id` et le même SHA. Les rôles `backend` et `target`, machines et
 `peer_host` doivent se correspondre exactement.
 
-Le pairage et la reconnexion refusent le nom seul, mais n'emploient pas la même
-identité. Une opération atomique de pairage observe une unique annonce au nom
-exact, `ConnectableUndirected` et HID `0x1812`, résout immédiatement cette même
+Le pairage et le diagnostic ponctuel refusent le nom seul, mais n'emploient pas
+la même identité. Une opération atomique de pairage observe une unique annonce
+au nom exact, `ConnectableUndirected` et HID `0x1812`, résout immédiatement cette même
 adresse avec `FromBluetoothAddressAsync`, puis appelle le `PairAsync(Encryption)`
 standard. L'empreinte radio n'est qu'un diagnostic de cette opération : elle ne
 doit jamais être réutilisée par une seconde commande, car l'adresse privée BLE
 peut tourner. Après preuve du chiffrement, le résultat publie le hachage de
-l'identifiant AEP de la paire persistante ; `Connect` et le moniteur de
-reconnexion exigent uniquement cette identité durable. Ni l'adresse ni
-l'identifiant AEP bruts ne sont publiés. `IsConnectable` AEP reste diagnostique :
-les portes effectives sont la publicité brute, `IsPresent`, `CanPair`, le
-pairage chiffré et le service HID. L'agent de télémétrie ne gère plus la
-reconnexion HOGP. Le moteur backend exige de son côté exactement un abonné actif
-dont l'identité hachée est autorisée et emploie l'overload de notification ciblé.
+l'identifiant AEP de la paire persistante ; la commande bornée `Connect` exige
+cette identité durable, vérifie l'unique service HID puis libère ses références.
+Ni l'adresse ni l'identifiant AEP bruts ne sont publiés. `IsConnectable` AEP
+reste diagnostique :
+les portes effectives sont la publicité brute, le pairage chiffré et le service
+HID. Pendant la qualification fonctionnelle, aucune application cible ne garde
+de session GATT : le pilote HID Windows possède seul la connexion et la
+reconnexion. L'agent de télémétrie ne contient aucun code Bluetooth. Le moteur
+backend exige de son côté exactement un abonné actif dont l'identité hachée est
+autorisée et emploie l'overload de notification ciblé.
+SSH n'est qu'un canal de maintenance de dernier recours ; il ne transporte
+jamais une commande souris et ne constitue pas une preuve HOGP.
 
 `Start-InteractiveMouseQualification.ps1` refuse de démarrer la surface sûre si
 le bail cible ne correspond pas au run, au SHA et au backend. Le pilote matériel

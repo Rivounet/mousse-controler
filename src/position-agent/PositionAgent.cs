@@ -14,9 +14,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
-using Windows.Devices.Enumeration;
 
 namespace MousseControler.PositionAgent
 {
@@ -72,185 +69,6 @@ namespace MousseControler.PositionAgent
         public CaptureMonitor monitor { get; set; }
         public string image_base64 { get; set; }
         public string error { get; set; }
-    }
-
-    internal sealed class HogpReconnectMonitor : IDisposable
-    {
-        private const string Selector =
-            "System.Devices.Aep.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\"";
-        private static readonly string[] RequestedProperties = new string[0];
-        private readonly string exactName;
-        private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
-        private readonly Thread worker;
-        private BluetoothLEDevice device;
-        private IReadOnlyList<GattDeviceService> services;
-        private GattSession session;
-        private GattSessionStatus? observedSessionStatus;
-
-        private readonly string expectedPairedAepIdSha256;
-
-        internal HogpReconnectMonitor(string exactName, string expectedPairedAepIdSha256)
-        {
-            this.exactName = exactName;
-            this.expectedPairedAepIdSha256 = NormalizeSha256(expectedPairedAepIdSha256);
-            worker = new Thread(Run) { IsBackground = true, Name = "HOGP reconnect monitor" };
-        }
-
-        internal void Start()
-        {
-            Console.WriteLine("HOGP reconnect monitor: paired endpoint '" + exactName + "'.");
-            worker.Start();
-        }
-
-        public void Dispose()
-        {
-            cancellation.Cancel();
-            bool stopped = !worker.IsAlive || worker.Join(35000);
-            ReleaseConnection();
-            if (stopped) cancellation.Dispose();
-        }
-
-        private void Run()
-        {
-            while (!cancellation.IsCancellationRequested)
-            {
-                try
-                {
-                    if (device == null || session == null)
-                    {
-                        ReleaseConnection();
-                        ConnectOnce();
-                    }
-                    else
-                    {
-                        ObserveSessionStatus();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ReleaseConnection();
-                    Console.Error.WriteLine("[{0:O}] HOGP reconnect pending: {1}",
-                        DateTimeOffset.Now, ex.Message);
-                }
-                cancellation.Token.WaitHandle.WaitOne(2000);
-            }
-        }
-
-        private void ConnectOnce()
-        {
-            DeviceInformationCollection candidates = DeviceInformation.FindAllAsync(
-                Selector, RequestedProperties, DeviceInformationKind.AssociationEndpoint)
-                .AsTask().GetAwaiter().GetResult();
-            DeviceInformation selected = null;
-            foreach (DeviceInformation candidate in candidates)
-            {
-                if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
-                    !string.Equals(Hash(candidate.Id), expectedPairedAepIdSha256, StringComparison.Ordinal) ||
-                    !candidate.Pairing.IsPaired)
-                    continue;
-                selected = candidate;
-                break;
-            }
-            if (selected == null) throw new InvalidOperationException("paired HOGP endpoint is not connectable");
-
-            BluetoothLEDevice candidateDevice = BluetoothLEDevice.FromIdAsync(selected.Id)
-                .AsTask().GetAwaiter().GetResult();
-            if (candidateDevice == null) throw new InvalidOperationException("BluetoothLEDevice creation returned null");
-            GattDeviceServicesResult result = candidateDevice.GetGattServicesForUuidAsync(
-                GattServiceUuids.HumanInterfaceDevice, BluetoothCacheMode.Uncached)
-                .AsTask().GetAwaiter().GetResult();
-            if (result.Status != GattCommunicationStatus.Success || result.Services.Count != 1)
-            {
-                foreach (GattDeviceService service in result.Services) service.Dispose();
-                candidateDevice.Dispose();
-                throw new InvalidOperationException("HOGP service connection status: " + result.Status);
-            }
-            GattSession candidateSession = result.Services[0].Session;
-            if (candidateSession == null || !candidateSession.CanMaintainConnection)
-            {
-                if (candidateSession != null) candidateSession.Dispose();
-                foreach (GattDeviceService service in result.Services) service.Dispose();
-                candidateDevice.Dispose();
-                throw new InvalidOperationException("HOGP session cannot maintain the connection");
-            }
-            try
-            {
-                candidateSession.MaintainConnection = true;
-            }
-            catch
-            {
-                candidateSession.Dispose();
-                foreach (GattDeviceService service in result.Services) service.Dispose();
-                candidateDevice.Dispose();
-                throw;
-            }
-            if (cancellation.IsCancellationRequested)
-            {
-                DisposeSession(candidateSession);
-                foreach (GattDeviceService service in result.Services) service.Dispose();
-                candidateDevice.Dispose();
-                return;
-            }
-            device = candidateDevice;
-            services = result.Services;
-            session = candidateSession;
-            observedSessionStatus = candidateSession.SessionStatus;
-            Console.WriteLine("[{0:O}] HOGP link connected; native HID service active.", DateTimeOffset.Now);
-        }
-
-        private void ObserveSessionStatus()
-        {
-            GattSessionStatus current = session.SessionStatus;
-            if (observedSessionStatus == current) return;
-            GattSessionStatus? previous = observedSessionStatus;
-            observedSessionStatus = current;
-            Console.WriteLine("[{0:O}] HOGP session status: {1}.", DateTimeOffset.Now, current);
-            if (previous == GattSessionStatus.Closed && current == GattSessionStatus.Active)
-                Console.WriteLine("[{0:O}] HOGP link reconnected; maintained GATT session active.",
-                    DateTimeOffset.Now);
-        }
-
-        private static string NormalizeSha256(string value)
-        {
-            string normalized = (value ?? "").Trim().ToUpperInvariant();
-            if (normalized.Length != 64 || normalized.Any(character =>
-                !((character >= '0' && character <= '9') ||
-                  (character >= 'A' && character <= 'F'))))
-                throw new ArgumentException("HOGP device identity must contain 64 hex characters");
-            return normalized;
-        }
-
-        private static string Hash(string value)
-        {
-            using (SHA256 sha = SHA256.Create())
-                return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value))
-                    .Select(part => part.ToString("X2", CultureInfo.InvariantCulture)));
-        }
-
-        private void ReleaseConnection()
-        {
-            GattSession sessionToDispose = session;
-            session = null;
-            observedSessionStatus = null;
-            if (sessionToDispose != null) DisposeSession(sessionToDispose);
-            if (services != null)
-            {
-                foreach (GattDeviceService service in services) service.Dispose();
-                services = null;
-            }
-            if (device != null)
-            {
-                device.Dispose();
-                device = null;
-            }
-        }
-
-        private static void DisposeSession(GattSession current)
-        {
-            try { current.MaintainConnection = false; }
-            catch { }
-            current.Dispose();
-        }
     }
 
     internal sealed class DisplayInfo
@@ -639,33 +457,9 @@ namespace MousseControler.PositionAgent
                     finally { Array.Clear(clear, 0, clear.Length); }
                     return 0;
                 }
-                if ((args.Length == 3 || args.Length == 4) && args[0] == "--hogp-reconnect")
-                {
-                    if (string.IsNullOrWhiteSpace(args[1]))
-                        throw new InvalidDataException("HOGP device name was empty");
-                    if (args.Length == 4)
-                    {
-                        StreamWriter log = new StreamWriter(args[3], true, new UTF8Encoding(false));
-                        log.AutoFlush = true;
-                        Console.SetOut(log);
-                        Console.SetError(log);
-                    }
-                    using (CancellationTokenSource cancellation = new CancellationTokenSource())
-                    using (HogpReconnectMonitor monitor = new HogpReconnectMonitor(args[1], args[2]))
-                    {
-                        Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs) {
-                            eventArgs.Cancel = true;
-                            cancellation.Cancel();
-                        };
-                        monitor.Start();
-                        cancellation.Token.WaitHandle.WaitOne();
-                    }
-                    return 0;
-                }
                 if (args.Length != 2 || args[0] != "--config")
                 {
                     Console.Error.WriteLine("Usage: PositionAgent.exe --config <agent.json>");
-                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> <paired-aep-id-sha256> [log-path]");
                     Console.Error.WriteLine("       PositionAgent.exe --protect-secret  (reads one line from stdin)");
                     return 2;
                 }

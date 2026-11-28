@@ -157,21 +157,25 @@ d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 épinglé, HMAC-SHA-256, séquence et horodatage. L'API de commande reste sur
 `127.0.0.1`, avec bearer DPAPI, TTL, idempotence et limite de débit.
 
-Le mode de télémétrie `PositionAgent --config` n'ouvre aucun service HOGP et ne
-surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
-`--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
-l'empreinte SHA-256 de l'identifiant AEP Windows de la paire persistante. Cette
-identité durable est produite uniquement après preuve du chiffrement ; elle est
-distincte de l'empreinte de l'adresse radio, qui reste un diagnostic éphémère.
+`PositionAgent --config` publie exclusivement la télémétrie et les captures. Il
+n'ouvre aucun service HOGP, ne crée aucune session GATT et ne surveille aucun
+périphérique Bluetooth. Après l'enrôlement, le pilote HID natif Windows est
+l'unique Report Host chargé de la connexion et de la reconnexion ; aucun client
+GATT applicatif persistant ne lui fait concurrence. L'outil de pairage reste une
+commande ponctuelle de provisioning et de diagnostic, jamais une tâche de fond.
+L'identité AEP durable est produite uniquement après preuve du chiffrement ; elle
+est distincte de l'empreinte de l'adresse radio, qui reste un diagnostic éphémère.
 Une seule opération d'enrôlement observe exactement une annonce portant le nom
 exact, le type `ConnectableUndirected` et le service HID `0x1812`, puis résout
 immédiatement cette même adresse avec `FromBluetoothAddressAsync` avant le
 `PairAsync(Encryption)` standard. L'adresse n'est jamais transmise à une seconde
 commande ni utilisée comme identité persistante, car une adresse privée BLE peut
-tourner entre deux énumérations. `IsPresent` et `CanPair` qualifient l'endpoint ;
-le consentement Windows confirme l'enrôlement, puis `Connect` exige le hachage AEP
-durable et le service HID. Ni l'adresse ni l'identifiant AEP bruts ne sont
-journalisés.
+tourner entre deux énumérations. Le consentement Windows confirme l'enrôlement.
+La commande ponctuelle `Connect` exige ensuite le nom exact, le hachage AEP
+durable, `Pairing.IsPaired` et l'ouverture non cachée de l'unique service HID ;
+`IsPresent` et `IsConnectable` restent diagnostiques. La commande libère toutes
+ses références avant la qualification fonctionnelle afin de rendre la connexion
+au pilote HID natif. Ni l'adresse ni l'identifiant AEP bruts ne sont journalisés.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
