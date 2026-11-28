@@ -47,7 +47,7 @@ class HogpControlPolicy:
     endpoint_recovery_grace_seconds: int = 30
 
     def __post_init__(self) -> None:
-        if not self.target_key_id or len(self.target_key_id) > 128:
+        if not self.target_key_id.strip() or len(self.target_key_id) > 128:
             raise ValueError("target_key_id is required and must be at most 128 characters")
         for name in (
             "target_aep_sha256",
@@ -205,11 +205,14 @@ class HogpControlCoordinator:
         now_monotonic_ms = self._monotonic_ms()
         try:
             transport = self._transport_status()
+            if not isinstance(transport, dict):
+                raise ValueError("HOGP transport status must be an object")
+            authorized = self._authorized(transport)
             transport_available = True
         except Exception:
             transport = {}
+            authorized = False
             transport_available = False
-        authorized = transport_available and self._authorized(transport)
         with self._lock:
             acknowledgment = report.get("acknowledgment")
             if (acknowledgment is not None and self._outstanding is not None and

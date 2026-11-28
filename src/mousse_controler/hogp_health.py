@@ -96,6 +96,8 @@ class HogpHealthMonitor:
         self._logger(f"HOGP engine recovery pending: {detail}")
         try:
             self._controller.restart_transport()
+            if self._controller.is_stopped() or self._stopped.is_set():
+                return self._replace(state="stopped", last_error=None)
             self._on_provider_restart()
         except Exception as recovery_exc:
             recovery_detail = f"{type(recovery_exc).__name__}: {recovery_exc}"
@@ -114,11 +116,13 @@ class HogpHealthMonitor:
             return self._replace(state="stopped")
         try:
             status = self._transport.status()
+            if not isinstance(status, dict) or "advertising" not in status:
+                raise ValueError("HOGP engine status is missing advertising state")
         except Exception as exc:
             detail = f"{type(exc).__name__}: {exc}"
             return self._recover("engine_fault", detail)
 
-        if "advertising" in status and not self._is_true(status["advertising"]):
+        if not self._is_true(status["advertising"]):
             return self._recover(
                 "provider_not_advertising",
                 f"advertising={status['advertising']}",

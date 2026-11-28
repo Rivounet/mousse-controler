@@ -95,7 +95,8 @@ anti-rejeu inchangés.
 Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de
 contrôle afin qu'un runtime de contrôle ne puisse jamais falsifier une position.
 Un secret réutilisé sous deux identifiants est refusé avant création du transport.
-Le mode `position-only` exclut lui aussi la clé de contrôle et les tests observent
+Une identité de contrôle reste exclue lorsque le plan est désactivé. Le mode
+`position-only` exclut lui aussi la clé de contrôle et les tests observent
 l'effacement des secrets lorsque la composition échoue ou que le serveur ferme.
 
 `tests/contract/test_hogp_control_agent_contract.py` interdit au runtime cible
@@ -115,7 +116,11 @@ le type `Interactive`, le répertoire de travail, l'écho exact des acquittement
 et l'absence de droit de mutation ACL pour tout principal inattendu sont
 verrouillés. Les tests
 unitaires font tourner la génération après reprise du
-provider et distinguent `advertising=False` de la simple absence d'abonné.
+provider, traitent l'absence du statut `advertising` comme une rupture du canal
+et distinguent `advertising=False` de la simple absence d'abonné. Un statut de
+transport absent ou non structuré ferme aussi le plan de reprise.
+Une course avec l'arrêt ne fait ni tourner la génération provider ni publier
+une reprise fictive.
 
 ## Assemblage système hermétique
 

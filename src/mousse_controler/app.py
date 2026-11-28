@@ -223,23 +223,40 @@ def _hogp_control_policy(config: dict[str, Any]) -> HogpControlPolicy | None:
     return policy
 
 
+def _hogp_control_key_id(config: dict[str, Any]) -> str | None:
+    selected = config.get("hogp_control")
+    if selected is None:
+        return None
+    if not isinstance(selected, dict):
+        raise ValueError("hogp_control must be an object")
+    value = selected.get("target_key_id")
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip() or len(value) > 128:
+        raise ValueError("hogp_control.target_key_id must be a non-empty string")
+    agent_keys = config.get("agent_keys_dpapi")
+    if not isinstance(agent_keys, dict) or value not in agent_keys:
+        raise ValueError("hogp_control target key is not configured")
+    return value
+
+
 def _route_keysets(
-    keys: dict[str, bytearray], policy: HogpControlPolicy | None,
+    keys: dict[str, bytearray], control_key_id: str | None,
 ) -> tuple[dict[str, bytearray], dict[str, bytearray] | None]:
-    if policy is None:
+    if control_key_id is None:
         return keys, None
-    control_secret = keys[policy.target_key_id]
+    control_secret = keys[control_key_id]
     if any(
-        key_id != policy.target_key_id and secret == control_secret
+        key_id != control_key_id and secret == control_secret
         for key_id, secret in keys.items()
     ):
         raise ValueError("hogp_control secret must be distinct from telemetry secrets")
     return (
         {
             key_id: secret for key_id, secret in keys.items()
-            if key_id != policy.target_key_id
+            if key_id != control_key_id
         },
-        {policy.target_key_id: control_secret},
+        {control_key_id: control_secret},
     )
 
 
@@ -260,6 +277,7 @@ def build_runtime(
     selected = factories or _default_runtime_factories()
     config = json.loads(config_path.read_text(encoding="utf-8"))
     control_policy = _hogp_control_policy(config)
+    control_key_id = _hogp_control_key_id(config)
     store = PositionStore()
     keys: dict[str, bytearray] = {}
     try:
@@ -269,7 +287,7 @@ def build_runtime(
         _wipe_runtime_secrets(keys)
         raise
     try:
-        position_keys, control_keys = _route_keysets(keys, control_policy)
+        position_keys, control_keys = _route_keysets(keys, control_key_id)
     except BaseException:
         _wipe_runtime_secrets(keys)
         raise
@@ -488,13 +506,14 @@ def serve(config_path: Path) -> int:
 def serve_position_only(config_path: Path) -> int:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     control_policy = _hogp_control_policy(config)
+    control_key_id = _hogp_control_key_id(config)
     store = PositionStore()
     keys: dict[str, bytearray] = {}
     server = None
     try:
         for key_id, value in config["agent_keys_dpapi"].items():
             keys[key_id] = bytearray(unprotect(value))
-        position_keys, _ = _route_keysets(keys, control_policy)
+        position_keys, _ = _route_keysets(keys, control_key_id)
         receiver = PositionReceiver(store, HmacVerifier(position_keys))
         server = make_https_server(
             config["position_bind"], int(config["position_port"]), receiver,

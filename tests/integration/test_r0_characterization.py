@@ -430,7 +430,7 @@ class RuntimeTransport:
         return
 
     def status(self) -> dict[str, str]:
-        return {"subscribed": "true"}
+        return {"advertising": "true", "subscribed": "true"}
 
 
 class RuntimeController:

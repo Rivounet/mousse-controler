@@ -216,6 +216,12 @@ namespace MousseControler.HogpControlAgent
             if (commands.Length > 256 || commands.Any(item => !IsCanonicalGuid(item)) ||
                 commands.Distinct(StringComparer.Ordinal).Count() != commands.Length)
                 throw new InvalidDataException("persisted command history is invalid");
+            if (state.pending_acknowledgment != null &&
+                (state.provider_generation == null ||
+                 !commands.Contains(state.pending_acknowledgment.command_id,
+                     StringComparer.Ordinal)))
+                throw new InvalidDataException(
+                    "persisted acknowledgment is not linked to command history");
             sequence = Math.Max(sequence, state.sequence);
             providerGeneration = state.provider_generation;
             pendingAcknowledgment = state.pending_acknowledgment;

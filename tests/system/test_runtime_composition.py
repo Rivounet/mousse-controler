@@ -299,6 +299,56 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
             self.assertEqual(captured["system-agent"], bytearray(len(captured["system-agent"])))
             self.assertTrue(server.closed)
 
+    def test_disabled_hogp_control_key_remains_reserved_from_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {
+                    "system-agent": "position-secret",
+                    "hogp-agent": "control-secret",
+                },
+                "position_bind": "127.0.0.1",
+                "position_port": 0,
+                "tls_certificate": "unused-test-certificate",
+                "tls_private_key": "unused-test-key",
+                "hogp_control": {
+                    "enabled": False,
+                    "target_key_id": "hogp-agent",
+                },
+            }), encoding="utf-8")
+            secrets = {
+                "position-secret": b"clear-position-secret",
+                "control-secret": b"clear-control-secret",
+            }
+            captured: dict[str, bytearray] = {}
+
+            def capture_verifier(keys: dict[str, bytearray]) -> object:
+                captured.update(keys)
+                return object()
+
+            class ImmediateServer:
+                closed = False
+
+                def serve_forever(self) -> None:
+                    raise KeyboardInterrupt
+
+                def server_close(self) -> None:
+                    self.closed = True
+
+            server = ImmediateServer()
+            with (
+                patch("mousse_controler.app.unprotect", side_effect=secrets.__getitem__),
+                patch("mousse_controler.app.HmacVerifier", side_effect=capture_verifier),
+                patch("mousse_controler.app.make_https_server", return_value=server),
+            ):
+                self.assertEqual(serve_position_only(config_path), 0)
+
+            self.assertEqual(set(captured), {"system-agent"})
+            self.assertEqual(
+                captured["system-agent"], bytearray(len(captured["system-agent"])),
+            )
+            self.assertTrue(server.closed)
+
     def test_real_composition_connects_position_command_and_event_protocols(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

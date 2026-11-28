@@ -95,9 +95,16 @@ qualifient pas `DESKTOP-NPIHO8K`.
   diagnostic.
   Un acquittement persiste jusqu'à ce que le backend renvoie exactement son
   identifiant et son état ; une simple réponse HTTP corrélée ne suffit pas à
-  l'effacer.
+  l'effacer. Au chargement, il doit aussi référencer une commande de l'historique
+  borné et une génération provider connue.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
   séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
+  Toute identité de clé déclarée pour le plan de contrôle reste réservée à
+  cette route même lorsque le plan est désactivé ; elle n'est jamais réinjectée
+  dans les clés de télémétrie ou de capture.
+- **Supervision provider** : un statut moteur sans champ `advertising` est une
+  rupture de contrat, jamais assimilée à une simple attente d'abonné. La reprise
+  reste bornée par le même délai monotone.
 
 ## Priorités et alternatives
 

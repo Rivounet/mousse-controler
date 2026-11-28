@@ -19,6 +19,12 @@ class _Controller:
             raise self.restart_error
 
 
+class _StoppingController(_Controller):
+    def restart_transport(self) -> None:
+        super().restart_transport()
+        self.stopped = True
+
+
 class _Transport:
     def __init__(self, outcomes) -> None:
         self.outcomes = list(outcomes)
@@ -49,8 +55,8 @@ class HogpHealthMonitorTests(unittest.TestCase):
 
     def test_missing_subscriber_never_recreates_provider(self) -> None:
         monitor, controller = self.monitor([
-            {"authorized_subscriber": "False"},
-            {"authorized_subscriber": "False"},
+            {"advertising": "True", "authorized_subscriber": "False"},
+            {"advertising": "True", "authorized_subscriber": "False"},
         ])
 
         monitor.poll_once()
@@ -61,7 +67,9 @@ class HogpHealthMonitorTests(unittest.TestCase):
         self.assertEqual(controller.restarts, 0)
 
     def test_authorized_subscriber_is_connected(self) -> None:
-        monitor, controller = self.monitor([{"authorized_subscriber": "True"}])
+        monitor, controller = self.monitor([{
+            "advertising": "True", "authorized_subscriber": "True",
+        }])
 
         status = monitor.poll_once()
 
@@ -87,7 +95,11 @@ class HogpHealthMonitorTests(unittest.TestCase):
     def test_successful_poll_does_not_bypass_fault_cooldown(self) -> None:
         now = [10.0]
         monitor, controller = self.monitor(
-            [RuntimeError("first"), {"subscribed": "false"}, RuntimeError("second")],
+            [
+                RuntimeError("first"),
+                {"advertising": "True", "subscribed": "false"},
+                RuntimeError("second"),
+            ],
             clock=lambda: now[0],
         )
 
@@ -129,6 +141,29 @@ class HogpHealthMonitorTests(unittest.TestCase):
         self.assertEqual(status.state, "engine_restarted")
         self.assertEqual(controller.restarts, 1)
         self.assertEqual(rotations, ["rotated"])
+
+    def test_missing_advertising_state_is_an_engine_fault(self) -> None:
+        monitor, controller = self.monitor([{"authorized_subscriber": "False"}])
+
+        status = monitor.poll_once()
+
+        self.assertEqual(status.state, "engine_restarted")
+        self.assertIn("missing advertising state", status.last_error)
+        self.assertEqual(controller.restarts, 1)
+
+    def test_shutdown_race_does_not_rotate_provider_generation(self) -> None:
+        rotations = []
+        monitor, controller = self.monitor(
+            [RuntimeError("channel lost")],
+            controller=_StoppingController(),
+            on_provider_restart=lambda: rotations.append("rotated"),
+        )
+
+        status = monitor.poll_once()
+
+        self.assertEqual(status.state, "stopped")
+        self.assertEqual(controller.restarts, 1)
+        self.assertEqual(rotations, [])
 
 
 if __name__ == "__main__":

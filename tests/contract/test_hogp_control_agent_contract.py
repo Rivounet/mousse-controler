@@ -38,6 +38,7 @@ class HogpControlAgentContractTests(unittest.TestCase):
         self.assertIn("response acknowledgment is invalid", source)
         self.assertIn("--inspect-identities", source)
         self.assertIn("outcome_unknown", source)
+        self.assertIn("persisted acknowledgment is not linked to command history", source)
         self.assertIn("not_required", source)
         self.assertIn("restart precondition is no longer satisfied", source)
         self.assertIn("File.Replace(temporary, statePath, null)", source)
