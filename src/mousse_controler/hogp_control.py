@@ -127,9 +127,19 @@ class HogpControlCoordinator:
             return selected
 
     @staticmethod
-    def _authorized(status: dict[str, Any]) -> bool:
-        value = status.get("authorized_subscriber", status.get("subscribed", ""))
-        return str(value).strip().lower() == "true"
+    def _boolean_status(
+        status: dict[str, Any], names: tuple[str, ...], label: str,
+    ) -> bool:
+        for name in names:
+            if name not in status:
+                continue
+            value = str(status[name]).strip().lower()
+            if value == "true":
+                return True
+            if value == "false":
+                return False
+            raise ValueError(f"HOGP transport {label} must be boolean")
+        raise ValueError(f"HOGP transport status is missing {label}")
 
     def _validate_report(self, key_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         if key_id != self._policy.target_key_id:
@@ -207,10 +217,17 @@ class HogpControlCoordinator:
             transport = self._transport_status()
             if not isinstance(transport, dict):
                 raise ValueError("HOGP transport status must be an object")
-            authorized = self._authorized(transport)
+            advertising = self._boolean_status(
+                transport, ("advertising",), "advertising",
+            )
+            authorized = self._boolean_status(
+                transport, ("authorized_subscriber", "subscribed"),
+                "authorized subscriber",
+            )
             transport_available = True
         except Exception:
             transport = {}
+            advertising = False
             authorized = False
             transport_available = False
         with self._lock:
@@ -252,6 +269,7 @@ class HogpControlCoordinator:
 
             command = self._outstanding
             if (command is None and not authorized and transport_available and
+                    advertising and
                     report["elevated"]):
                 if (self._policy.allow_adapter_restart and
                         (not report["radio_present"] or

@@ -35,7 +35,7 @@ class HogpHealthMonitor:
         fault_recovery_seconds: float,
         clock: Callable[[], float] = time.monotonic,
         logger: Callable[[str], None] | None = None,
-        on_provider_restart: Callable[[], None] | None = None,
+        on_provider_restart: Callable[[], bool | None] | None = None,
     ) -> None:
         for name, value, maximum in (
             ("poll_seconds", poll_seconds, 300.0),
@@ -52,7 +52,7 @@ class HogpHealthMonitor:
         self._fault_recovery_seconds = fault_recovery_seconds
         self._clock = clock
         self._logger = logger or (lambda message: None)
-        self._on_provider_restart = on_provider_restart or (lambda: None)
+        self._on_provider_restart = on_provider_restart or (lambda: True)
         self._lock = threading.Lock()
         self._last_fault_recovery: float | None = None
         self._snapshot = HogpHealthSnapshot(
@@ -98,7 +98,8 @@ class HogpHealthMonitor:
             self._controller.restart_transport()
             if self._controller.is_stopped() or self._stopped.is_set():
                 return self._replace(state="stopped", last_error=None)
-            self._on_provider_restart()
+            if self._on_provider_restart() is False:
+                return self._replace(state="stopped", last_error=None)
         except Exception as recovery_exc:
             recovery_detail = f"{type(recovery_exc).__name__}: {recovery_exc}"
             self._logger(f"HOGP engine recovery failed: {recovery_detail}")

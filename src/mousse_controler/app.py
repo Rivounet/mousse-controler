@@ -65,9 +65,22 @@ class _RuntimeLifecycle:
         self.command_token = command_token
         self.keys = keys
         self.stopped = threading.Event()
+        self._state_lock = threading.Lock()
         self.servers: list[dict[str, object]] = []
         self.maintenance: threading.Thread | None = None
         self.closed = False
+
+    def request_stop(self) -> None:
+        with self._state_lock:
+            self.stopped.set()
+
+    def run_if_active(self, operation: Callable[[], bool]) -> bool:
+        """Linearize provider metadata changes with process stop intent."""
+
+        with self._state_lock:
+            if self.stopped.is_set():
+                return False
+            return operation()
 
     def add_server(self, name: str, server: object) -> object:
         self.servers.append({"name": name, "server": server, "thread": None})
@@ -99,7 +112,7 @@ class _RuntimeLifecycle:
             if thread.is_alive():
                 raise RuntimeError(f"{label} did not stop within 6 seconds")
 
-        attempt("stop event", self.stopped.set)
+        attempt("stop event", self.request_stop)
         if self.maintenance is not None:
             attempt(
                 "maintenance thread join",
@@ -471,7 +484,11 @@ def serve(config_path: Path) -> int:
             fault_recovery_seconds=fault_recovery_seconds,
             logger=lambda message: print(message, file=sys.stderr, flush=True),
             on_provider_restart=(
-                runtime.hogp_control.rotate_provider_generation
+                lambda: lifecycle.run_if_active(
+                    lambda: controller.run_if_running(
+                        runtime.hogp_control.rotate_provider_generation,
+                    ),
+                )
                 if runtime.hogp_control is not None else None
             ),
         )
@@ -482,7 +499,7 @@ def serve(config_path: Path) -> int:
         lifecycle.maintenance.start()
 
         def stop_handler(signum, frame):
-            lifecycle.stopped.set()
+            lifecycle.request_stop()
 
         signal.signal(signal.SIGINT, stop_handler)
         signal.signal(signal.SIGTERM, stop_handler)

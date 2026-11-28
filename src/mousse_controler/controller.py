@@ -24,8 +24,10 @@ class MouseController:
         self._transport = transport
         self._positions = positions
         self._lock = threading.Lock()
+        self._state_lock = threading.Lock()
         self._stopped = threading.Event()
         self._stopped.set()
+        self._stop_epoch = 0
         self._transport_stopped = True
         self._buttons = 0
         self._last_positioning_metrics: dict[str, float | int | str] = {}
@@ -42,6 +44,8 @@ class MouseController:
         with self._lock:
             if not self._stopped.is_set() and not self._transport_stopped:
                 return
+            with self._state_lock:
+                start_epoch = self._stop_epoch
             try:
                 self._transport.start()
             except Exception:
@@ -53,10 +57,27 @@ class MouseController:
                 raise
             self._buttons = 0
             self._transport_stopped = False
-            self._stopped.clear()
+            with self._state_lock:
+                if self._stop_epoch != start_epoch:
+                    try:
+                        self._transport.stop()
+                    finally:
+                        self._transport_stopped = True
+                    return
+                self._stopped.clear()
 
     def is_stopped(self) -> bool:
-        return self._stopped.is_set()
+        with self._state_lock:
+            return self._stopped.is_set()
+
+    def run_if_running(self, operation) -> bool:
+        """Linearize provider metadata changes with controller stop intent."""
+
+        with self._state_lock:
+            if self._stopped.is_set():
+                return False
+            operation()
+            return True
 
     def restart_transport(self) -> None:
         if self._stopped.is_set():
@@ -98,7 +119,9 @@ class MouseController:
         return self._positions.latest(max_age_ms)
 
     def emergency_stop(self) -> None:
-        self._stopped.set()
+        with self._state_lock:
+            self._stop_epoch += 1
+            self._stopped.set()
         with self._lock:
             if self._transport_stopped:
                 return

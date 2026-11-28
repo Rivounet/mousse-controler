@@ -120,7 +120,10 @@ provider, traitent l'absence du statut `advertising` comme une rupture du canal
 et distinguent `advertising=False` de la simple absence d'abonné. Un statut de
 transport absent ou non structuré ferme aussi le plan de reprise.
 Une course avec l'arrêt ne fait ni tourner la génération provider ni publier
-une reprise fictive.
+une reprise fictive : la rotation traverse une section critique commune à
+l'arrêt du processus et à l'intention d'arrêt du contrôleur. Un compteur
+d'époque garantit également qu'une intention d'arrêt publiée pendant
+`transport.start()` gagne avant l'activation du contrôleur.
 
 ## Assemblage système hermétique
 

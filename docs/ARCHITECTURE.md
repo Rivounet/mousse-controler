@@ -104,7 +104,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   dans les clés de télémétrie ou de capture.
 - **Supervision provider** : un statut moteur sans champ `advertising` est une
   rupture de contrat, jamais assimilée à une simple attente d'abonné. La reprise
-  reste bornée par le même délai monotone.
+  reste bornée par le même délai monotone. Le coordinateur n'autorise aucune
+  reprise cible si `advertising` ou l'état d'abonnement est absent, invalide, ou
+  si le provider n'annonce plus.
 
 ## Priorités et alternatives
 

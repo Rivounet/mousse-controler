@@ -16,6 +16,16 @@ from tests.support.waiting import wait_until
 
 
 class ControllerTests(unittest.TestCase):
+    def test_provider_metadata_callback_is_excluded_after_stop_intent(self) -> None:
+        calls = []
+
+        self.assertTrue(self.controller.run_if_running(lambda: calls.append("active")))
+        self.controller.emergency_stop()
+        self.assertFalse(
+            self.controller.run_if_running(lambda: calls.append("stopped"))
+        )
+        self.assertEqual(calls, ["active"])
+
     def setUp(self):
         self.transport = SimulatedHidTransport()
         self.store = PositionStore()
@@ -284,6 +294,34 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "injected start failure"):
             self.controller.start()
 
+        self.assertTrue(self.controller.is_stopped())
+        self.assertFalse(self.transport.started)
+        self.assertEqual(self.transport.events[-1], ("stop",))
+
+    def test_stop_intent_wins_when_published_during_start(self):
+        self.controller.emergency_stop()
+        entered = threading.Event()
+        release = threading.Event()
+        original_start = self.transport.start
+
+        def blocking_start():
+            original_start()
+            entered.set()
+            release.wait(1)
+
+        self.transport.start = blocking_start
+        start_thread = threading.Thread(target=self.controller.start)
+        start_thread.start()
+        self.assertTrue(entered.wait(1))
+        stop_thread = threading.Thread(target=self.controller.emergency_stop)
+        stop_thread.start()
+        self.assertTrue(self.controller._stopped.wait(1))
+        release.set()
+        start_thread.join(1)
+        stop_thread.join(1)
+
+        self.assertFalse(start_thread.is_alive())
+        self.assertFalse(stop_thread.is_alive())
         self.assertTrue(self.controller.is_stopped())
         self.assertFalse(self.transport.started)
         self.assertEqual(self.transport.events[-1], ("stop",))

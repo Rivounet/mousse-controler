@@ -252,7 +252,33 @@ class HogpControlCoordinatorTests(unittest.TestCase):
         self.assertIsNone(response["command"])
 
     def test_malformed_transport_status_is_fail_closed(self) -> None:
-        coordinator = self.coordinator(status=lambda: None)
+        for malformed in (
+            None,
+            {},
+            {"advertising": "maybe", "authorized_subscriber": "False"},
+            {"advertising": "True"},
+        ):
+            with self.subTest(malformed=malformed):
+                coordinator = self.coordinator(status=lambda: malformed)
+                response = coordinator.accept(
+                    "hogp-agent",
+                    report(
+                        radio_present=False,
+                        radio_state="Unavailable",
+                        adapter_problem_code=43,
+                    ),
+                )
+
+                self.assertFalse(response["transport"]["available"])
+                self.assertFalse(response["transport"]["authorized_subscriber"])
+                self.assertIsNone(response["command"])
+
+    def test_provider_not_advertising_never_triggers_target_recovery(self) -> None:
+        coordinator = self.coordinator(status=lambda: {
+            "advertising": "False",
+            "authorized_subscriber": "False",
+            "subscriber_count": "0",
+        })
 
         response = coordinator.accept(
             "hogp-agent",
@@ -263,8 +289,7 @@ class HogpControlCoordinatorTests(unittest.TestCase):
             ),
         )
 
-        self.assertFalse(response["transport"]["available"])
-        self.assertFalse(response["transport"]["authorized_subscriber"])
+        self.assertTrue(response["transport"]["available"])
         self.assertIsNone(response["command"])
 
     def test_non_elevated_agent_never_receives_pnp_command(self) -> None:

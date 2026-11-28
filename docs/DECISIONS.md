@@ -431,3 +431,24 @@ API d'entrée restent interdits.
 même chemin d'observation, limité aux paires persistantes. Un dépassement du
 délai reste un état dégradé sans action PnP ; seule une observation complète et
 corrélée aux quatre empreintes peut rendre une reprise admissible.
+
+## D-081 — Fermeture intégrale du plan de contrôle (28 novembre 2026)
+
+**Décision :** l'identité de clé du plan de contrôle reste réservée même quand
+ce plan est désactivé. Un statut transport doit exposer des booléens valides
+pour `advertising` et l'abonnement autorisé ; un objet vide, incomplet ou
+invalide n'autorise aucune reprise cible. Un provider qui n'annonce plus doit
+d'abord être réparé côté backend. Enfin, la rotation de génération traverse les
+mêmes sections critiques que l'arrêt du processus et l'intention d'arrêt du
+contrôleur.
+
+**Motif :** la simple présence d'un objet de statut ne prouve ni la santé du
+provider ni l'absence d'abonné. De même, un contrôle d'arrêt suivi d'une action
+non atomique laissait une fenêtre où une génération pouvait tourner pendant
+l'arrêt. Ces ambiguïtés mélangeaient authentification, santé provider et état
+de cycle de vie.
+
+**Conséquence :** une clé de contrôle ne peut jamais signer une télémétrie, une
+panne provider ne déclenche jamais une action PnP cible et aucune reprise
+fictive n'est publiée pendant l'arrêt. Les acquittements persistés restent liés
+à une commande connue et ne sont retirés qu'après écho exact du backend.

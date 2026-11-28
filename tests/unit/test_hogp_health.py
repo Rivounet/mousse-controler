@@ -165,6 +165,17 @@ class HogpHealthMonitorTests(unittest.TestCase):
         self.assertEqual(controller.restarts, 1)
         self.assertEqual(rotations, [])
 
+    def test_aborted_atomic_rotation_is_reported_as_stopped(self) -> None:
+        monitor, controller = self.monitor(
+            [RuntimeError("channel lost")],
+            on_provider_restart=lambda: False,
+        )
+
+        status = monitor.poll_once()
+
+        self.assertEqual(status.state, "stopped")
+        self.assertEqual(controller.restarts, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

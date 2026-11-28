@@ -101,6 +101,16 @@ class HogpControlAgentContractTests(unittest.TestCase):
         for forbidden in ("move(", "buttons(", "scroll(", "PairAsync", "GattSession"):
             self.assertNotIn(forbidden, source)
 
+        application = (ROOT / "src" / "mousse_controler" / "app.py").read_text(
+            encoding="utf-8"
+        )
+        controller = (ROOT / "src" / "mousse_controler" / "controller.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("lifecycle.run_if_active", application)
+        self.assertIn("controller.run_if_running", application)
+        self.assertIn("def run_if_running", controller)
+
 
 if __name__ == "__main__":
     unittest.main()
