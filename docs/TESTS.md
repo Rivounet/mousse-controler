@@ -89,7 +89,10 @@ génération du provider, l'unicité et l'expiration des commandes, les
 acquittements, l'absence de commande sans élévation et le refus fail-closed si
 le statut transport est indisponible. La grâce et le cooldown suivent une
 horloge monotone ; `not_required` prouve qu'une reprise devenue inutile n'est
-ni exécutée ni rejouée. Le test système traverse réellement
+ni exécutée ni rejouée. L'écho d'un acquittement survit à la rotation ou au
+redémarrage backend ; un acquittement sans correspondance ne supprime jamais
+une autre commande et peut être confirmé avant sa livraison dans la même
+réponse. Le test système traverse réellement
 `POST /v1/hogp-control` avec TLS remplacé par un serveur hermétique, HMAC et
 anti-rejeu inchangés.
 Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de

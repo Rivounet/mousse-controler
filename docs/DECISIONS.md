@@ -453,4 +453,6 @@ de cycle de vie.
 **Conséquence :** une clé de contrôle ne peut jamais signer une télémétrie, une
 panne provider ne déclenche jamais une action PnP cible et aucune reprise
 fictive n'est publiée pendant l'arrêt. Les acquittements persistés restent liés
-à une commande connue et ne sont retirés qu'après écho exact du backend.
+à une commande connue et ne sont retirés qu'après écho exact du backend. Cet
+écho confirme la réception d'un état cible authentifié, même après rotation ou
+redémarrage backend ; il ne valide ni ne supprime une autre commande courante.

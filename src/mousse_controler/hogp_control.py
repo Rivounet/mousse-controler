@@ -232,13 +232,15 @@ class HogpControlCoordinator:
             transport_available = False
         with self._lock:
             acknowledgment = report.get("acknowledgment")
-            if (acknowledgment is not None and self._outstanding is not None and
-                    acknowledgment["command_id"] == self._outstanding["command_id"]):
+            if acknowledgment is not None:
                 self._last_ack = {
                     "command_id": acknowledgment["command_id"],
                     "state": acknowledgment["state"],
                 }
-                self._outstanding = None
+                if (self._outstanding is not None and
+                        acknowledgment["command_id"] ==
+                        self._outstanding["command_id"]):
+                    self._outstanding = None
 
             if authorized:
                 self._outstanding = None

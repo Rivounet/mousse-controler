@@ -157,6 +157,62 @@ class HogpControlCoordinatorTests(unittest.TestCase):
         self.assertEqual(current["provider_generation"], rotated)
         self.assertIsNone(current["last_acknowledgment"])
 
+    def test_rotated_command_ack_is_echoed_before_a_new_command(self) -> None:
+        now = [1_000_000]
+        coordinator = self.coordinator(
+            clock_ms=lambda: now[0],
+            monotonic_ms=lambda: now[0],
+        )
+        issued = coordinator.accept(
+            "hogp-agent",
+            report(provider_generation="22222222-2222-4222-8222-222222222222"),
+        )["command"]
+        rotated = coordinator.rotate_provider_generation(
+            "33333333-3333-4333-8333-333333333333",
+        )
+        now[0] += 31_000
+
+        response = coordinator.accept(
+            "hogp-agent",
+            report(
+                provider_generation=GENERATION,
+                acknowledgment={
+                    "command_id": issued["command_id"],
+                    "state": "outcome_unknown",
+                },
+            ),
+        )
+
+        self.assertEqual(response["provider_generation"], rotated)
+        self.assertEqual(response["last_acknowledgment"], {
+            "command_id": issued["command_id"],
+            "state": "outcome_unknown",
+        })
+        self.assertIsNotNone(response["command"])
+        self.assertNotEqual(response["command"]["command_id"], issued["command_id"])
+
+    def test_unknown_authenticated_ack_does_not_clear_current_command(self) -> None:
+        coordinator = self.coordinator()
+        issued = coordinator.accept(
+            "hogp-agent",
+            report(provider_generation="22222222-2222-4222-8222-222222222222"),
+        )["command"]
+        unrelated = "44444444-4444-4444-8444-444444444444"
+
+        response = coordinator.accept(
+            "hogp-agent",
+            report(
+                provider_generation=GENERATION,
+                acknowledgment={
+                    "command_id": unrelated,
+                    "state": "outcome_unknown",
+                },
+            ),
+        )
+
+        self.assertEqual(response["last_acknowledgment"]["command_id"], unrelated)
+        self.assertEqual(response["command"]["command_id"], issued["command_id"])
+
     def test_radio_off_is_observable_but_never_restarts_the_wrong_node(self) -> None:
         response = self.coordinator().accept(
             "hogp-agent",

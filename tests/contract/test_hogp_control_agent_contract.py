@@ -36,6 +36,10 @@ class HogpControlAgentContractTests(unittest.TestCase):
         self.assertIn("response.last_acknowledgment.command_id", source)
         self.assertIn("response.last_acknowledgment.state", source)
         self.assertIn("response acknowledgment is invalid", source)
+        self.assertLess(
+            source.index("pendingAcknowledgment = null"),
+            source.index("HandleCommand(response.command, token)"),
+        )
         self.assertIn("--inspect-identities", source)
         self.assertIn("outcome_unknown", source)
         self.assertIn("persisted acknowledgment is not linked to command history", source)
