@@ -282,6 +282,14 @@ def _wipe_runtime_secrets(
         secret[:] = b"\0" * len(secret)
 
 
+def _validate_command_token(command_token: bytearray) -> None:
+    if (not command_token or len(command_token) > 512 or
+            any(value < 0x21 or value > 0x7E for value in command_token)):
+        raise ValueError(
+            "command token must contain 1 to 512 visible ASCII characters"
+        )
+
+
 def build_runtime(
     config_path: Path, *, factories: RuntimeFactories | None = None,
 ) -> RuntimeAssembly:
@@ -303,6 +311,15 @@ def build_runtime(
         position_keys, control_keys = _route_keysets(keys, control_key_id)
     except BaseException:
         _wipe_runtime_secrets(keys)
+        raise
+    command_token: bytearray | None = None
+    try:
+        command_token = bytearray(
+            selected.unprotect_secret(config["command_token_dpapi"])
+        )
+        _validate_command_token(command_token)
+    except BaseException:
+        _wipe_runtime_secrets(keys, command_token)
         raise
     try:
         capture_broker = CaptureBroker(
@@ -338,13 +355,11 @@ def build_runtime(
             store, position_verifier, capture_broker, hogp_control_receiver,
         )
         controller = MouseController(transport, store)
-        command_token = bytearray(
-            selected.unprotect_secret(config["command_token_dpapi"])
-        )
     except BaseException:
-        _wipe_runtime_secrets(keys)
+        _wipe_runtime_secrets(keys, command_token)
         raise
 
+    assert command_token is not None
     actions: ActionExecutor | None = None
     try:
         registry = ActionRegistry(

@@ -106,6 +106,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   Toute identité de clé déclarée pour le plan de contrôle reste réservée à
   cette route même lorsque le plan est désactivé ; elle n'est jamais réinjectée
   dans les clés de télémétrie ou de capture.
+  Le jeton des API loopback est refusé avant construction du transport s'il
+  n'est pas composé de caractères ASCII visibles ; un secret binaire arbitraire
+  ne peut pas être représenté fidèlement dans un en-tête HTTP Bearer.
 - **Supervision provider** : un statut moteur sans champ `advertising` est une
   rupture de contrat, jamais assimilée à une simple attente d'abonné. La reprise
   reste bornée par le même délai monotone. Le coordinateur n'autorise aucune

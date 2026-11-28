@@ -217,11 +217,40 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be distinct"):
                 build_runtime(config_path, factories=factories)
 
+    def test_non_ascii_command_token_is_rejected_before_runtime_construction(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {"system-agent": "agent-secret"},
+                "command_token_dpapi": "command-token",
+                "hogp_executable": "unused-hermetic-engine.exe",
+            }), encoding="utf-8")
+            transport_calls = []
+            secrets = {
+                "agent-secret": b"clear-agent-secret",
+                "command-token": b"binary-\xff-token",
+            }
+            factories = RuntimeFactories(
+                unprotect_secret=secrets.__getitem__,
+                transport=lambda *args, **kwargs: transport_calls.append(
+                    (args, kwargs)
+                ),
+                position_server=lambda *args, **kwargs: None,
+                command_server=lambda *args, **kwargs: None,
+                event_server=lambda *args, **kwargs: None,
+            )
+
+            with self.assertRaisesRegex(ValueError, "visible ASCII"):
+                build_runtime(config_path, factories=factories)
+
+            self.assertEqual(transport_calls, [])
+
     def test_composition_failure_wipes_unprotected_agent_secrets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config_path = Path(directory) / "config.json"
             config_path.write_text(json.dumps({
                 "agent_keys_dpapi": {"system-agent": "position-secret"},
+                "command_token_dpapi": "command-token",
                 "hogp_executable": "unused-hermetic-engine.exe",
             }), encoding="utf-8")
             captured: list[bytearray] = []
@@ -231,7 +260,10 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
                 return object()
 
             factories = RuntimeFactories(
-                unprotect_secret=lambda value: b"clear-agent-secret",
+                unprotect_secret=lambda value: {
+                    "position-secret": b"clear-agent-secret",
+                    "command-token": b"clear-command-token",
+                }[value],
                 transport=lambda *args, **kwargs: (_ for _ in ()).throw(
                     RuntimeError("transport construction failed")
                 ),

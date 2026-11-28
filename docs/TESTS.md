@@ -100,6 +100,9 @@ commande ne remplace pas cet écho, tout en restant observable au cycle suivant.
 Le test système traverse réellement
 `POST /v1/hogp-control` avec TLS remplacé par un serveur hermétique, HMAC et
 anti-rejeu inchangés.
+Il refuse aussi un jeton de commande binaire avant toute construction du
+transport, afin que le client loopback et les en-têtes Bearer partagent le même
+contrat ASCII visible.
 Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de
 contrôle afin qu'un runtime de contrôle ne puisse jamais falsifier une position.
 Un secret réutilisé sous deux identifiants est refusé avant création du transport.
