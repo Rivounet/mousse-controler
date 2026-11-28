@@ -442,7 +442,9 @@ d'abord être réparé côté backend. Une commande en attente est suspendue, sa
 être perdue ni redélivrée, jusqu'au retour de cet état sain. Enfin, la rotation
 de génération traverse les
 mêmes sections critiques que l'arrêt du processus et l'intention d'arrêt du
-contrôleur.
+contrôleur. La génération est aussi échantillonnée avant chaque lecture du
+statut transport ; si elle change avant la décision, ce statut est périmé et le
+plan de reprise reste fermé jusqu'au rapport suivant.
 
 **Motif :** la simple présence d'un objet de statut ne prouve ni la santé du
 provider ni l'absence d'abonné. De même, un contrôle d'arrêt suivi d'une action

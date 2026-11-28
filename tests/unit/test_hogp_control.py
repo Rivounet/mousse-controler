@@ -351,6 +351,50 @@ class HogpControlCoordinatorTests(unittest.TestCase):
         self.assertFalse(response["transport"]["available"])
         self.assertIsNone(response["command"])
 
+    def test_provider_rotation_invalidates_concurrent_transport_status(self) -> None:
+        state = {"coordinator": None, "rotated": False}
+        rotated_generation = "33333333-3333-4333-8333-333333333333"
+
+        def stale_status():
+            coordinator = state["coordinator"]
+            if not state["rotated"]:
+                state["rotated"] = True
+                coordinator.rotate_provider_generation(rotated_generation)
+            return {
+                "advertising": "True",
+                "authorized_subscriber": "False",
+                "subscriber_count": "0",
+            }
+
+        coordinator = self.coordinator(status=stale_status)
+        state["coordinator"] = coordinator
+
+        response = coordinator.accept(
+            "hogp-agent",
+            report(
+                radio_present=False,
+                radio_state="Unavailable",
+                adapter_problem_code=43,
+            ),
+        )
+
+        self.assertEqual(response["provider_generation"], rotated_generation)
+        self.assertFalse(response["transport"]["available"])
+        self.assertIsNone(response["command"])
+
+        fresh = coordinator.accept(
+            "hogp-agent",
+            report(
+                radio_present=False,
+                radio_state="Unavailable",
+                adapter_problem_code=43,
+            ),
+        )
+        self.assertTrue(fresh["transport"]["available"])
+        self.assertEqual(
+            fresh["command"]["provider_generation"], rotated_generation,
+        )
+
     def test_malformed_transport_status_is_fail_closed(self) -> None:
         for malformed in (
             None,

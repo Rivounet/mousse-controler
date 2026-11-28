@@ -128,6 +128,9 @@ transport absent ou non structuré ferme aussi le plan de reprise.
 Les tests suspendent une commande déjà en attente pendant un statut invalide ou
 `advertising=False`, puis vérifient la reprise du même identifiant seulement
 après retour à un statut sain.
+Une rotation déterministe intercalée pendant la lecture du statut vérifie qu'un
+état de l'ancien provider ne peut jamais créer une commande liée à la nouvelle
+génération ; la réponse devient indisponible et ne contient aucune commande.
 Une course avec l'arrêt ne fait ni tourner la génération provider ni publier
 une reprise fictive : la rotation traverse une section critique commune à
 l'arrêt du processus et à l'intention d'arrêt du contrôleur. Un compteur

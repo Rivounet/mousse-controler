@@ -111,7 +111,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   reste bornée par le même délai monotone. Le coordinateur n'autorise aucune
   reprise cible si `advertising` ou l'état d'abonnement est absent, invalide, ou
   si le provider n'annonce plus. Une commande déjà en attente reste mémorisée
-  mais n'est pas redélivrée avant le retour d'un statut sain.
+  mais n'est pas redélivrée avant le retour d'un statut sain. Chaque lecture de
+  statut est liée à la génération provider observée avant cette lecture ; une
+  rotation concurrente invalide le statut et ferme la réponse sans commande.
 
 ## Priorités et alternatives
 

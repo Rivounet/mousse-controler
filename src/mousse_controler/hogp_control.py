@@ -213,6 +213,8 @@ class HogpControlCoordinator:
         report = self._validate_report(key_id, payload)
         now_ms = self._clock_ms()
         now_monotonic_ms = self._monotonic_ms()
+        with self._lock:
+            status_generation = self._provider_generation
         try:
             transport = self._transport_status()
             if not isinstance(transport, dict):
@@ -231,6 +233,14 @@ class HogpControlCoordinator:
             authorized = False
             transport_available = False
         with self._lock:
+            if status_generation != self._provider_generation:
+                # The status describes the provider observed before its
+                # rotation. It must never authorize a command for the new
+                # generation; the target will report again with a fresh view.
+                transport = {}
+                advertising = False
+                authorized = False
+                transport_available = False
             acknowledgment = report.get("acknowledgment")
             received_acknowledgment: dict[str, str] | None = None
             if acknowledgment is not None:
