@@ -31,6 +31,16 @@ class PairingIdentityContractTests(unittest.TestCase):
         self.assertIn("liveCandidates[identity] = candidate", source)
         self.assertNotIn("present && connectable", source)
 
+    def test_inspection_correlates_name_connectable_advertisement_and_hid_service(self) -> None:
+        source = TOOL.read_text(encoding="utf-8")
+        self.assertIn("BluetoothLEAdvertisementWatcher", source)
+        self.assertIn("BluetoothLEScanningMode.Active", source)
+        self.assertIn("BluetoothLEAdvertisementType.ConnectableUndirected", source)
+        self.assertIn("GattServiceUuids.HumanInterfaceDevice", source)
+        self.assertIn("ExactNameSeen && item.Value.ConnectableSeen", source)
+        self.assertIn("item.Value.HidServiceSeen", source)
+        self.assertIn("observedAdvertisementIdentity != expectedIdSha256", source)
+
     def test_new_pairing_requires_observed_encryption_and_rolls_back_otherwise(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
         self.assertIn("result.ProtectionLevelUsed.ToString()", source)

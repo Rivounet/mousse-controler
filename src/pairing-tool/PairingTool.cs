@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -10,11 +11,20 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Foundation;
 
 internal static class PairingTool
 {
+    private sealed class AdvertisementObservation
+    {
+        internal bool ExactNameSeen;
+        internal bool ConnectableSeen;
+        internal bool HidServiceSeen;
+        internal int Frames;
+    }
+
     private const string Selector =
         "System.Devices.Aep.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\"";
     private static readonly Dictionary<string, object> Diagnostics =
@@ -72,8 +82,16 @@ internal static class PairingTool
     private static int Run(string exactName, string expectedIdSha256, string resultPath,
         bool inspectOnly, bool connectOnly)
     {
+        var observedAdvertisementIdentity = connectOnly
+            ? null
+            : DiscoverAdvertisingIdentity(exactName, TimeSpan.FromSeconds(20));
+        if (expectedIdSha256 != null && observedAdvertisementIdentity != null &&
+            observedAdvertisementIdentity != expectedIdSha256)
+            throw new InvalidOperationException(
+                "The live connectable HID advertisement did not match the expected physical identity");
+        var discoveryIdentity = expectedIdSha256 ?? observedAdvertisementIdentity;
         var device = DiscoverLiveEndpoint(
-            exactName, expectedIdSha256, TimeSpan.FromSeconds(35));
+            exactName, discoveryIdentity, TimeSpan.FromSeconds(35));
         var initiallyPaired = device.Pairing.IsPaired;
         var ceremonies = new List<string>();
         var status = initiallyPaired ? "AlreadyPaired" : "NotStarted";
@@ -163,6 +181,70 @@ internal static class PairingTool
         Console.WriteLine((inspectOnly ? "Inspection" : "Pairing") + " status: " + status);
         return inspectOnly || (connectOnly && initiallyPaired && connectionStatus == "Success") ||
             (paired && encryptionVerified) ? 0 : 1;
+    }
+
+    private static string DiscoverAdvertisingIdentity(string exactName, TimeSpan timeout)
+    {
+        var sync = new object();
+        var observations = new Dictionary<ulong, AdvertisementObservation>();
+        var watcher = new BluetoothLEAdvertisementWatcher
+        {
+            ScanningMode = BluetoothLEScanningMode.Active
+        };
+        TypedEventHandler<BluetoothLEAdvertisementWatcher,
+            BluetoothLEAdvertisementReceivedEventArgs> handler = (sender, eventArgs) =>
+        {
+            lock (sync)
+            {
+                AdvertisementObservation observation;
+                if (!observations.TryGetValue(eventArgs.BluetoothAddress, out observation))
+                {
+                    observation = new AdvertisementObservation();
+                    observations[eventArgs.BluetoothAddress] = observation;
+                }
+                observation.Frames++;
+                if (string.Equals(eventArgs.Advertisement.LocalName, exactName,
+                    StringComparison.Ordinal))
+                    observation.ExactNameSeen = true;
+                if (eventArgs.AdvertisementType ==
+                    BluetoothLEAdvertisementType.ConnectableUndirected)
+                    observation.ConnectableSeen = true;
+                if (eventArgs.Advertisement.ServiceUuids.Any(uuid =>
+                    uuid == GattServiceUuids.HumanInterfaceDevice))
+                    observation.HidServiceSeen = true;
+            }
+        };
+        watcher.Received += handler;
+        try
+        {
+            watcher.Start();
+            Thread.Sleep(timeout);
+        }
+        finally
+        {
+            watcher.Stop();
+            watcher.Received -= handler;
+        }
+
+        lock (sync)
+        {
+            var candidates = observations.Where(item =>
+                item.Value.ExactNameSeen && item.Value.ConnectableSeen &&
+                item.Value.HidServiceSeen).ToArray();
+            Diagnostics["advertisement_address_count"] = observations.Count;
+            Diagnostics["advertisement_candidate_count"] = candidates.Length;
+            Diagnostics["advertisement_candidates"] = candidates.Select(item =>
+                new Dictionary<string, object>
+                {
+                    { "id_sha256", HashAddress(item.Key) },
+                    { "identity_kind", "bluetooth_address_sha256" },
+                    { "frames", item.Value.Frames }
+                }).ToArray();
+            if (candidates.Length != 1)
+                throw new InvalidOperationException(
+                    "Expected exactly one live connectable HID advertisement with the exact name");
+            return HashAddress(candidates[0].Key);
+        }
     }
 
     private static DeviceInformation DiscoverLiveEndpoint(
@@ -313,6 +395,11 @@ internal static class PairingTool
               (character >= 'A' && character <= 'F'))))
             return null;
         return Hash(normalized);
+    }
+
+    private static string HashAddress(ulong address)
+    {
+        return Hash(address.ToString("X12", CultureInfo.InvariantCulture));
     }
 
     private static bool GetBoolean(DeviceInformation candidate, string name)

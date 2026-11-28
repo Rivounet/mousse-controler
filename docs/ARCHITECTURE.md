@@ -149,9 +149,12 @@ surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
 `--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
 l'empreinte SHA-256 de l'adresse physique Bluetooth attendue. Les doublons AEP
 Windows sont regroupés par cette empreinte ; l'adresse brute n'est jamais
-journalisée. `IsPresent` et `CanPair` qualifient l'inspection, puis les portes
-`Pair` et `Connect` apportent la preuve effective de chiffrement et de service
-HID, car certains pilotes Windows 10 publient un `IsConnectable` AEP périmé.
+journalisée. L'inspection radio active exige que la même adresse émette une
+réponse de scan au nom exact et une annonce `ConnectableUndirected` portant le
+service HID `0x1812`. Cette identité corrèle ensuite les AEP ; `IsPresent` et
+`CanPair` les qualifient, puis les portes `Pair` et `Connect` apportent la preuve
+effective de chiffrement et de service HID, car certains pilotes Windows 10
+publient un `IsConnectable` AEP périmé.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
