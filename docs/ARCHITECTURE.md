@@ -106,7 +106,8 @@ qualifient pas `DESKTOP-NPIHO8K`.
   rupture de contrat, jamais assimilée à une simple attente d'abonné. La reprise
   reste bornée par le même délai monotone. Le coordinateur n'autorise aucune
   reprise cible si `advertising` ou l'état d'abonnement est absent, invalide, ou
-  si le provider n'annonce plus.
+  si le provider n'annonce plus. Une commande déjà en attente reste mémorisée
+  mais n'est pas redélivrée avant le retour d'un statut sain.
 
 ## Priorités et alternatives
 

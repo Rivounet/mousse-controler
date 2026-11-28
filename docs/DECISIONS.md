@@ -438,7 +438,9 @@ corrélée aux quatre empreintes peut rendre une reprise admissible.
 ce plan est désactivé. Un statut transport doit exposer des booléens valides
 pour `advertising` et l'abonnement autorisé ; un objet vide, incomplet ou
 invalide n'autorise aucune reprise cible. Un provider qui n'annonce plus doit
-d'abord être réparé côté backend. Enfin, la rotation de génération traverse les
+d'abord être réparé côté backend. Une commande en attente est suspendue, sans
+être perdue ni redélivrée, jusqu'au retour de cet état sain. Enfin, la rotation
+de génération traverse les
 mêmes sections critiques que l'arrêt du processus et l'intention d'arrêt du
 contrôleur.
 

@@ -292,6 +292,42 @@ class HogpControlCoordinatorTests(unittest.TestCase):
         self.assertTrue(response["transport"]["available"])
         self.assertIsNone(response["command"])
 
+    def test_outstanding_command_is_suspended_while_provider_is_unhealthy(self) -> None:
+        status = [{
+            "advertising": "True",
+            "authorized_subscriber": "False",
+            "subscriber_count": "0",
+        }]
+        coordinator = self.coordinator(status=lambda: status[0])
+        issued = coordinator.accept(
+            "hogp-agent",
+            report(provider_generation="22222222-2222-4222-8222-222222222222"),
+        )
+
+        status[0] = {}
+        unavailable = coordinator.accept("hogp-agent", report(provider_generation=GENERATION))
+        status[0] = {
+            "advertising": "False",
+            "authorized_subscriber": "False",
+            "subscriber_count": "0",
+        }
+        not_advertising = coordinator.accept(
+            "hogp-agent", report(provider_generation=GENERATION),
+        )
+        status[0] = {
+            "advertising": "True",
+            "authorized_subscriber": "False",
+            "subscriber_count": "0",
+        }
+        resumed = coordinator.accept("hogp-agent", report(provider_generation=GENERATION))
+
+        self.assertIsNotNone(issued["command"])
+        self.assertIsNone(unavailable["command"])
+        self.assertIsNone(not_advertising["command"])
+        self.assertEqual(
+            resumed["command"]["command_id"], issued["command"]["command_id"],
+        )
+
     def test_non_elevated_agent_never_receives_pnp_command(self) -> None:
         response = self.coordinator().accept(
             "hogp-agent",

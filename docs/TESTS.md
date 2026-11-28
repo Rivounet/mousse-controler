@@ -119,6 +119,9 @@ unitaires font tourner la génération après reprise du
 provider, traitent l'absence du statut `advertising` comme une rupture du canal
 et distinguent `advertising=False` de la simple absence d'abonné. Un statut de
 transport absent ou non structuré ferme aussi le plan de reprise.
+Les tests suspendent une commande déjà en attente pendant un statut invalide ou
+`advertising=False`, puis vérifient la reprise du même identifiant seulement
+après retour à un statut sain.
 Une course avec l'arrêt ne fait ni tourner la génération provider ni publier
 une reprise fictive : la rotation traverse une section critique commune à
 l'arrêt du processus et à l'intention d'arrêt du contrôleur. Un compteur

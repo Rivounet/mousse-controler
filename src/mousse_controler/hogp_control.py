@@ -267,7 +267,10 @@ class HogpControlCoordinator:
                 self._policy.endpoint_recovery_grace_seconds * 1000
             )
 
-            command = self._outstanding
+            command = (
+                self._outstanding
+                if transport_available and advertising else None
+            )
             if (command is None and not authorized and transport_available and
                     advertising and
                     report["elevated"]):
