@@ -162,15 +162,16 @@ surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
 `--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
 l'empreinte SHA-256 de l'identifiant AEP Windows de la paire persistante. Cette
 identité durable est produite uniquement après preuve du chiffrement ; elle est
-distincte de l'empreinte de l'adresse radio, qui sert seulement au provisioning.
-Les doublons AEP Windows pré-appairage sont regroupés par l'empreinte radio ; ni
-l'adresse ni l'identifiant AEP bruts ne sont journalisés. L'inspection radio
-active exige que la même adresse émette une
-réponse de scan au nom exact et une annonce `ConnectableUndirected` portant le
-service HID `0x1812`. Cette identité corrèle ensuite les AEP ; `IsPresent` et
-`CanPair` les qualifient, puis les portes `Pair` et `Connect` apportent la preuve
-effective de chiffrement et de service HID, car certains pilotes Windows 10
-publient un `IsConnectable` AEP périmé.
+distincte de l'empreinte de l'adresse radio, qui reste un diagnostic éphémère.
+Une seule opération d'enrôlement observe exactement une annonce portant le nom
+exact, le type `ConnectableUndirected` et le service HID `0x1812`, puis résout
+immédiatement cette même adresse avec `FromBluetoothAddressAsync` avant le
+`PairAsync(Encryption)` standard. L'adresse n'est jamais transmise à une seconde
+commande ni utilisée comme identité persistante, car une adresse privée BLE peut
+tourner entre deux énumérations. `IsPresent` et `CanPair` qualifient l'endpoint ;
+le consentement Windows confirme l'enrôlement, puis `Connect` exige le hachage AEP
+durable et le service HID. Ni l'adresse ni l'identifiant AEP bruts ne sont
+journalisés.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat

@@ -19,8 +19,9 @@
 - `OperationCoordinator` possède l'unique voie de commande locale ;
 - `PositionAgent --config` publie uniquement télémétrie et captures ; la
   reconnexion HOGP est un mode et une tâche distincts ;
-- toute sélection Bluetooth mutante exige le nom exact et l'empreinte SHA-256
-  de l'adresse physique attendue, après regroupement des doublons AEP Windows ;
+- l'enrôlement Bluetooth est une opération atomique : annonce unique au nom
+  exact, connectable et HID, résolution immédiate de cette adresse rotative,
+  pairage standard chiffré, puis émission de l'identité AEP durable ;
 - le moteur HOGP exige exactement un abonné actif autorisé et lui envoie la
   notification de manière ciblée ;
 - la release contrôleur est construite depuis les objets d'un SHA propre,
@@ -42,9 +43,10 @@
    doivent désigner l'autre machine, le même `run_id` et le même SHA.
 4. Utiliser uniquement les tâches `MC-HID-EXEC-001` et l'instance HOGP de
    qualification. Ne pas démarrer ni repointer la tâche de production.
-5. Inspecter l'identité du périphérique backend depuis la cible avant pairage,
-   puis imposer cette empreinte pour `Pair` et `Connect`. Enrôler séparément
-   l'empreinte de la cible observée par le moteur HOGP côté backend.
+5. Exécuter le pairage atomique depuis la cible pendant la fenêtre interactive,
+   conserver uniquement l'identité AEP produite après preuve du chiffrement et
+   l'imposer à `Connect` puis à la reconnexion. Enrôler séparément l'empreinte de
+   la cible observée par le moteur HOGP côté backend.
 6. Exiger `authorized_subscriber=True`, `subscriber_count=1`, l'empreinte
    attendue, une session `Active`, `buttons=0`, une position fraîche et aucune
    action active.

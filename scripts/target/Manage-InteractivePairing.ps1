@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory)][ValidateSet('Start', 'Status', 'Stop')][string]$Action,
     [string]$DeviceName = 'MINI-PC-BACKEND',
-    [string]$ExpectedDeviceIdSha256,
+    [string]$ExpectedPairedAepIdSha256,
     [ValidateSet('Pair', 'Inspect', 'Connect')][string]$Mode = 'Pair',
     [string]$WorkDirectory = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001",
     [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-Pairing'
@@ -24,16 +24,16 @@ switch ($Action) {
         $modeArgument = switch ($Mode) {
             'Inspect' { '--inspect-name' }
             'Connect' { '--connect-name' }
-            default { '--name' }
+            default { '--pair-name' }
         }
-        if ($Mode -ne 'Inspect' -and $ExpectedDeviceIdSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
-            throw '-ExpectedDeviceIdSha256 with 64 hex characters is required for Pair and Connect'
+        if ($Mode -eq 'Connect' -and $ExpectedPairedAepIdSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
+            throw '-ExpectedPairedAepIdSha256 with 64 hex characters is required for Connect'
         }
-        $arguments = if ($Mode -eq 'Inspect') {
+        $arguments = if ($Mode -ne 'Connect') {
             '{0} "{1}" "{2}"' -f $modeArgument, $DeviceName, $resultPath
         } else {
             '{0} "{1}" "{2}" "{3}"' -f $modeArgument, $DeviceName,
-                $ExpectedDeviceIdSha256.ToUpperInvariant(), $resultPath
+                $ExpectedPairedAepIdSha256.ToUpperInvariant(), $resultPath
         }
         $taskAction = New-ScheduledTaskAction -Execute $pairingTool -Argument $arguments
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited

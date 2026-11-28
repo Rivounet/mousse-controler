@@ -292,3 +292,19 @@ est accepté par le moniteur persistant `--hogp-reconnect`.
 HOGP ne casse pas la sélection de la paire persistante. Ni l'adresse radio ni
 l'identifiant AEP bruts ne sont journalisés. Un pairage non chiffré, un rollback
 ou une erreur ne produit jamais d'identité durable utilisable.
+
+## D-075 — Enrôlement atomique face aux adresses privées BLE (28 novembre 2026)
+
+**Décision :** amender la partie enrôlement de D-072 et D-074. Une empreinte
+d'adresse radio observée par un premier processus ne peut pas autoriser un
+second processus : la pile Windows et le fournisseur HOGP peuvent présenter une
+nouvelle adresse privée avant la seconde énumération. `PairingTool` réalise donc
+dans un seul processus le scan actif, l'exigence d'un candidat unique au nom
+exact/connectable/HID, la résolution directe de cette adresse par
+`FromBluetoothAddressAsync` et le `PairAsync(Encryption)` standard. La validation
+Windows manuelle reste le point de confiance humain du provisioning.
+
+**Conséquence :** le script de pairage direct par empreinte radio est supprimé.
+L'adresse et son hachage restent des diagnostics de la tentative, jamais une
+identité transmissible. Après succès chiffré seulement, le hachage AEP durable
+devient l'unique identité acceptée par `Connect` et `--hogp-reconnect`.

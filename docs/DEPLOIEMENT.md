@@ -207,17 +207,18 @@ machine un bail via `scripts/qualification/Manage-QualificationLease.ps1` avec
 le même `run_id` et le même SHA. Les rôles `backend` et `target`, machines et
 `peer_host` doivent se correspondre exactement.
 
-Le pairage et la reconnexion refusent désormais le nom seul : l'inspection
-regroupe les doublons AEP par empreinte SHA-256 d'adresse Bluetooth physique,
-et `Pair`/`Connect` exigent cette empreinte d'enrôlement. Après preuve du
-chiffrement, le pairage publie séparément le hachage de l'identifiant AEP de la
-paire persistante ; le moniteur de reconnexion exige uniquement cette identité
-durable. Ni l'adresse ni l'identifiant AEP bruts ne sont publiés. Le scan actif
-doit corréler, pour la même adresse, le nom exact dans `ScanResponse` et `0x1812`
-dans une annonce `ConnectableUndirected`. `IsConnectable` AEP reste
-diagnostique : les portes
-effectives sont cette publicité brute, `IsPresent`, `CanPair`, le pairage
-chiffré et le service HID. L'agent de télémétrie ne gère plus la
+Le pairage et la reconnexion refusent le nom seul, mais n'emploient pas la même
+identité. Une opération atomique de pairage observe une unique annonce au nom
+exact, `ConnectableUndirected` et HID `0x1812`, résout immédiatement cette même
+adresse avec `FromBluetoothAddressAsync`, puis appelle le `PairAsync(Encryption)`
+standard. L'empreinte radio n'est qu'un diagnostic de cette opération : elle ne
+doit jamais être réutilisée par une seconde commande, car l'adresse privée BLE
+peut tourner. Après preuve du chiffrement, le résultat publie le hachage de
+l'identifiant AEP de la paire persistante ; `Connect` et le moniteur de
+reconnexion exigent uniquement cette identité durable. Ni l'adresse ni
+l'identifiant AEP bruts ne sont publiés. `IsConnectable` AEP reste diagnostique :
+les portes effectives sont la publicité brute, `IsPresent`, `CanPair`, le
+pairage chiffré et le service HID. L'agent de télémétrie ne gère plus la
 reconnexion HOGP. Le moteur backend exige de son côté exactement un abonné actif
 dont l'identité hachée est autorisée et emploie l'overload de notification ciblé.
 
