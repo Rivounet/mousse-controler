@@ -81,7 +81,6 @@ namespace MousseControler.PositionAgent
         private static readonly string[] RequestedProperties = {
             "System.Devices.Aep.IsPresent",
             "System.Devices.Aep.IsConnected",
-            "System.Devices.Aep.DeviceAddress",
             "System.Devices.Aep.Bluetooth.Le.IsConnectable"
         };
         private readonly string exactName;
@@ -90,12 +89,12 @@ namespace MousseControler.PositionAgent
         private BluetoothLEDevice device;
         private IReadOnlyList<GattDeviceService> services;
 
-        private readonly string expectedIdSha256;
+        private readonly string expectedPairedAepIdSha256;
 
-        internal HogpReconnectMonitor(string exactName, string expectedIdSha256)
+        internal HogpReconnectMonitor(string exactName, string expectedPairedAepIdSha256)
         {
             this.exactName = exactName;
-            this.expectedIdSha256 = NormalizeSha256(expectedIdSha256);
+            this.expectedPairedAepIdSha256 = NormalizeSha256(expectedPairedAepIdSha256);
             worker = new Thread(Run) { IsBackground = true, Name = "HOGP reconnect monitor" };
         }
 
@@ -144,7 +143,7 @@ namespace MousseControler.PositionAgent
             foreach (DeviceInformation candidate in candidates)
             {
                 if (!string.Equals(candidate.Name, exactName, StringComparison.Ordinal) ||
-                    !string.Equals(HashDeviceAddress(candidate), expectedIdSha256, StringComparison.Ordinal) ||
+                    !string.Equals(Hash(candidate.Id), expectedPairedAepIdSha256, StringComparison.Ordinal) ||
                     !candidate.Pairing.IsPaired ||
                     !GetBoolean(candidate, "System.Devices.Aep.IsPresent"))
                     continue;
@@ -197,20 +196,6 @@ namespace MousseControler.PositionAgent
             using (SHA256 sha = SHA256.Create())
                 return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value))
                     .Select(part => part.ToString("X2", CultureInfo.InvariantCulture)));
-        }
-
-        private static string HashDeviceAddress(DeviceInformation candidate)
-        {
-            object value;
-            if (!candidate.Properties.TryGetValue("System.Devices.Aep.DeviceAddress", out value))
-                return null;
-            string normalized = (value as string ?? "").Replace(":", "").Replace("-", "")
-                .Trim().ToUpperInvariant();
-            if (normalized.Length != 12 || normalized.Any(character =>
-                !((character >= '0' && character <= '9') ||
-                  (character >= 'A' && character <= 'F'))))
-                return null;
-            return Hash(normalized);
         }
 
         private void ReleaseConnection()
@@ -640,7 +625,7 @@ namespace MousseControler.PositionAgent
                 if (args.Length != 2 || args[0] != "--config")
                 {
                     Console.Error.WriteLine("Usage: PositionAgent.exe --config <agent.json>");
-                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> <expected-id-sha256> [log-path]");
+                    Console.Error.WriteLine("       PositionAgent.exe --hogp-reconnect <exact-device-name> <paired-aep-id-sha256> [log-path]");
                     Console.Error.WriteLine("       PositionAgent.exe --protect-secret  (reads one line from stdin)");
                     return 2;
                 }

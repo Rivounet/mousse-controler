@@ -71,10 +71,24 @@ class PairingIdentityContractTests(unittest.TestCase):
         self.assertIn("ExpectedDeviceIdSha256", source)
         self.assertIn("System.Devices.Aep.DeviceAddress", source)
         self.assertIn("ComputeHash($identityBytes)", source)
-        self.assertIn("$_.IdSha256 -ceq $expectedIdentity", source)
+        self.assertIn("$_.IdSha256 -ceq $result.expected_id_sha256", source)
         self.assertIn("ProtectionLevelUsed", source)
         self.assertIn("UnpairAsync", source)
         self.assertIn("Existing pairing cannot prove", source)
+        self.assertIn("paired_aep_id_sha256 = $null", source)
+        self.assertIn("[Text.Encoding]::UTF8.GetBytes($device.Id)", source)
+
+    def test_direct_pairing_always_persists_a_fail_closed_diagnostic(self) -> None:
+        source = DIRECT_PAIRING.read_text(encoding="utf-8")
+        self.assertIn("error_type = 'RejectedProtectionLevel'", source)
+        self.assertIn("pairing_rollback_status = 'OperationFailed'", source)
+        self.assertIn("} finally {\n    if ($null -ne $device)", source)
+        self.assertIn("Move-Item -LiteralPath $temporaryResult", source)
+        self.assertLess(source.index("$result = [ordered]@{"), source.index("try {"))
+        self.assertLess(
+            source.index("Move-Item -LiteralPath $temporaryResult"),
+            source.index("exit $exitCode"),
+        )
 
     def test_diagnostic_fingerprint_never_outputs_the_raw_adapter_address(self) -> None:
         source = FINGERPRINT.read_text(encoding="utf-8")

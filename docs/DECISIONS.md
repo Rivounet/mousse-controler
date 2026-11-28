@@ -278,3 +278,17 @@ entrante rejetée) puis les deux machines `BTHUSB 29` (délai de sécurité).
 `ProtectionLevelUsed=Encryption`, prouver sans nouveau consentement la
 reconnexion, le redémarrage de chaque machine, un cycle radio et la recréation ou
 mise à jour du runtime avec identité et descripteur HOGP inchangés.
+
+## D-074 — Identités d'enrôlement et de reconnexion HOGP (28 novembre 2026)
+
+**Décision :** séparer l'identité radio éphémère utilisée pendant l'enrôlement
+de l'identité Windows durable utilisée pour la reconnexion. L'inspection et le
+pairage initial sélectionnent le nom exact et le hachage de l'adresse radio de
+la fenêtre courante. Après preuve `ProtectionLevelUsed=Encryption`, le résultat
+publie en plus le hachage de l'identifiant AEP appairé. Seul ce second hachage
+est accepté par le moniteur persistant `--hogp-reconnect`.
+
+**Conséquence :** une rotation d'adresse BLE ou un redémarrage du fournisseur
+HOGP ne casse pas la sélection de la paire persistante. Ni l'adresse radio ni
+l'identifiant AEP bruts ne sont journalisés. Un pairage non chiffré, un rollback
+ou une erreur ne produit jamais d'identité durable utilisable.

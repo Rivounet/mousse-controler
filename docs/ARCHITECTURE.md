@@ -160,9 +160,12 @@ d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 Le mode de télémétrie `PositionAgent --config` n'ouvre aucun service HOGP et ne
 surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
 `--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
-l'empreinte SHA-256 de l'adresse physique Bluetooth attendue. Les doublons AEP
-Windows sont regroupés par cette empreinte ; l'adresse brute n'est jamais
-journalisée. L'inspection radio active exige que la même adresse émette une
+l'empreinte SHA-256 de l'identifiant AEP Windows de la paire persistante. Cette
+identité durable est produite uniquement après preuve du chiffrement ; elle est
+distincte de l'empreinte de l'adresse radio, qui sert seulement au provisioning.
+Les doublons AEP Windows pré-appairage sont regroupés par l'empreinte radio ; ni
+l'adresse ni l'identifiant AEP bruts ne sont journalisés. L'inspection radio
+active exige que la même adresse émette une
 réponse de scan au nom exact et une annonce `ConnectableUndirected` portant le
 service HID `0x1812`. Cette identité corrèle ensuite les AEP ; `IsPresent` et
 `CanPair` les qualifient, puis les portes `Pair` et `Connect` apportent la preuve

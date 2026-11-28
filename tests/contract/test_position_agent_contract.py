@@ -8,15 +8,15 @@ MANAGER = ROOT / "scripts" / "target" / "Manage-InteractivePositionAgent.ps1"
 
 
 class PositionAgentReconnectContractTests(unittest.TestCase):
-    def test_reconnect_uses_exact_paired_present_physical_endpoint(self) -> None:
+    def test_reconnect_uses_exact_paired_present_durable_aep_identity(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
         self.assertIn("StringComparison.Ordinal", source)
         self.assertIn("candidate.Pairing.IsPaired", source)
         self.assertIn('System.Devices.Aep.IsPresent', source)
-        self.assertIn('System.Devices.Aep.DeviceAddress', source)
-        self.assertIn("HashDeviceAddress(candidate)", source)
-        self.assertNotIn("Hash(candidate.Id)", source)
-        self.assertIn("expectedIdSha256", source)
+        self.assertNotIn('System.Devices.Aep.DeviceAddress', source)
+        self.assertNotIn("HashDeviceAddress(candidate)", source)
+        self.assertIn("Hash(candidate.Id)", source)
+        self.assertIn("expectedPairedAepIdSha256", source)
 
     def test_reconnect_opens_uncached_hid_service(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
@@ -50,7 +50,8 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         source = MANAGER.read_text(encoding="utf-8")
         self.assertIn("HogpReconnect", source)
         self.assertIn("--hogp-reconnect", source)
-        self.assertIn("HogpDeviceIdSha256", source)
+        self.assertIn("HogpPairedAepIdSha256", source)
+        self.assertNotIn("HogpDeviceIdSha256", source)
         self.assertIn("New-ScheduledTaskTrigger -AtLogOn", source)
 
     def test_position_telemetry_mode_does_not_start_hogp_reconnect(self) -> None:
