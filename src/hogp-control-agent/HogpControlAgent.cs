@@ -273,7 +273,18 @@ namespace MousseControler.HogpControlAgent
                     if (response == null || response.schema != "mousse-hogp-control-v1" ||
                         !IsCanonicalGuid(response.provider_generation))
                         throw new InvalidDataException("HOGP control response is invalid");
-                    if (sentAcknowledgment != null && pendingAcknowledgment == sentAcknowledgment)
+                    if (response.last_acknowledgment != null &&
+                        (!IsCanonicalGuid(response.last_acknowledgment.command_id) ||
+                         !IsAcknowledgmentState(response.last_acknowledgment.state)))
+                        throw new InvalidDataException(
+                            "HOGP control response acknowledgment is invalid");
+                    if (sentAcknowledgment != null &&
+                        pendingAcknowledgment == sentAcknowledgment &&
+                        response.last_acknowledgment != null &&
+                        string.Equals(response.last_acknowledgment.command_id,
+                            sentAcknowledgment.command_id, StringComparison.Ordinal) &&
+                        string.Equals(response.last_acknowledgment.state,
+                            sentAcknowledgment.state, StringComparison.Ordinal))
                         pendingAcknowledgment = null;
                     providerGeneration = response.provider_generation;
                     SaveState();

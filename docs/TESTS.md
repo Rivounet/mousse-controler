@@ -111,7 +111,9 @@ Le contrat exige aussi l'inspection d'identités sans identifiant brut, l'état
 atomique anti-rejeu, le verrou mono-instance, l'installation sous répertoires
 protégés, les empreintes attendues et l'absence de binaire élevé sous
 `LOCALAPPDATA`. Le rôle matériel `USB`/`PCI`, le déclencheur `AtLogOn`, le SID,
-le type `Interactive` et le répertoire de travail sont verrouillés. Les tests
+le type `Interactive`, le répertoire de travail, l'écho exact des acquittements
+et l'absence de droit de mutation ACL pour tout principal inattendu sont
+verrouillés. Les tests
 unitaires font tourner la génération après reprise du
 provider et distinguent `advertising=False` de la simple absence d'abonné.
 

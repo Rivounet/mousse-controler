@@ -93,6 +93,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   Cet « agent cible » désigne le runtime applicatif déployé
   `HogpControlAgent.exe`, jamais l'agent Codex utilisé pour l'installation ou le
   diagnostic.
+  Un acquittement persiste jusqu'à ce que le backend renvoie exactement son
+  identifiant et son état ; une simple réponse HTTP corrélée ne suffit pas à
+  l'effacer.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
   séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
 

@@ -137,4 +137,3 @@ class HogpHealthMonitor:
                 self._replace(state="stopped")
                 return
             self.poll_once()
-

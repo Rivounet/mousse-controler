@@ -68,22 +68,51 @@ function Set-ProtectedDirectoryAcl([string]$Path, [switch]$AllowUsersRead) {
 }
 
 function Assert-ProtectedDirectory([string]$Path) {
+    $administratorsSid = 'S-1-5-32-544'
+    $systemSid = 'S-1-5-18'
     $item = Get-Item -LiteralPath $Path -Force
     if (-not $item.PSIsContainer -or
         ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         throw "Protected path is not a regular directory: $Path"
     }
     $acl = Get-Acl -LiteralPath $Path
-    $unsafe = @($acl.Access | Where-Object {
-        $_.AccessControlType -eq 'Allow' -and
-        $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq 'S-1-5-32-545' -and
-        ($_.FileSystemRights -band (
-            [Security.AccessControl.FileSystemRights]::Write -bor
-            [Security.AccessControl.FileSystemRights]::Modify -bor
-            [Security.AccessControl.FileSystemRights]::FullControl))
-    })
-    if ($unsafe.Count -ne 0) {
-        throw "Protected path grants write access to standard users: $Path"
+    if (-not $acl.AreAccessRulesProtected -or
+        (Resolve-PrincipalSid ([string]$acl.Owner)) -ne $administratorsSid) {
+        throw "Protected path inheritance or owner is invalid: $Path"
+    }
+    $dangerousRights = (
+        [Security.AccessControl.FileSystemRights]::Write -bor
+        [Security.AccessControl.FileSystemRights]::Modify -bor
+        [Security.AccessControl.FileSystemRights]::FullControl -bor
+        [Security.AccessControl.FileSystemRights]::Delete -bor
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+        [Security.AccessControl.FileSystemRights]::TakeOwnership
+    )
+    $allowedWriteSids = @($administratorsSid, $systemSid)
+    foreach ($rule in @($acl.Access)) {
+        if ($rule.AccessControlType -ne 'Allow' -or
+            -not ($rule.FileSystemRights -band $dangerousRights)) {
+            continue
+        }
+        $sid = $rule.IdentityReference.Translate(
+            [Security.Principal.SecurityIdentifier]).Value
+        if ($sid -notin $allowedWriteSids) {
+            throw "Protected path grants mutation rights to an unexpected principal: $Path"
+        }
+    }
+    foreach ($requiredSid in $allowedWriteSids) {
+        $fullControl = @($acl.Access | Where-Object {
+            $_.AccessControlType -eq 'Allow' -and
+            $_.IdentityReference.Translate(
+                [Security.Principal.SecurityIdentifier]).Value -eq $requiredSid -and
+            ($_.FileSystemRights -band
+                [Security.AccessControl.FileSystemRights]::FullControl) -eq
+                [Security.AccessControl.FileSystemRights]::FullControl
+        })
+        if ($fullControl.Count -eq 0) {
+            throw "Protected path is missing a required full-control principal: $Path"
+        }
     }
 }
 

@@ -253,7 +253,9 @@ d'écriture des utilisateurs standards, réserve configuration, secret DPAPI et
 état à `SYSTEM`/administrateurs, inscrit la tâche puis vérifie son action.
 `Start` ne réinscrit jamais la tâche : il contrôle les ACL, le manifeste,
 les deux empreintes, le principal Windows exact et `RunLevel=Highest` avant
-lancement. Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
+lancement. Les ACL sont non héritées, possédées par `Administrators`, refusent
+tout droit de mutation hors `SYSTEM`/`Administrators` et garantissent leur
+contrôle total. Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
 répertoire de travail protégé sont également vérifiés. `Stop` conserve
 l'installation ; `Uninstall` est la suppression administrative explicite.
 
@@ -271,8 +273,10 @@ indisponible ferment la porte sans action. Le runtime n'appelle aucune API GATT
 et le backend ne redémarre jamais le provider pour la seule absence d'abonné.
 La génération, la séquence anti-rejeu, l'historique borné des commandes et les
 acquittements sont persistés atomiquement. Une interruption au milieu d'une
-reprise produit `outcome_unknown` et interdit un rejeu automatique. Une reprise
-interne du moteur fait tourner la génération ; un statut `advertising=False`
+reprise produit `outcome_unknown` et interdit un rejeu automatique. Un
+acquittement n'est retiré de l'état cible qu'après écho exact de son
+identifiant et de son état par le backend. Une reprise interne du moteur fait
+tourner la génération ; un statut `advertising=False`
 est réparé comme panne provider, alors que `subscriber=False` reste un état
 externe sans recréation.
 
