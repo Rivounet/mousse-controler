@@ -2,7 +2,7 @@
 
 | Chantier | État | Critère de clôture |
 |---|---|---|
-| Qualification like-prod sur `DESKTOP-NPIHO8K` depuis le `main` courant | **EN COURS — NON QUALIFIÉE** | instance HOGP dédiée, paire de baux, abonné unique autorisé, actions sur surface sûre et preuves au SHA exact |
+| Qualification like-prod sur `DESKTOP-NPIHO8K` depuis le `main` courant | **EN COURS — PROVISIONING UNIQUE AUTORISÉ** | pairage chiffré après un consentement Windows unique, puis persistance sans nouveau consentement, instance HOGP dédiée, paire de baux, abonné unique autorisé, actions sur surface sûre et preuves au SHA exact |
 | Production `mini-pc-backend` | **PRÉSERVÉE — HORS QUALIFICATION** | aucune tâche de production repointée ou utilisée par le run like-prod |
 | Preuves `MonOrdinateur` | **HISTORIQUES UNIQUEMENT** | ne sont jamais présentées comme preuve pour `DESKTOP-NPIHO8K` |
 | Robustesse R0–R5 et R6 | Fusionnés | Qualifications logicielles et rapports historiques conservés |

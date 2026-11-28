@@ -5,6 +5,13 @@
 > `77d4a5939673053fa2e0dae73bc3a284a8597ac7`. Les mentions « Draft » de ce
 > rapport décrivent l'état historique au moment de la qualification et sont
 > conservées comme preuves.
+>
+> **Correctif de preuve du 28 novembre 2026 :** l'affirmation historique
+> « aucune fenêtre graphique n'est requise » ne démontre pas un pairage entrant
+> sans consentement. Une requalification sans validation de la notification sur
+> `MINI-PC-BACKEND` a produit `BTHUSB 37` puis `BTHUSB 29` et aucune paire. Le
+> consentement Windows Desktop est désormais classé comme provisioning manuel
+> unique ; la persistance ultérieure doit rester entièrement automatique.
 
 **Date :** 20 novembre 2026  
 **Branche :** `feat/mc-hid-exec-001`  

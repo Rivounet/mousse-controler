@@ -85,6 +85,15 @@ Ces preuves matérielles sont antérieures aux correctifs R1–R5 : elles ne val
 pas requalification matérielle de ces correctifs ni constat de la version
 actuellement installée.
 
+La mention historique « aucune fenêtre graphique requise » ne prouve pas un
+pairage entrant sans consentement. La requalification du 28 novembre 2026 sur
+`DESKTOP-NPIHO8K` a reproduit une notification backend, puis les événements
+`BTHUSB 37` (authentification entrante rejetée) et `BTHUSB 29` (délai du
+gestionnaire de sécurité) lorsque personne ne la validait. Sur Windows Desktop,
+le consentement unique appartient donc au provisioning. Le fonctionnement
+ensuite attendu est automatique et persistant ; toute demande de consentement
+après redémarrage ou mise à jour invalide la qualification.
+
 ## Exploitation et sécurité
 
 ```text
@@ -120,6 +129,10 @@ L'architecture détaillée et la boucle de position sont spécifiées dans
 Si le prototype conforme échoue sur la pile Windows/Realtek, comparer d'abord un
 adaptateur externe programmable capable d'HOGP. Un changement d'OS, de pilote ou
 de matériel nécessite une décision explicite ; aucune installation implicite.
+Un tel adaptateur est également le repli requis si le provisioning doit lui-même
+être totalement sans intervention, l'acceptation globale des demandes entrantes
+n'étant prise en charge par Microsoft que pour les applications Windows 10 IoT
+Core.
 
 ## Réalisation MC-HID-EXEC-001 — 20 novembre 2026
 

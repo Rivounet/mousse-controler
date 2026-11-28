@@ -243,3 +243,13 @@ Sur Windows Desktop, la cible initie donc le pairage pendant une fenêtre courte
 où le backend est explicitement découvrable et connectable. Le résultat doit
 indiquer `ProtectionLevelUsed=Encryption`; sinon le pairage est annulé et la
 qualification s'arrête.
+
+Cette fenêtre ne supprime pas le consentement entrant de Windows Desktop. La
+politique `windows-interactive` exige une validation système unique sur le
+backend et la consigne comme étape de provisioning. Après création du bond,
+aucun consentement ne doit être requis pour un redémarrage, un cycle radio, une
+recréation du provider ou une mise à jour conservant l'identité de package et le
+descripteur HOGP ; ces quatre cas doivent être requalifiés avant clôture.
+`--consent-policy unattended` est refusé avant toute modification radio, car le
+projet ne possède pas de gestionnaire entrant IoT Core et Windows Desktop ne
+permet pas de substituer une application au consentement système.
