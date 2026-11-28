@@ -101,6 +101,10 @@ l'effacement des secrets lorsque la composition échoue ou que le serveur ferme.
 `tests/contract/test_hogp_control_agent_contract.py` interdit au runtime cible
 les API GATT, de pairage et d'injection, exige les quatre empreintes PnP/AEP,
 le binaire `pnputil` système exact et une tâche distincte `RunLevel=Highest`.
+Il impose aussi une énumération AEP limitée par le sélecteur Windows des seuls
+périphériques BLE appairés, bornée à 30 secondes. Cette contrainte couvre la
+régression matérielle où l'énumération BLE générale dépassait dix secondes sur
+`DESKTOP-NPIHO8K` ; le sélecteur ne crée aucun client BLE ou GATT.
 Le profil `build` compile ce runtime séparément ; aucun test logiciel ne lance
 de commande PnP ou Bluetooth réelle.
 Le contrat exige aussi l'inspection d'identités sans identifiant brut, l'état

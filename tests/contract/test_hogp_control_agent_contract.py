@@ -12,7 +12,8 @@ class HogpControlAgentContractTests(unittest.TestCase):
         )
 
         for forbidden in (
-            "BluetoothLEDevice",
+            "BluetoothLEDevice.FromIdAsync",
+            "BluetoothLEDevice.FromBluetoothAddressAsync",
             "GattSession",
             "MaintainConnection",
             "GetGattServices",
@@ -44,6 +45,10 @@ class HogpControlAgentContractTests(unittest.TestCase):
         self.assertIn('StartsWith("PCI\\\\"', source)
         self.assertIn("expected exactly one enrolled PnP instance for role", source)
         self.assertIn("Task.WhenAny", source)
+        self.assertIn("BluetoothLEDevice.GetDeviceSelectorFromPairingState(true)", source)
+        self.assertIn("DeviceInformationCollection FindPairedAeps()", source)
+        self.assertIn("paired Bluetooth AEP enumeration", source)
+        self.assertIn("PairedAepEnumerationTimeout = TimeSpan.FromSeconds(30)", source)
         self.assertIn("searcher.Options.Timeout", source)
 
     def test_agent_build_is_separate_and_uses_windows_metadata(self) -> None:

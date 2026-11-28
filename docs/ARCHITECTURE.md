@@ -87,7 +87,9 @@ qualifient pas `DESKTOP-NPIHO8K`.
   l'état Windows Bluetooth/PnP/HID. Une réponse API peut demander un unique
   redémarrage PnP borné si la politique backend et la politique locale
   l'autorisent, si le runtime est élevé et si toutes les empreintes concordent.
-  Il n'ouvre jamais `BluetoothLEDevice`, `GattSession` ou un service GATT.
+  Il utilise uniquement le sélecteur statique Windows des périphériques BLE
+  déjà appairés, sans instancier `BluetoothLEDevice`, ouvrir `GattSession` ou
+  découvrir un service GATT.
   Cet « agent cible » désigne le runtime applicatif déployé
   `HogpControlAgent.exe`, jamais l'agent Codex utilisé pour l'installation ou le
   diagnostic.

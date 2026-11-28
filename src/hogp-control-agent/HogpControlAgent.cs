@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
+using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Radios;
 
@@ -151,8 +152,8 @@ namespace MousseControler.HogpControlAgent
         private const string AdapterRole = "bluetooth_adapter";
         private const string PairedEndpointRole = "paired_ble_endpoint";
         private const string HidChildRole = "hogp_hid_child";
-        internal const string AepSelector =
-            "System.Devices.Aep.ProtocolId:=\"{BB7BB05E-5972-42B5-94FC-76EAA7084D49}\"";
+        private static readonly TimeSpan DefaultEnumerationTimeout = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan PairedAepEnumerationTimeout = TimeSpan.FromSeconds(30);
         private readonly AgentConfig config;
         private readonly byte[] secret;
         private readonly string certificatePin;
@@ -324,10 +325,7 @@ namespace MousseControler.HogpControlAgent
             Radio bluetoothRadio = AwaitResult(
                 Radio.GetRadiosAsync().AsTask(), "Bluetooth radio enumeration")
                 .SingleOrDefault(item => item.Kind == RadioKind.Bluetooth);
-            DeviceInformationCollection endpoints = AwaitResult(
-                DeviceInformation.FindAllAsync(
-                    AepSelector, null, DeviceInformationKind.AssociationEndpoint).AsTask(),
-                "Bluetooth AEP enumeration");
+            DeviceInformationCollection endpoints = FindPairedAeps();
             DeviceInformation[] pairedMatches = endpoints.Where(item =>
                 string.Equals(item.Name, config.HogpDeviceName, StringComparison.Ordinal) &&
                 item.Pairing.IsPaired &&
@@ -492,9 +490,30 @@ namespace MousseControler.HogpControlAgent
             return nodes;
         }
 
+        internal static string PairedAepSelector()
+        {
+            return BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
+        }
+
+        internal static DeviceInformationCollection FindPairedAeps()
+        {
+            return AwaitResult(
+                DeviceInformation.FindAllAsync(
+                    PairedAepSelector(), null,
+                    DeviceInformationKind.AssociationEndpoint).AsTask(),
+                "paired Bluetooth AEP enumeration", PairedAepEnumerationTimeout);
+        }
+
         internal static T AwaitResult<T>(Task<T> task, string operation)
         {
-            Task completed = Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10)))
+            return AwaitResult(task, operation, DefaultEnumerationTimeout);
+        }
+
+        internal static T AwaitResult<T>(Task<T> task, string operation, TimeSpan timeout)
+        {
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("timeout");
+            Task completed = Task.WhenAny(task, Task.Delay(timeout))
                 .GetAwaiter().GetResult();
             if (!object.ReferenceEquals(completed, task))
                 throw new TimeoutException(operation + " timed out");
@@ -693,10 +712,7 @@ namespace MousseControler.HogpControlAgent
         {
             if (string.IsNullOrWhiteSpace(hogpDeviceName) || string.IsNullOrWhiteSpace(resultPath))
                 throw new InvalidDataException("HOGP name and result path are required");
-            DeviceInformationCollection endpoints = Agent.AwaitResult(
-                DeviceInformation.FindAllAsync(
-                    Agent.AepSelector, null, DeviceInformationKind.AssociationEndpoint).AsTask(),
-                "Bluetooth AEP enumeration");
+            DeviceInformationCollection endpoints = Agent.FindPairedAeps();
             Radio[] radios = Agent.AwaitResult(
                 Radio.GetRadiosAsync().AsTask(), "Bluetooth radio enumeration")
                 .Where(item => item.Kind == RadioKind.Bluetooth).ToArray();

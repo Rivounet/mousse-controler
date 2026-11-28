@@ -240,7 +240,11 @@ ultérieurs ne demandent aucun consentement interactif.
 
 L'enrôlement des identités se prépare en lecture seule avec
 `HogpControlAgent.exe --inspect-identities <nom-HOGP> <résultat.json>` après le
-pairage réussi. La configuration emploie `HogpDeviceName`, les quatre empreintes
+pairage réussi. L'inspection et les observations périodiques utilisent le
+sélecteur Windows limité aux périphériques BLE déjà appairés et un délai borné
+de 30 secondes. Cet appel ne fait que produire une requête AQS : il n'instancie
+aucun périphérique BLE et n'ouvre ni client, ni session, ni service GATT.
+La configuration emploie `HogpDeviceName`, les quatre empreintes
 sélectionnées et un `StatePath` exactement situé sous
 `C:\ProgramData\MousseControler\Qualification\MC-HOGP-NATIVE-OWNER-001`.
 L'action `Install` reçoit les empreintes attendues du binaire et de la
@@ -287,6 +291,7 @@ Références Microsoft qui fondent ce protocole :
 
 - [pairage de périphériques Windows](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices) ;
 - [propriétés AEP et adresse physique](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/device-information-properties) ;
+- [sélecteur des périphériques BLE appairés](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.bluetoothledevice.getdeviceselectorfrompairingstate) ;
 - [client GATT et corrélation par adresse](https://learn.microsoft.com/en-us/windows/uwp/devices-sensors/gatt-client) ;
 - [niveau de protection du pairage](https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.devicepairingprotectionlevel) ;
 - [notification GATT ciblée](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattlocalcharacteristic.notifyvalueasync) ;

@@ -412,3 +412,22 @@ coordonne et atteste les opérations Windows bornées. SSH reste un secours de
 maintenance. Les deux actions PnP sont désactivées par défaut et leur promotion
 hors qualification exige une preuve matérielle favorable et une décision de
 déploiement distincte.
+
+## D-080 — Observation AEP bornée aux périphériques BLE appairés (28 novembre 2026)
+
+**Constat :** sur `DESKTOP-NPIHO8K`, l'énumération de tous les Association
+Endpoints BLE dépassait le délai de dix secondes du runtime, alors que la
+requête Windows restreinte aux périphériques BLE appairés terminait en quelques
+secondes et retrouvait exactement l'AEP chiffré attendu.
+
+**Décision :** `HogpControlAgent` produit son filtre AQS avec
+`BluetoothLEDevice.GetDeviceSelectorFromPairingState(true)` et limite cette
+énumération à trente secondes. Cet appel statique ne crée aucun
+`BluetoothLEDevice` et ne prend donc pas possession du transport : les appels
+`FromIdAsync`, les sessions GATT, la découverte de services, le pairage et les
+API d'entrée restent interdits.
+
+**Conséquence :** l'inspection et le runtime périodique suivent exactement le
+même chemin d'observation, limité aux paires persistantes. Un dépassement du
+délai reste un état dégradé sans action PnP ; seule une observation complète et
+corrélée aux quatre empreintes peut rendre une reprise admissible.
