@@ -51,7 +51,7 @@ Les décisions ne sont pas des preuves de faisabilité. Pour chaque choix struct
 
 | D-028 | 2026-11-19 | Validé ; complète D-024 et amende D-004 | Retour de position réelle depuis MonOrdinateur via LAN privé sécurisé, distinct du Bluetooth HID | Agent Windows visible limité à GetCursorPos, topologie, session et transmission HTTPS authentifiée ; aucune exécution de commandes souris ; D-024 reste la décision de localisation de Codex |
 
-| D-029 | 2026-11-19 | Validé | Priorité au Bluetooth LE HID natif entre mini-pc-backend et MonOrdinateur ; récepteur USB Logitech Nano 046D:C534 exclu du transport | Les pilotes HID natifs Windows reçoivent les commandes ; pont HID matériel seulement en repli après arbitrage ; aucune usurpation Logitech ni garantie d'indétectabilité |
+| D-029 | 2026-11-19 | Historique, remplacé par D-078 | Priorité au Bluetooth LE HID natif entre mini-pc-backend et MonOrdinateur ; récepteur USB Logitech Nano 046D:C534 exclu du transport | D-078 interdit désormais tout matériel ou transport de repli ; aucune usurpation Logitech ni garantie d'indétectabilité |
 | D-030 | 2026-11-19 | Validé | MC-HID-EXEC-001 confié à Codex exécuté sur mini-pc-backend, avec intervention autorisée sur MonOrdinateur via accès distant authentifié à établir/qualifier | Développement et qualification des deux côtés coordonnés dans un mandat unique ; pas de deuxième mandat cible indépendant, ni fusion automatique |
 | D-031 | 2026-11-19 | Validé | Contrôle par séquences de zones A→B→C : rectangle, cercle ou polygone ; sélection aléatoire d'un point interne par zone | Position réelle confirmée par agent LAN et correction HID ; graine de test reproductible ; validation géométrique et multi-écrans |
 | D-032 | 2026-11-19 | Validé | Trajectoires courbes, vitesse variable avec accélération/décélération et micro-variations bornées seulement pendant les déplacements | Moteur de trajectoires indépendant du transport HID ; comportement paramétrable et interruptible, sans objectif de dissimulation d'automatisation |
@@ -346,3 +346,115 @@ Windows prévue pour attendre indéfiniment et reprendre dès disponibilité.
 **Conséquence :** le cycle radio ne déclenche ni nouvel appairage ni boucle de
 découverte GATT. Les transitions `Closed` puis `Active` sont journalisées et la
 reprise `Active` constitue la preuve de reconnexion de la même session maintenue.
+
+## D-078 — Propriété HOGP exclusive du pilote cible Windows (28 novembre 2026)
+
+**Décision propriétaire :** conserver exclusivement le transport Bluetooth sur
+les radios Windows existantes, sans matériel supplémentaire et sans changement
+de transport. SSH reste un moyen de maintenance de dernier recours et ne porte
+jamais les commandes souris. Après l'enrôlement chiffré, le pilote HID natif
+Windows est l'unique Report Host : `PositionAgent` redevient strictement un agent
+de télémétrie/capture et son mode `--hogp-reconnect` est supprimé.
+
+**Motif :** le moniteur applicatif ouvrait un second client GATT sur le service
+HID déjà possédé par Windows. Les essais sur `DESKTOP-NPIHO8K` ont montré qu'une
+session `MaintainConnection=true` restait `Closed` après cycle radio et qu'un
+probe distinct reproduisait ce défaut ; cette couche ne rétablissait donc pas la
+connexion et pouvait concurrencer le pilote HID. Les bibliothèques GATT tierces
+resteraient des enveloppes de la même pile Windows.
+
+**Conséquence :** D-074 à D-077 restent les traces historiques des hypothèses et
+essais, mais leurs prescriptions de moniteur persistant sont remplacées par la
+présente décision. `PairingTool Connect` demeure un diagnostic ponctuel fondé
+sur l'identité AEP durable et doit libérer toutes ses références avant un essai
+fonctionnel. La porte like-prod exige la reconnexion native après redémarrage du
+provider, cycle radio, redémarrage cible et mise à jour à identité/descripteur
+inchangés, sans nouveau consentement. L'instance HOGP de production reste hors
+qualification.
+
+## D-079 — Provider stable et plan de contrôle API séparé (28 novembre 2026)
+
+**Constat matériel :** au SHA `d179e93bb05a502846eba1e9679d5662a9000b5f`,
+le pilote HID de `DESKTOP-NPIHO8K` s'est abonné automatiquement tant que le
+provider GATT qualificatif conservait sa durée de vie. Après recréation du
+provider, aucun abonnement n'est revenu pendant plus de 180 secondes, après
+cycle de chaque radio ni après redémarrage de la cible. L'annonce conservait
+pourtant le même nom, le service HID, le type connectable, l'adresse hachée et
+l'AEP appairé chiffré. Le nœud HID restait absent. Un cycle radio cible a en
+outre placé l'adaptateur Qualcomm Atheros en code 43 jusqu'au redémarrage.
+
+**Décision backend :** l'absence d'abonné est un état externe
+`awaiting_subscriber`, jamais une panne du moteur. La supervision ne recrée le
+provider que si son canal de commande est réellement défaillant, avec délai de
+reprise borné. Le provider doit rester stable pendant les mises à jour du code
+qui n'affectent pas son contrat ; une évolution ultérieure de son hébergement
+devra préserver cette propriété.
+
+**Décision cible :** un runtime déployé distinct, `HogpControlAgent`, peut
+utiliser l'API HTTPS sortante comme plan de contrôle. Il remonte radio, PnP,
+pairage et présence HID puis exécute seulement une commande PnP explicitement
+autorisée, liée à la génération du provider et à quatre empreintes enrôlées. Il
+ne contient ni client GATT, ni pairage, ni API d'entrée ou d'injection. Les
+redémarrages PnP exigent une tâche `Highest` installée une fois en contexte
+administrateur ; sans preuve d'élévation, le backend n'émet aucune commande.
+Le terme « agent cible » désigne ce runtime déployé, pas l'agent Codex distant.
+Son binaire, sa configuration et son état sont placés sous ACL protégées ; un
+manifeste vérifie leurs empreintes et la définition de tâche avant démarrage.
+La génération provider, la séquence, les identifiants déjà traités et tout
+acquittement en attente persistent atomiquement. Une interruption pendant une
+opération est publiée `outcome_unknown` et n'est jamais rejouée implicitement.
+Toute recréation réelle du provider fait tourner sa génération ; un provider
+vivant mais sans publicité est une panne distincte de l'absence d'abonné.
+
+**Conséquence :** Bluetooth HOGP reste l'unique plan de données souris. L'API
+ne transporte aucune action HID et ne remplace pas le pilote Windows ; elle
+coordonne et atteste les opérations Windows bornées. SSH reste un secours de
+maintenance. Les deux actions PnP sont désactivées par défaut et leur promotion
+hors qualification exige une preuve matérielle favorable et une décision de
+déploiement distincte.
+
+## D-080 — Observation AEP bornée aux périphériques BLE appairés (28 novembre 2026)
+
+**Constat :** sur `DESKTOP-NPIHO8K`, l'énumération de tous les Association
+Endpoints BLE dépassait le délai de dix secondes du runtime, alors que la
+requête Windows restreinte aux périphériques BLE appairés terminait en quelques
+secondes et retrouvait exactement l'AEP chiffré attendu.
+
+**Décision :** `HogpControlAgent` produit son filtre AQS avec
+`BluetoothLEDevice.GetDeviceSelectorFromPairingState(true)` et limite cette
+énumération à trente secondes. Cet appel statique ne crée aucun
+`BluetoothLEDevice` et ne prend donc pas possession du transport : les appels
+`FromIdAsync`, les sessions GATT, la découverte de services, le pairage et les
+API d'entrée restent interdits.
+
+**Conséquence :** l'inspection et le runtime périodique suivent exactement le
+même chemin d'observation, limité aux paires persistantes. Un dépassement du
+délai reste un état dégradé sans action PnP ; seule une observation complète et
+corrélée aux quatre empreintes peut rendre une reprise admissible.
+
+## D-081 — Fermeture intégrale du plan de contrôle (28 novembre 2026)
+
+**Décision :** l'identité de clé du plan de contrôle reste réservée même quand
+ce plan est désactivé. Un statut transport doit exposer des booléens valides
+pour `advertising` et l'abonnement autorisé ; un objet vide, incomplet ou
+invalide n'autorise aucune reprise cible. Un provider qui n'annonce plus doit
+d'abord être réparé côté backend. Une commande en attente est suspendue, sans
+être perdue ni redélivrée, jusqu'au retour de cet état sain. Enfin, la rotation
+de génération traverse les
+mêmes sections critiques que l'arrêt du processus et l'intention d'arrêt du
+contrôleur. La génération est aussi échantillonnée avant chaque lecture du
+statut transport ; si elle change avant la décision, ce statut est périmé et le
+plan de reprise reste fermé jusqu'au rapport suivant.
+
+**Motif :** la simple présence d'un objet de statut ne prouve ni la santé du
+provider ni l'absence d'abonné. De même, un contrôle d'arrêt suivi d'une action
+non atomique laissait une fenêtre où une génération pouvait tourner pendant
+l'arrêt. Ces ambiguïtés mélangeaient authentification, santé provider et état
+de cycle de vie.
+
+**Conséquence :** une clé de contrôle ne peut jamais signer une télémétrie, une
+panne provider ne déclenche jamais une action PnP cible et aucune reprise
+fictive n'est publiée pendant l'arrêt. Les acquittements persistés restent liés
+à une commande connue et ne sont retirés qu'après écho exact du backend. Cet
+écho confirme la réception d'un état cible authentifié, même après rotation ou
+redémarrage backend ; il ne valide ni ne supprime une autre commande courante.

@@ -1,8 +1,9 @@
-# Planning opérationnel — 27 novembre 2026
+# Planning opérationnel — 28 novembre 2026
 
 | Chantier | État | Critère de clôture |
 |---|---|---|
 | Qualification like-prod sur `DESKTOP-NPIHO8K` depuis le `main` courant | **EN COURS — PROVISIONING UNIQUE AUTORISÉ** | pairage chiffré après un consentement Windows unique, puis persistance sans nouveau consentement, instance HOGP dédiée, paire de baux, abonné unique autorisé, actions sur surface sûre et preuves au SHA exact |
+| Reconnexion HOGP cible | **À REQUALIFIER — PROPRIÉTAIRE NATIF WINDOWS** | aucune tâche ni session GATT applicative cible ; reprise du même bond après redémarrage provider, cycle radio et redémarrage cible |
 | Production `mini-pc-backend` | **PRÉSERVÉE — HORS QUALIFICATION** | aucune tâche de production repointée ou utilisée par le run like-prod |
 | Preuves `MonOrdinateur` | **HISTORIQUES UNIQUEMENT** | ne sont jamais présentées comme preuve pour `DESKTOP-NPIHO8K` |
 | Robustesse R0–R5 et R6 | Fusionnés | Qualifications logicielles et rapports historiques conservés |

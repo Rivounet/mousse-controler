@@ -19,6 +19,9 @@ PC cible Windows : pile Bluetooth et souris HID natives Windows
   PositionAgent visible (C# .NET Framework 4.8, session utilisateur)
            │ GetCursorPos / écrans / session / capture explicitement demandée
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
+  HogpControlAgent distinct (optionnel, actions désactivées par défaut)
+           │ état radio/PnP/HID + acquittements ; aucune API GATT/HID
+           └── HTTPS sortant `/v1/hogp-control` ───────────────────────► plan de contrôle backend
 ```
 
 ## Couches et règles de dépendance
@@ -31,6 +34,21 @@ L'architecture conserve un seul processus mais sépare les responsabilités :
 | Application | `application`, `orchestration`, `actions`, `sequence` | cas d'usage, cycle de vie, coordination et attribution exclusive du périphérique |
 | Domaine | `geometry`, `trajectory`, types de `feedback` | règles pures, valeurs et invariants indépendants des protocoles |
 | Infrastructure | `controller`, `transport`, `capture`, `dpapi`, `security` | HID, processus WinRT, stockage privé et primitives de sécurité |
+
+`hogp_health` observe le provider sans le recréer lorsqu'un abonné manque.
+`hogp_control` porte un plan de contrôle optionnel, authentifié et sans commande
+souris. Le runtime cible correspondant est un exécutable séparé de
+`PositionAgent`; partager le serveur HTTPS ne fusionne ni leurs clés, ni leurs
+séquences, ni leurs responsabilités.
+Chaque route possède son propre trousseau : la clé HOGP est refusée par
+`/v1/position` et `/v1/capture`, et la clé de télémétrie est refusée par
+`/v1/hogp-control`. Le démarrage refuse également deux identifiants dont le
+matériau secret serait identique.
+
+Les identités PnP sont aussi verrouillées par rôle : l'adaptateur doit être un
+nœud Bluetooth sur bus matériel `USB` ou `PCI` (la cible qualifiée expose
+`USB`), l'endpoint pairé appartient à `BTHLE\DEV_` et l'enfant HID à
+`BTHLEDEVICE\`. Une empreinte correcte associée au mauvais rôle est refusée.
 
 Les adaptateurs ne pilotent plus directement le contrôleur. Ils appellent
 `MouseApplicationService`, qui partage un unique `OperationCoordinator` avec
@@ -65,12 +83,47 @@ qualifient pas `DESKTOP-NPIHO8K`.
 - **Agent cible** : lit curseur, topologie, DPI et état de session ; publie les
   mesures et réalise seulement les captures avant/après explicitement liées à
   une action. Il ne reçoit aucune commande souris et n'est pas un service caché.
+- **Agent de contrôle HOGP** : observe exclusivement les identités enrôlées et
+  l'état Windows Bluetooth/PnP/HID. Une réponse API peut demander un unique
+  redémarrage PnP borné si la politique backend et la politique locale
+  l'autorisent, si le runtime est élevé et si toutes les empreintes concordent.
+  Il utilise uniquement le sélecteur statique Windows des périphériques BLE
+  déjà appairés, sans instancier `BluetoothLEDevice`, ouvrir `GattSession` ou
+  découvrir un service GATT.
+  Cet « agent cible » désigne le runtime applicatif déployé
+  `HogpControlAgent.exe`, jamais l'agent Codex utilisé pour l'installation ou le
+  diagnostic.
+  Un acquittement persiste jusqu'à ce que le backend renvoie exactement son
+  identifiant et son état ; une simple réponse HTTP corrélée ne suffit pas à
+  l'effacer. Au chargement, il doit aussi référencer une commande de l'historique
+  borné et une génération provider connue. Le backend renvoie l'écho de tout
+  acquittement cible authentifié, y compris après rotation ou redémarrage, mais
+  ne retire sa commande courante que si leurs identifiants correspondent. Dans
+  une même réponse, cet écho reçu est prioritaire sur une expiration simultanée
+  d'une autre commande ; l'expiration reste mémorisée pour le cycle suivant.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
   séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
+  Toute identité de clé déclarée pour le plan de contrôle reste réservée à
+  cette route même lorsque le plan est désactivé ; elle n'est jamais réinjectée
+  dans les clés de télémétrie ou de capture.
+  Le jeton des API loopback est refusé avant construction du transport s'il
+  n'est pas composé de caractères ASCII visibles ; un secret binaire arbitraire
+  ne peut pas être représenté fidèlement dans un en-tête HTTP Bearer.
+- **Supervision provider** : un statut moteur sans champ `advertising` est une
+  rupture de contrat, jamais assimilée à une simple attente d'abonné. La reprise
+  reste bornée par le même délai monotone. Le coordinateur n'autorise aucune
+  reprise cible si `advertising` ou l'état d'abonnement est absent, invalide, ou
+  si le provider n'annonce plus. Une commande déjà en attente reste mémorisée
+  mais n'est pas redélivrée avant le retour d'un statut sain. Chaque lecture de
+  statut est liée à la génération provider observée avant cette lecture ; une
+  rotation concurrente invalide le statut et ferme la réponse sans commande.
 
 ## Priorités et alternatives
 
-P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534` est hors périmètre (radio propriétaire 2,4 GHz non Bluetooth). Repli : pont HID physique programmable après arbitrage ; HID virtuel seulement en option secondaire explicitement décidée. `SendInput`/`SetCursorPos` seuls ne satisfont pas l'exigence de périphérique HID.
+P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534`, un
+pont HID physique, un HID virtuel et `SendInput`/`SetCursorPos` sont hors
+périmètre. Il n'existe aucun transport de repli : les limites de la pile
+Bluetooth Windows doivent être observables et traitées dans cette architecture.
 
 ## État des preuves
 
@@ -124,15 +177,13 @@ cible ; il n'est pas une API de commande.
 L'architecture détaillée et la boucle de position sont spécifiées dans
 [`MC-HID-AUDIT-001/ARCHITECTURE.md`](../qualification/MC-HID-AUDIT-001/ARCHITECTURE.md).
 
-## Alternative en cas de NO-GO
+## Limite de solution retenue
 
-Si le prototype conforme échoue sur la pile Windows/Realtek, comparer d'abord un
-adaptateur externe programmable capable d'HOGP. Un changement d'OS, de pilote ou
-de matériel nécessite une décision explicite ; aucune installation implicite.
-Un tel adaptateur est également le repli requis si le provisioning doit lui-même
-être totalement sans intervention, l'acceptation globale des demandes entrantes
-n'étant prise en charge par Microsoft que pour les applications Windows 10 IoT
-Core.
+Le périmètre impose les radios Windows existantes et Bluetooth HOGP. Aucun
+matériel supplémentaire ni autre transport n'est un repli admissible. Une
+limite de la pile Windows est donc rendue visible et traitée par stabilité du
+provider, état fail-closed et plan de contrôle API ; elle n'est pas masquée par
+un changement de technologie. SSH reste exclusivement un secours de maintenance.
 
 ## Réalisation MC-HID-EXEC-001 — 20 novembre 2026
 
@@ -157,21 +208,25 @@ d'entrée. Il publie en sortie seulement vers HTTPS privé avec certificat
 épinglé, HMAC-SHA-256, séquence et horodatage. L'API de commande reste sur
 `127.0.0.1`, avec bearer DPAPI, TTL, idempotence et limite de débit.
 
-Le mode de télémétrie `PositionAgent --config` n'ouvre aucun service HOGP et ne
-surveille aucun périphérique Bluetooth. La reconnexion HOGP est un mode
-`--hogp-reconnect` séparé, lancé par une tâche distincte et lié au nom exact plus
-l'empreinte SHA-256 de l'identifiant AEP Windows de la paire persistante. Cette
-identité durable est produite uniquement après preuve du chiffrement ; elle est
-distincte de l'empreinte de l'adresse radio, qui reste un diagnostic éphémère.
+`PositionAgent --config` publie exclusivement la télémétrie et les captures. Il
+n'ouvre aucun service HOGP, ne crée aucune session GATT et ne surveille aucun
+périphérique Bluetooth. Après l'enrôlement, le pilote HID natif Windows est
+l'unique Report Host chargé de la connexion et de la reconnexion ; aucun client
+GATT applicatif persistant ne lui fait concurrence. L'outil de pairage reste une
+commande ponctuelle de provisioning et de diagnostic, jamais une tâche de fond.
+L'identité AEP durable est produite uniquement après preuve du chiffrement ; elle
+est distincte de l'empreinte de l'adresse radio, qui reste un diagnostic éphémère.
 Une seule opération d'enrôlement observe exactement une annonce portant le nom
 exact, le type `ConnectableUndirected` et le service HID `0x1812`, puis résout
 immédiatement cette même adresse avec `FromBluetoothAddressAsync` avant le
 `PairAsync(Encryption)` standard. L'adresse n'est jamais transmise à une seconde
 commande ni utilisée comme identité persistante, car une adresse privée BLE peut
-tourner entre deux énumérations. `IsPresent` et `CanPair` qualifient l'endpoint ;
-le consentement Windows confirme l'enrôlement, puis `Connect` exige le hachage AEP
-durable et le service HID. Ni l'adresse ni l'identifiant AEP bruts ne sont
-journalisés.
+tourner entre deux énumérations. Le consentement Windows confirme l'enrôlement.
+La commande ponctuelle `Connect` exige ensuite le nom exact, le hachage AEP
+durable, `Pairing.IsPaired` et l'ouverture non cachée de l'unique service HID ;
+`IsPresent` et `IsConnectable` restent diagnostiques. La commande libère toutes
+ses références avant la qualification fonctionnelle afin de rendre la connexion
+au pilote HID natif. Ni l'adresse ni l'identifiant AEP bruts ne sont journalisés.
 
 La base GATT exige une identité de package déclarant la capacité `bluetooth`.
 Smart App Control refuse le binaire C++ auto-signé même lorsque le certificat
@@ -222,7 +277,7 @@ HID de l'action ont été émis ; un clic reste `EXECUTED`. `CONFIRMED` est rés
 `CaptureBroker` n'accepte aucune capture autonome. Une politique d'action ou de
 séquence peut demander `before` et/ou `after`. La demande est remise à l'agent
 dans la réponse HTTPS à son échantillon de position sortant : aucun port entrant
-n'est ajouté sur MonOrdinateur. L'agent visible relit alors le curseur, choisit
+n'est ajouté sur le PC cible. L'agent visible relit alors le curseur, choisit
 le rectangle écran qui le contient (coordonnées négatives incluses), affiche
 l'indication `CAPTURE VISIBLE`, copie uniquement ce moniteur complet puis
 téléverse un PNG HMAC sur `/v1/capture` avec corrélation et horodatage. Taille,
@@ -357,7 +412,9 @@ isolé par une variable d'environnement ; il ne touche aucune tâche réelle.
 `scripts/qualification/qualify.py` est l'unique point d'entrée des profils
 locaux. Il orchestre une liste fermée de phases et écrit pour chacune un log,
 une durée et un statut, puis un `summary.json` contenant SHA Git, versions,
-exclusions et artefacts. `full-local` enchaîne strictement `software` puis
+exclusions et artefacts. Un résultat logiciel non favorable reste une preuve
+comptable : ses compteurs sont validés et agrégés avant l'arrêt fail-closed de
+la qualification. `full-local` enchaîne strictement `software` puis
 `build`; il n'existe aucune transition vers un diagnostic matériel.
 
 La chaîne build Windows découvre Roslyn avec `vswhere`, le SDK avec

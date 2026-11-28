@@ -5,10 +5,6 @@ param(
     [string]$Action,
     [string]$ExecutablePath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\PositionAgent.exe",
     [string]$ConfigPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\agent.json",
-    [ValidateSet('Position', 'HogpReconnect')][string]$Mode = 'Position',
-    [string]$HogpDeviceName = 'MINI-PC-BACKEND',
-    [string]$HogpPairedAepIdSha256,
-    [string]$HogpLogPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\hogp-reconnect.log",
     [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-PositionAgent'
 )
 
@@ -41,7 +37,7 @@ function Get-AgentTaskState {
 switch ($Action) {
     'Start' {
         if (-not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) { throw 'PositionAgent executable not found' }
-        if ($Mode -eq 'Position' -and -not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+        if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
             throw 'PositionAgent config not found'
         }
         $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -49,16 +45,7 @@ switch ($Action) {
             Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
         }
-        $arguments = if ($Mode -eq 'HogpReconnect') {
-            if ($HogpPairedAepIdSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
-                throw '-HogpPairedAepIdSha256 with 64 hex characters is required in HogpReconnect mode'
-            }
-            Remove-Item -LiteralPath $HogpLogPath -Force -ErrorAction SilentlyContinue
-            '--hogp-reconnect "{0}" "{1}" "{2}"' -f $HogpDeviceName,
-                $HogpPairedAepIdSha256.ToUpperInvariant(), $HogpLogPath
-        } else {
-            '--config "{0}"' -f $ConfigPath
-        }
+        $arguments = '--config "{0}"' -f $ConfigPath
         $taskAction = New-ScheduledTaskAction -Execute $ExecutablePath -Argument $arguments
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
         $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME

@@ -430,7 +430,7 @@ class RuntimeTransport:
         return
 
     def status(self) -> dict[str, str]:
-        return {"subscribed": "true"}
+        return {"advertising": "true", "subscribed": "true"}
 
 
 class RuntimeController:
@@ -508,7 +508,9 @@ class LifecycleCharacterizationTests(unittest.TestCase):
             position = FakeServer(shutdown_error=True)
             command = FakeServer()
             events = FakeServer()
-            thread_facade = types.SimpleNamespace(Thread=threading.Thread, Event=ImmediateEvent)
+            thread_facade = types.SimpleNamespace(
+                Thread=threading.Thread, Event=ImmediateEvent, Lock=threading.Lock,
+            )
             patches.extend([
                 mock.patch.object(app, "make_https_server", return_value=position),
                 mock.patch.object(app, "make_command_server", return_value=command),

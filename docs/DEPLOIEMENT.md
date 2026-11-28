@@ -207,20 +207,80 @@ machine un bail via `scripts/qualification/Manage-QualificationLease.ps1` avec
 le même `run_id` et le même SHA. Les rôles `backend` et `target`, machines et
 `peer_host` doivent se correspondre exactement.
 
-Le pairage et la reconnexion refusent le nom seul, mais n'emploient pas la même
-identité. Une opération atomique de pairage observe une unique annonce au nom
-exact, `ConnectableUndirected` et HID `0x1812`, résout immédiatement cette même
+Le pairage et le diagnostic ponctuel refusent le nom seul, mais n'emploient pas
+la même identité. Une opération atomique de pairage observe une unique annonce
+au nom exact, `ConnectableUndirected` et HID `0x1812`, résout immédiatement cette même
 adresse avec `FromBluetoothAddressAsync`, puis appelle le `PairAsync(Encryption)`
 standard. L'empreinte radio n'est qu'un diagnostic de cette opération : elle ne
 doit jamais être réutilisée par une seconde commande, car l'adresse privée BLE
 peut tourner. Après preuve du chiffrement, le résultat publie le hachage de
-l'identifiant AEP de la paire persistante ; `Connect` et le moniteur de
-reconnexion exigent uniquement cette identité durable. Ni l'adresse ni
-l'identifiant AEP bruts ne sont publiés. `IsConnectable` AEP reste diagnostique :
-les portes effectives sont la publicité brute, `IsPresent`, `CanPair`, le
-pairage chiffré et le service HID. L'agent de télémétrie ne gère plus la
-reconnexion HOGP. Le moteur backend exige de son côté exactement un abonné actif
-dont l'identité hachée est autorisée et emploie l'overload de notification ciblé.
+l'identifiant AEP de la paire persistante ; la commande bornée `Connect` exige
+cette identité durable, vérifie l'unique service HID puis libère ses références.
+Ni l'adresse ni l'identifiant AEP bruts ne sont publiés. `IsConnectable` AEP
+reste diagnostique :
+les portes effectives sont la publicité brute, le pairage chiffré et le service
+HID. Pendant la qualification fonctionnelle, aucune application cible ne garde
+de session GATT : le pilote HID Windows possède seul la connexion et la
+reconnexion. L'agent de télémétrie ne contient aucun code Bluetooth. Le moteur
+backend exige de son côté exactement un abonné actif dont l'identité hachée est
+autorisée et emploie l'overload de notification ciblé.
+SSH n'est qu'un canal de maintenance de dernier recours ; il ne transporte
+jamais une commande souris et ne constitue pas une preuve HOGP.
+
+Le plan de contrôle API est optionnel et séparé. Le backend l'active par un
+objet `hogp_control` contenant la clé dédiée, les empreintes AEP/adaptateur/
+endpoint BLE/enfant HID et deux autorisations booléennes désactivées par
+défaut. La cible utilise `HogpControlAgent.exe`, construit par
+`Build-HogpControlAgent.ps1`, avec une configuration DPAPI et certificat
+épinglé distincte. `Manage-HogpControlAgent.ps1` inscrit uniquement la tâche
+qualificative `MC-HOGP-NATIVE-OWNER-001` à l'ouverture de session avec
+`RunLevel=Highest` ; cette inscription exige une console déjà administrative.
+Elle constitue l'unique élévation de provisioning : les échanges et reprises
+ultérieurs ne demandent aucun consentement interactif.
+
+L'enrôlement des identités se prépare en lecture seule avec
+`HogpControlAgent.exe --inspect-identities <nom-HOGP> <résultat.json>` après le
+pairage réussi. L'inspection et les observations périodiques utilisent le
+sélecteur Windows limité aux périphériques BLE déjà appairés et un délai borné
+de 30 secondes. Cet appel ne fait que produire une requête AQS : il n'instancie
+aucun périphérique BLE et n'ouvre ni client, ni session, ni service GATT.
+La configuration emploie `HogpDeviceName`, les quatre empreintes
+sélectionnées et un `StatePath` exactement situé sous
+`C:\ProgramData\MousseControler\Qualification\MC-HOGP-NATIVE-OWNER-001`.
+L'action `Install` reçoit les empreintes attendues du binaire et de la
+configuration, les copie sous `Program Files`/`ProgramData`, retire les droits
+d'écriture des utilisateurs standards, réserve configuration, secret DPAPI et
+état à `SYSTEM`/administrateurs, inscrit la tâche puis vérifie son action.
+`Start` ne réinscrit jamais la tâche : il contrôle les ACL, le manifeste,
+les deux empreintes, le principal Windows exact et `RunLevel=Highest` avant
+lancement. Les ACL sont non héritées, possédées par `Administrators`, refusent
+tout droit de mutation hors `SYSTEM`/`Administrators` et garantissent leur
+contrôle total. Le contrôle des tiers porte sur les droits mutateurs primitifs,
+sans confondre les bits communs des agrégats `ReadAndExecute` et `FullControl`.
+Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
+répertoire de travail protégé sont également vérifiés. `Stop` conserve
+l'installation ; `Uninstall` est la suppression administrative explicite.
+
+Le premier échange sert seulement à apprendre la génération courante du
+provider et ne commande rien. Une génération différente peut autoriser un
+redémarrage de l'endpoint pairé exact ; un adaptateur absent ou en code problème
+peut autoriser son redémarrage exact. Chaque action est unique par génération,
+expirable, temporisée, corrélée à la séquence HMAC, acquittée et revalidée par
+précondition locale puis postcondition. Si Windows a déjà restauré le nœud,
+`not_required` acquitte sans exécuter `pnputil` ni rejouer. Après un redémarrage
+du runtime cible, une absence HID continue
+doit dépasser la grâce configurée avant la même reprise ciblée. Un runtime non
+élevé, une empreinte divergente, plusieurs nœuds candidats ou un statut backend
+indisponible ferment la porte sans action. Le runtime n'appelle aucune API GATT
+et le backend ne redémarre jamais le provider pour la seule absence d'abonné.
+La génération, la séquence anti-rejeu, l'historique borné des commandes et les
+acquittements sont persistés atomiquement. Une interruption au milieu d'une
+reprise produit `outcome_unknown` et interdit un rejeu automatique. Un
+acquittement n'est retiré de l'état cible qu'après écho exact de son
+identifiant et de son état par le backend. Une reprise interne du moteur fait
+tourner la génération ; un statut `advertising=False`
+est réparé comme panne provider, alors que `subscriber=False` reste un état
+externe sans recréation.
 
 `Start-InteractiveMouseQualification.ps1` refuse de démarrer la surface sûre si
 le bail cible ne correspond pas au run, au SHA et au backend. Le pilote matériel
@@ -237,6 +297,7 @@ Références Microsoft qui fondent ce protocole :
 
 - [pairage de périphériques Windows](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices) ;
 - [propriétés AEP et adresse physique](https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/device-information-properties) ;
+- [sélecteur des périphériques BLE appairés](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.bluetoothledevice.getdeviceselectorfrompairingstate) ;
 - [client GATT et corrélation par adresse](https://learn.microsoft.com/en-us/windows/uwp/devices-sensors/gatt-client) ;
 - [niveau de protection du pairage](https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.devicepairingprotectionlevel) ;
 - [notification GATT ciblée](https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattlocalcharacteristic.notifyvalueasync) ;

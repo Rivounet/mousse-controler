@@ -10,7 +10,7 @@ if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'out\PositionAge
 $source = Join-Path $root 'src\position-agent\PositionAgent.cs'
 $manifest = Join-Path $root 'src\position-agent\PositionAgent.manifest'
 . (Join-Path $PSScriptRoot 'Resolve-BuildTools.ps1')
-$tools = Resolve-MousseBuildTools -RequireWindowsSdk
+$tools = Resolve-MousseBuildTools
 
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $output | Out-Null
@@ -19,9 +19,6 @@ $executable = Join-Path $output 'PositionAgent.exe'
     /win32manifest:$manifest /out:$executable `
     /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll `
     /reference:System.Security.dll /reference:System.Web.Extensions.dll `
-    "/reference:$($tools.Runtime)" "/reference:$($tools.InteropRuntime)" `
-    "/reference:$($tools.SystemRuntime)" "/reference:$($tools.WindowsMetadata)" `
-    "/reference:$($tools.UniversalContract)" "/reference:$($tools.FoundationContract)" `
     $source
 if ($LASTEXITCODE -ne 0) { throw "PositionAgent compilation failed: $LASTEXITCODE" }
 Copy-Item -LiteralPath (Join-Path $root 'src\position-agent\agent.example.json') -Destination $output -Force
@@ -34,7 +31,6 @@ if ($QualificationManifestPath) {
         contract = 'MC-ROBUSTNESS-R4-001'
         target_framework = '.NET Framework 4.x (v4.0.30319 reference assemblies)'
         compiler_version = $tools.CompilerVersion
-        windows_sdk_version = $tools.WindowsSdkVersion
         options = @('/target:exe', '/optimize+', '/platform:x64', '/warn:4', '/warnaserror+')
         artifact = [PSCustomObject]@{
             path = $executable

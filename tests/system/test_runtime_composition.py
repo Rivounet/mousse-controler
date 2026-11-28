@@ -8,11 +8,13 @@ import socket
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from mousse_controler.app import (
     RuntimeFactories,
     build_runtime,
     register_runtime_servers,
+    serve_position_only,
 )
 from mousse_controler.command_server import make_command_server
 from mousse_controler.event_server import EventWebSocketServer
@@ -22,6 +24,7 @@ from mousse_controler.transport import SimulatedHidTransport
 
 
 AGENT_SECRET = b"hermetic-agent-secret"
+HOGP_CONTROL_SECRET = b"hermetic-hogp-control-secret"
 COMMAND_TOKEN = b"hermetic-command-token"
 
 
@@ -158,12 +161,235 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
         )
         return status, json.loads(response.decode("utf-8"))
 
+    def test_invalid_hogp_control_policy_is_rejected_before_secret_unprotect(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {"hogp-agent": "protected"},
+                "hogp_control": {
+                    "enabled": True,
+                    "target_key_id": "hogp-agent",
+                    "target_aep_sha256": "invalid",
+                    "adapter_instance_sha256": "B" * 64,
+                    "paired_pnp_instance_sha256": "C" * 64,
+                    "hid_pnp_instance_sha256": "D" * 64,
+                },
+            }), encoding="utf-8")
+            calls = []
+            factories = RuntimeFactories(
+                unprotect_secret=lambda value: calls.append(value) or b"secret",
+                transport=lambda *args, **kwargs: None,
+                position_server=lambda *args, **kwargs: None,
+                command_server=lambda *args, **kwargs: None,
+                event_server=lambda *args, **kwargs: None,
+            )
+
+            with self.assertRaisesRegex(ValueError, "target_aep_sha256"):
+                build_runtime(config_path, factories=factories)
+
+            self.assertEqual(calls, [])
+
+    def test_hogp_control_secret_must_not_equal_a_telemetry_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {
+                    "system-agent": "position-secret",
+                    "hogp-agent": "control-secret",
+                },
+                "hogp_control": {
+                    "enabled": True,
+                    "target_key_id": "hogp-agent",
+                    "target_aep_sha256": "A" * 64,
+                    "adapter_instance_sha256": "B" * 64,
+                    "paired_pnp_instance_sha256": "C" * 64,
+                    "hid_pnp_instance_sha256": "D" * 64,
+                },
+            }), encoding="utf-8")
+            factories = RuntimeFactories(
+                unprotect_secret=lambda value: b"same-secret",
+                transport=lambda *args, **kwargs: None,
+                position_server=lambda *args, **kwargs: None,
+                command_server=lambda *args, **kwargs: None,
+                event_server=lambda *args, **kwargs: None,
+            )
+
+            with self.assertRaisesRegex(ValueError, "must be distinct"):
+                build_runtime(config_path, factories=factories)
+
+    def test_non_ascii_command_token_is_rejected_before_runtime_construction(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {"system-agent": "agent-secret"},
+                "command_token_dpapi": "command-token",
+                "hogp_executable": "unused-hermetic-engine.exe",
+            }), encoding="utf-8")
+            transport_calls = []
+            secrets = {
+                "agent-secret": b"clear-agent-secret",
+                "command-token": b"binary-\xff-token",
+            }
+            factories = RuntimeFactories(
+                unprotect_secret=secrets.__getitem__,
+                transport=lambda *args, **kwargs: transport_calls.append(
+                    (args, kwargs)
+                ),
+                position_server=lambda *args, **kwargs: None,
+                command_server=lambda *args, **kwargs: None,
+                event_server=lambda *args, **kwargs: None,
+            )
+
+            with self.assertRaisesRegex(ValueError, "visible ASCII"):
+                build_runtime(config_path, factories=factories)
+
+            self.assertEqual(transport_calls, [])
+
+    def test_composition_failure_wipes_unprotected_agent_secrets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {"system-agent": "position-secret"},
+                "command_token_dpapi": "command-token",
+                "hogp_executable": "unused-hermetic-engine.exe",
+            }), encoding="utf-8")
+            captured: list[bytearray] = []
+
+            def capture_verifier(keys: dict[str, bytearray]) -> object:
+                captured.extend(keys.values())
+                return object()
+
+            factories = RuntimeFactories(
+                unprotect_secret=lambda value: {
+                    "position-secret": b"clear-agent-secret",
+                    "command-token": b"clear-command-token",
+                }[value],
+                transport=lambda *args, **kwargs: (_ for _ in ()).throw(
+                    RuntimeError("transport construction failed")
+                ),
+                position_server=lambda *args, **kwargs: None,
+                command_server=lambda *args, **kwargs: None,
+                event_server=lambda *args, **kwargs: None,
+            )
+
+            with patch("mousse_controler.app.HmacVerifier", side_effect=capture_verifier):
+                with self.assertRaisesRegex(RuntimeError, "transport construction failed"):
+                    build_runtime(config_path, factories=factories)
+
+            self.assertEqual(len(captured), 1)
+            self.assertEqual(captured[0], bytearray(len(captured[0])))
+
+    def test_position_only_excludes_control_key_and_wipes_secrets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {
+                    "system-agent": "position-secret",
+                    "hogp-agent": "control-secret",
+                },
+                "position_bind": "127.0.0.1",
+                "position_port": 0,
+                "tls_certificate": "unused-test-certificate",
+                "tls_private_key": "unused-test-key",
+                "hogp_control": {
+                    "enabled": True,
+                    "target_key_id": "hogp-agent",
+                    "target_aep_sha256": "A" * 64,
+                    "adapter_instance_sha256": "B" * 64,
+                    "paired_pnp_instance_sha256": "C" * 64,
+                    "hid_pnp_instance_sha256": "D" * 64,
+                },
+            }), encoding="utf-8")
+            secrets = {
+                "position-secret": b"clear-position-secret",
+                "control-secret": b"clear-control-secret",
+            }
+            captured: dict[str, bytearray] = {}
+
+            def capture_verifier(keys: dict[str, bytearray]) -> object:
+                captured.update(keys)
+                return object()
+
+            class ImmediateServer:
+                closed = False
+
+                def serve_forever(self) -> None:
+                    raise KeyboardInterrupt
+
+                def server_close(self) -> None:
+                    self.closed = True
+
+            server = ImmediateServer()
+            with (
+                patch("mousse_controler.app.unprotect", side_effect=secrets.__getitem__),
+                patch("mousse_controler.app.HmacVerifier", side_effect=capture_verifier),
+                patch("mousse_controler.app.make_https_server", return_value=server),
+            ):
+                self.assertEqual(serve_position_only(config_path), 0)
+
+            self.assertEqual(set(captured), {"system-agent"})
+            self.assertEqual(captured["system-agent"], bytearray(len(captured["system-agent"])))
+            self.assertTrue(server.closed)
+
+    def test_disabled_hogp_control_key_remains_reserved_from_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            config_path.write_text(json.dumps({
+                "agent_keys_dpapi": {
+                    "system-agent": "position-secret",
+                    "hogp-agent": "control-secret",
+                },
+                "position_bind": "127.0.0.1",
+                "position_port": 0,
+                "tls_certificate": "unused-test-certificate",
+                "tls_private_key": "unused-test-key",
+                "hogp_control": {
+                    "enabled": False,
+                    "target_key_id": "hogp-agent",
+                },
+            }), encoding="utf-8")
+            secrets = {
+                "position-secret": b"clear-position-secret",
+                "control-secret": b"clear-control-secret",
+            }
+            captured: dict[str, bytearray] = {}
+
+            def capture_verifier(keys: dict[str, bytearray]) -> object:
+                captured.update(keys)
+                return object()
+
+            class ImmediateServer:
+                closed = False
+
+                def serve_forever(self) -> None:
+                    raise KeyboardInterrupt
+
+                def server_close(self) -> None:
+                    self.closed = True
+
+            server = ImmediateServer()
+            with (
+                patch("mousse_controler.app.unprotect", side_effect=secrets.__getitem__),
+                patch("mousse_controler.app.HmacVerifier", side_effect=capture_verifier),
+                patch("mousse_controler.app.make_https_server", return_value=server),
+            ):
+                self.assertEqual(serve_position_only(config_path), 0)
+
+            self.assertEqual(set(captured), {"system-agent"})
+            self.assertEqual(
+                captured["system-agent"], bytearray(len(captured["system-agent"])),
+            )
+            self.assertTrue(server.closed)
+
     def test_real_composition_connects_position_command_and_event_protocols(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = root / "config.json"
             config_path.write_text(json.dumps({
-                "agent_keys_dpapi": {"system-agent": "agent-secret"},
+                "agent_keys_dpapi": {
+                    "system-agent": "agent-secret",
+                    "hogp-agent": "hogp-control-secret",
+                },
                 "command_token_dpapi": "command-token",
                 "hogp_executable": "unused-hermetic-engine.exe",
                 "position_bind": "127.0.0.1",
@@ -174,10 +400,19 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
                 "tls_private_key": "unused-test-key",
                 "capture_directory": str(root / "captures"),
                 "action_journal": str(root / "action-journal.jsonl"),
+                "hogp_control": {
+                    "enabled": True,
+                    "target_key_id": "hogp-agent",
+                    "target_aep_sha256": "A" * 64,
+                    "adapter_instance_sha256": "B" * 64,
+                    "paired_pnp_instance_sha256": "C" * 64,
+                    "hid_pnp_instance_sha256": "D" * 64,
+                },
             }), encoding="utf-8")
 
             secrets = {
                 "agent-secret": AGENT_SECRET,
+                "hogp-control-secret": HOGP_CONTROL_SECRET,
                 "command-token": COMMAND_TOKEN,
             }
             factories = RuntimeFactories(
@@ -234,6 +469,85 @@ class RuntimeCompositionSystemTests(unittest.TestCase):
                 )
                 self.assertEqual(status, 202)
                 self.assertEqual(json.loads(response)["accepted_seq"], 1)
+
+                cross_signature = sign(
+                    HOGP_CONTROL_SECRET, "POST", "/v1/position",
+                    observed_at, 1, position_body,
+                )
+                status, _ = self._post(
+                    position_port,
+                    "/v1/position",
+                    position_body,
+                    {
+                        "X-Agent-Key": "hogp-agent",
+                        "X-Signature": cross_signature,
+                        "X-Timestamp": str(observed_at),
+                        "X-Sequence": "1",
+                        "Content-Type": "application/json",
+                    },
+                )
+                self.assertEqual(status, 401)
+
+                control_at = int(time.time() * 1000)
+                control_body = json.dumps({
+                    "schema": "mousse-hogp-control-v1",
+                    "provider_generation": None,
+                    "target_aep_sha256": "A" * 64,
+                    "adapter_instance_sha256": "B" * 64,
+                    "paired_pnp_instance_sha256": "C" * 64,
+                    "hid_pnp_instance_sha256": "D" * 64,
+                    "radio_present": True,
+                    "radio_state": "On",
+                    "adapter_problem_code": 0,
+                    "paired": True,
+                    "hid_present": True,
+                    "elevated": True,
+                    "acknowledgment": None,
+                }, separators=(",", ":")).encode("utf-8")
+                control_signature = sign(
+                    HOGP_CONTROL_SECRET,
+                    "POST",
+                    "/v1/hogp-control",
+                    control_at,
+                    1,
+                    control_body,
+                )
+                status, response = self._post(
+                    position_port,
+                    "/v1/hogp-control",
+                    control_body,
+                    {
+                        "X-Agent-Key": "hogp-agent",
+                        "X-Signature": control_signature,
+                        "X-Timestamp": str(control_at),
+                        "X-Sequence": "1",
+                        "Content-Type": "application/json",
+                    },
+                )
+                control_response = json.loads(response)
+                self.assertEqual(status, 202)
+                self.assertEqual(control_response["schema"], "mousse-hogp-control-v1")
+                self.assertEqual(control_response["accepted_seq"], 1)
+                self.assertIsNone(control_response["command"])
+                self.assertIsNotNone(runtime.hogp_control)
+
+                wrong_control_signature = sign(
+                    AGENT_SECRET, "POST", "/v1/hogp-control",
+                    control_at, 2, control_body,
+                )
+                status, _ = self._post(
+                    position_port,
+                    "/v1/hogp-control",
+                    control_body,
+                    {
+                        "X-Agent-Key": "system-agent",
+                        "X-Signature": wrong_control_signature,
+                        "X-Timestamp": str(control_at),
+                        "X-Sequence": "2",
+                        "Content-Type": "application/json",
+                    },
+                )
+                self.assertEqual(status, 401)
 
                 unauthorized_body = b'{}'
                 status, _ = self._post(

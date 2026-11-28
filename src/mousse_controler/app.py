@@ -10,7 +10,6 @@ from pathlib import Path
 import signal
 import sys
 import threading
-import time
 from typing import Any, Callable
 
 from .actions import ActionExecutor, ActionRegistry
@@ -20,6 +19,12 @@ from .command_server import CommandGateway, make_command_server
 from .controller import MouseController, PositionStore
 from .dpapi import protect, unprotect
 from .event_server import make_event_server
+from .hogp_control import (
+    HogpControlCoordinator,
+    HogpControlPolicy,
+    HogpControlReceiver,
+)
+from .hogp_health import HogpHealthMonitor
 from .position_server import PositionReceiver, make_https_server
 from .orchestration import OperationCoordinator
 from .security import HmacVerifier
@@ -60,9 +65,22 @@ class _RuntimeLifecycle:
         self.command_token = command_token
         self.keys = keys
         self.stopped = threading.Event()
+        self._state_lock = threading.Lock()
         self.servers: list[dict[str, object]] = []
         self.maintenance: threading.Thread | None = None
         self.closed = False
+
+    def request_stop(self) -> None:
+        with self._state_lock:
+            self.stopped.set()
+
+    def run_if_active(self, operation: Callable[[], bool]) -> bool:
+        """Linearize provider metadata changes with process stop intent."""
+
+        with self._state_lock:
+            if self.stopped.is_set():
+                return False
+            return operation()
 
     def add_server(self, name: str, server: object) -> object:
         self.servers.append({"name": name, "server": server, "thread": None})
@@ -94,7 +112,7 @@ class _RuntimeLifecycle:
             if thread.is_alive():
                 raise RuntimeError(f"{label} did not stop within 6 seconds")
 
-        attempt("stop event", self.stopped.set)
+        attempt("stop event", self.request_stop)
         if self.maintenance is not None:
             attempt(
                 "maintenance thread join",
@@ -148,6 +166,7 @@ class RuntimeAssembly:
     actions: ActionExecutor
     application: MouseApplicationService
     gateway: CommandGateway
+    hogp_control: HogpControlCoordinator | None
     lifecycle: _RuntimeLifecycle
     factories: RuntimeFactories
 
@@ -164,6 +183,113 @@ def _default_runtime_factories() -> RuntimeFactories:
     )
 
 
+def _hogp_control_policy(config: dict[str, Any]) -> HogpControlPolicy | None:
+    selected = config.get("hogp_control")
+    if selected is None:
+        return None
+    if not isinstance(selected, dict):
+        raise ValueError("hogp_control must be an object")
+    enabled = selected.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ValueError("hogp_control.enabled must be boolean")
+    if not enabled:
+        return None
+    for name in ("allow_adapter_restart", "allow_endpoint_restart"):
+        if not isinstance(selected.get(name, False), bool):
+            raise ValueError(f"hogp_control.{name} must be boolean")
+    string_values: dict[str, str] = {}
+    for name in (
+        "target_key_id", "target_aep_sha256", "adapter_instance_sha256",
+        "paired_pnp_instance_sha256", "hid_pnp_instance_sha256",
+    ):
+        value = selected.get(name, "")
+        if not isinstance(value, str):
+            raise ValueError(f"hogp_control.{name} must be a string")
+        string_values[name] = value
+    integer_values: dict[str, int] = {}
+    for name, default in (
+        ("command_ttl_seconds", 60),
+        ("command_cooldown_seconds", 300),
+        ("endpoint_recovery_grace_seconds", 30),
+    ):
+        value = selected.get(name, default)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"hogp_control.{name} must be an integer")
+        integer_values[name] = value
+    policy = HogpControlPolicy(
+        target_key_id=string_values["target_key_id"],
+        target_aep_sha256=string_values["target_aep_sha256"],
+        adapter_instance_sha256=string_values["adapter_instance_sha256"],
+        paired_pnp_instance_sha256=string_values["paired_pnp_instance_sha256"],
+        hid_pnp_instance_sha256=string_values["hid_pnp_instance_sha256"],
+        allow_adapter_restart=selected.get("allow_adapter_restart", False),
+        allow_endpoint_restart=selected.get("allow_endpoint_restart", False),
+        command_ttl_seconds=integer_values["command_ttl_seconds"],
+        command_cooldown_seconds=integer_values["command_cooldown_seconds"],
+        endpoint_recovery_grace_seconds=integer_values[
+            "endpoint_recovery_grace_seconds"
+        ],
+    )
+    agent_keys = config.get("agent_keys_dpapi")
+    if not isinstance(agent_keys, dict) or policy.target_key_id not in agent_keys:
+        raise ValueError("hogp_control target key is not configured")
+    return policy
+
+
+def _hogp_control_key_id(config: dict[str, Any]) -> str | None:
+    selected = config.get("hogp_control")
+    if selected is None:
+        return None
+    if not isinstance(selected, dict):
+        raise ValueError("hogp_control must be an object")
+    value = selected.get("target_key_id")
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip() or len(value) > 128:
+        raise ValueError("hogp_control.target_key_id must be a non-empty string")
+    agent_keys = config.get("agent_keys_dpapi")
+    if not isinstance(agent_keys, dict) or value not in agent_keys:
+        raise ValueError("hogp_control target key is not configured")
+    return value
+
+
+def _route_keysets(
+    keys: dict[str, bytearray], control_key_id: str | None,
+) -> tuple[dict[str, bytearray], dict[str, bytearray] | None]:
+    if control_key_id is None:
+        return keys, None
+    control_secret = keys[control_key_id]
+    if any(
+        key_id != control_key_id and secret == control_secret
+        for key_id, secret in keys.items()
+    ):
+        raise ValueError("hogp_control secret must be distinct from telemetry secrets")
+    return (
+        {
+            key_id: secret for key_id, secret in keys.items()
+            if key_id != control_key_id
+        },
+        {control_key_id: control_secret},
+    )
+
+
+def _wipe_runtime_secrets(
+    keys: dict[str, bytearray], command_token: bytearray | None = None,
+) -> None:
+    if command_token is not None:
+        command_token[:] = b"\0" * len(command_token)
+    for secret in keys.values():
+        secret[:] = b"\0" * len(secret)
+
+
+def _validate_command_token(command_token: bytearray) -> None:
+    if (not command_token or len(command_token) > 512 or
+            any(value < 0x21 or value > 0x7E for value in command_token)):
+        raise ValueError(
+            "command token must contain 1 to 512 visible ASCII characters"
+        )
+
+
 def build_runtime(
     config_path: Path, *, factories: RuntimeFactories | None = None,
 ) -> RuntimeAssembly:
@@ -171,46 +297,101 @@ def build_runtime(
 
     selected = factories or _default_runtime_factories()
     config = json.loads(config_path.read_text(encoding="utf-8"))
+    control_policy = _hogp_control_policy(config)
+    control_key_id = _hogp_control_key_id(config)
     store = PositionStore()
-    keys = {
-        key_id: bytearray(selected.unprotect_secret(value))
-        for key_id, value in config["agent_keys_dpapi"].items()
-    }
-    capture_broker = CaptureBroker(
-        Path(config.get("capture_directory", str(config_path.parent / "captures"))),
-        max_pending=int(config.get("capture_max_pending", 64)),
-        max_records=int(config.get("capture_max_records", 2048)),
-        max_bytes=int(config.get("capture_max_bytes", 16 * 1024 * 1024)),
-        max_total_bytes=int(config.get("capture_max_total_bytes", 512 * 1024 * 1024)),
-    )
-    receiver = PositionReceiver(store, HmacVerifier(keys), capture_broker)
-    transport = selected.transport(
-        Path(config["hogp_executable"]),
-        startup_timeout=float(config.get("hogp_startup_timeout_seconds", 15.0)),
-        command_timeout=float(config.get("hogp_command_timeout_seconds", 3.0)),
-        stop_timeout=float(config.get("hogp_stop_timeout_seconds", 3.0)),
-        termination_timeout=float(config.get("hogp_termination_timeout_seconds", 2.0)),
-        authorized_client_sha256=config.get("hogp_authorized_client_sha256"),
-    )
-    controller = MouseController(transport, store)
-    command_token = bytearray(selected.unprotect_secret(config["command_token_dpapi"]))
-    registry = ActionRegistry(
-        max_records=int(config.get("action_max_records", 2048)),
-        max_subscribers=int(config.get("event_max_subscribers", 16)),
-        journal_path=Path(config.get(
-            "action_journal", str(config_path.parent / "action-journal.jsonl"))),
-        action_id_retention_seconds=int(config.get(
-            "action_id_retention_seconds", 2_592_000)),
-    )
-    coordinator = OperationCoordinator()
-    actions = ActionExecutor(
-        controller,
-        registry,
-        capture_broker,
-        max_queue=int(config.get("action_queue_size", 256)),
-        coordinator=coordinator,
-    )
-    lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
+    keys: dict[str, bytearray] = {}
+    try:
+        for key_id, value in config["agent_keys_dpapi"].items():
+            keys[key_id] = bytearray(selected.unprotect_secret(value))
+    except BaseException:
+        _wipe_runtime_secrets(keys)
+        raise
+    try:
+        position_keys, control_keys = _route_keysets(keys, control_key_id)
+    except BaseException:
+        _wipe_runtime_secrets(keys)
+        raise
+    command_token: bytearray | None = None
+    try:
+        command_token = bytearray(
+            selected.unprotect_secret(config["command_token_dpapi"])
+        )
+        _validate_command_token(command_token)
+    except BaseException:
+        _wipe_runtime_secrets(keys, command_token)
+        raise
+    try:
+        capture_broker = CaptureBroker(
+            Path(config.get("capture_directory", str(config_path.parent / "captures"))),
+            max_pending=int(config.get("capture_max_pending", 64)),
+            max_records=int(config.get("capture_max_records", 2048)),
+            max_bytes=int(config.get("capture_max_bytes", 16 * 1024 * 1024)),
+            max_total_bytes=int(config.get(
+                "capture_max_total_bytes", 512 * 1024 * 1024,
+            )),
+        )
+        position_verifier = HmacVerifier(position_keys)
+        transport = selected.transport(
+            Path(config["hogp_executable"]),
+            startup_timeout=float(config.get("hogp_startup_timeout_seconds", 15.0)),
+            command_timeout=float(config.get("hogp_command_timeout_seconds", 3.0)),
+            stop_timeout=float(config.get("hogp_stop_timeout_seconds", 3.0)),
+            termination_timeout=float(config.get(
+                "hogp_termination_timeout_seconds", 2.0,
+            )),
+            authorized_client_sha256=config.get("hogp_authorized_client_sha256"),
+        )
+        hogp_control = None
+        hogp_control_receiver = None
+        if control_policy is not None:
+            assert control_keys is not None
+            hogp_control = HogpControlCoordinator(control_policy, transport.status)
+            hogp_control_receiver = HogpControlReceiver(
+                HmacVerifier(control_keys),
+                hogp_control,
+            )
+        receiver = PositionReceiver(
+            store, position_verifier, capture_broker, hogp_control_receiver,
+        )
+        controller = MouseController(transport, store)
+    except BaseException:
+        _wipe_runtime_secrets(keys, command_token)
+        raise
+
+    assert command_token is not None
+    actions: ActionExecutor | None = None
+    try:
+        registry = ActionRegistry(
+            max_records=int(config.get("action_max_records", 2048)),
+            max_subscribers=int(config.get("event_max_subscribers", 16)),
+            journal_path=Path(config.get(
+                "action_journal", str(config_path.parent / "action-journal.jsonl"),
+            )),
+            action_id_retention_seconds=int(config.get(
+                "action_id_retention_seconds", 2_592_000,
+            )),
+        )
+        coordinator = OperationCoordinator()
+        actions = ActionExecutor(
+            controller,
+            registry,
+            capture_broker,
+            max_queue=int(config.get("action_queue_size", 256)),
+            coordinator=coordinator,
+        )
+        lifecycle = _RuntimeLifecycle(actions, controller, command_token, keys)
+    except BaseException as exc:
+        cleanup_errors: list[tuple[str, BaseException]] = []
+        if actions is not None:
+            try:
+                actions.close()
+            except BaseException as cleanup_exc:
+                cleanup_errors.append(("actions close", cleanup_exc))
+        _wipe_runtime_secrets(keys, command_token)
+        if cleanup_errors:
+            raise RuntimeCleanupError(exc, cleanup_errors) from exc
+        raise
     try:
         application = MouseApplicationService(
             controller,
@@ -245,6 +426,7 @@ def build_runtime(
         actions=actions,
         application=application,
         gateway=gateway,
+        hogp_control=hogp_control,
         lifecycle=lifecycle,
         factories=selected,
     )
@@ -296,9 +478,6 @@ def serve(config_path: Path) -> int:
     lifecycle = runtime.lifecycle
     primary_error: BaseException | None = None
     try:
-        refresh_seconds = _bounded_interval(
-            config, "hogp_reconnect_refresh_seconds", 30.0, 3600.0,
-        )
         fault_recovery_seconds = _bounded_interval(
             config, "hogp_fault_recovery_seconds", 5.0, 3600.0,
         )
@@ -312,50 +491,30 @@ def serve(config_path: Path) -> int:
         for name in ("position-https", "command-loopback", "events-websocket"):
             lifecycle.start_server(name)
 
-        def maintain_hogp() -> None:
-            disconnected_since: float | None = None
-            last_fault_recovery: float | None = None
-            while not lifecycle.stopped.wait(health_poll_seconds):
-                if controller.is_stopped():
-                    return
-                try:
-                    status = transport.status()
-                    subscriber_health = status.get(
-                        "authorized_subscriber", status.get("subscribed", ""),
-                    )
-                    if subscriber_health.lower() == "true":
-                        disconnected_since = None
-                        last_fault_recovery = None
-                        continue
-                    now = time.monotonic()
-                    if disconnected_since is None:
-                        disconnected_since = now
-                    elif now - disconnected_since >= refresh_seconds:
-                        controller.restart_transport()
-                        disconnected_since = time.monotonic()
-                except Exception as exc:
-                    print(f"HOGP reconnect maintenance pending: {exc}", file=sys.stderr, flush=True)
-                    now = time.monotonic()
-                    if (last_fault_recovery is None or
-                            now - last_fault_recovery >= fault_recovery_seconds):
-                        last_fault_recovery = now
-                        try:
-                            controller.restart_transport()
-                            disconnected_since = None
-                        except Exception as recovery_exc:
-                            print(
-                                f"HOGP fault recovery failed: {recovery_exc}",
-                                file=sys.stderr,
-                                flush=True,
-                            )
+        health_monitor = HogpHealthMonitor(
+            controller,
+            transport,
+            lifecycle.stopped,
+            poll_seconds=health_poll_seconds,
+            fault_recovery_seconds=fault_recovery_seconds,
+            logger=lambda message: print(message, file=sys.stderr, flush=True),
+            on_provider_restart=(
+                lambda: lifecycle.run_if_active(
+                    lambda: controller.run_if_running(
+                        runtime.hogp_control.rotate_provider_generation,
+                    ),
+                )
+                if runtime.hogp_control is not None else None
+            ),
+        )
 
         lifecycle.maintenance = threading.Thread(
-            target=maintain_hogp, name="hogp-maintenance", daemon=True,
+            target=health_monitor.run, name="hogp-maintenance", daemon=True,
         )
         lifecycle.maintenance.start()
 
         def stop_handler(signum, frame):
-            lifecycle.stopped.set()
+            lifecycle.request_stop()
 
         signal.signal(signal.SIGINT, stop_handler)
         signal.signal(signal.SIGTERM, stop_handler)
@@ -378,26 +537,43 @@ def serve(config_path: Path) -> int:
 
 def serve_position_only(config_path: Path) -> int:
     config = json.loads(config_path.read_text(encoding="utf-8"))
+    control_policy = _hogp_control_policy(config)
+    control_key_id = _hogp_control_key_id(config)
     store = PositionStore()
-    keys = {key_id: unprotect(value) for key_id, value in config["agent_keys_dpapi"].items()}
-    receiver = PositionReceiver(store, HmacVerifier(keys))
-    server = make_https_server(
-        config["position_bind"], int(config["position_port"]), receiver,
-        config["tls_certificate"], config["tls_private_key"],
-        max_connections=int(config.get("position_max_connections", 8)),
-        request_queue_size=int(config.get("position_request_queue_size", 8)),
-        tls_handshake_timeout=float(config.get(
-            "position_tls_handshake_timeout_seconds", 3.0)),
-        header_timeout=float(config.get("position_header_timeout_seconds", 2.0)),
-        header_total_timeout=float(config.get(
-            "position_header_total_timeout_seconds", 5.0)),
-        body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
-        body_total_timeout=float(config.get(
-            "position_body_total_timeout_seconds", 10.0)),
-        capture_body_total_timeout=float(config.get(
-            "position_capture_body_total_timeout_seconds", 120.0)),
-        write_timeout=float(config.get("position_write_timeout_seconds", 2.0)),
-    )
+    keys: dict[str, bytearray] = {}
+    server = None
+    try:
+        for key_id, value in config["agent_keys_dpapi"].items():
+            keys[key_id] = bytearray(unprotect(value))
+        position_keys, _ = _route_keysets(keys, control_key_id)
+        receiver = PositionReceiver(store, HmacVerifier(position_keys))
+        server = make_https_server(
+            config["position_bind"], int(config["position_port"]), receiver,
+            config["tls_certificate"], config["tls_private_key"],
+            max_connections=int(config.get("position_max_connections", 8)),
+            request_queue_size=int(config.get("position_request_queue_size", 8)),
+            tls_handshake_timeout=float(config.get(
+                "position_tls_handshake_timeout_seconds", 3.0)),
+            header_timeout=float(config.get(
+                "position_header_timeout_seconds", 2.0,
+            )),
+            header_total_timeout=float(config.get(
+                "position_header_total_timeout_seconds", 5.0,
+            )),
+            body_timeout=float(config.get("position_body_timeout_seconds", 5.0)),
+            body_total_timeout=float(config.get(
+                "position_body_total_timeout_seconds", 10.0,
+            )),
+            capture_body_total_timeout=float(config.get(
+                "position_capture_body_total_timeout_seconds", 120.0,
+            )),
+            write_timeout=float(config.get(
+                "position_write_timeout_seconds", 2.0,
+            )),
+        )
+    except BaseException:
+        _wipe_runtime_secrets(keys)
+        raise
     proof_emitted = threading.Event()
 
     def report_first_sample() -> None:
@@ -423,7 +599,11 @@ def serve_position_only(config_path: Path) -> int:
         pass
     finally:
         proof_emitted.set()
-        server.server_close()
+        assert server is not None
+        try:
+            server.server_close()
+        finally:
+            _wipe_runtime_secrets(keys)
     return 0
 
 

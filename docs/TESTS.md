@@ -28,7 +28,10 @@ Une qualification officielle refuse avant toute phase un dépôt sale, une
 identité Git indisponible ou un arbre non résolu. Son résumé v2 contient commit,
 empreinte d'arbre, branche, propreté, compteurs de tests, skips, erreurs
 attendues, durées et empreintes des artefacts. Tout skip ou échec attendu non
-explicitement sorti de la porte rend le profil logiciel non favorable.
+explicitement sorti de la porte rend le profil logiciel non favorable. Les
+métadonnées d'une phase de tests sont lues même lorsque son processus échoue :
+les tests réellement exécutés et leurs échecs restent donc comptés dans le
+résumé au lieu d'être remplacés par zéro.
 
 Un chemin fourni avec `--output-dir` doit être nouveau. L'orchestrateur le crée
 de manière exclusive et bloque avant toute phase s'il existe déjà, même vide,
@@ -78,6 +81,68 @@ vérifie dépôt sale refusé, extraction des seuls objets sélectionnés, réut
 identique, exécution autonome du vérificateur, altération et fichier inattendu
 refusés. Ces tests ne créent ni tâche ni processus applicatif persistant.
 
+## Supervision HOGP et plan de contrôle cible
+
+`tests/unit/test_hogp_health.py` verrouille la propriété architecturale issue de
+la qualification réelle : un abonné absent laisse le provider vivant ; seule
+une erreur du canal moteur autorise une reprise, avec temporisation observable.
+
+`tests/unit/test_hogp_control.py` vérifie la liaison aux identités enrôlées, la
+génération du provider, l'unicité et l'expiration des commandes, les
+acquittements, l'absence de commande sans élévation et le refus fail-closed si
+le statut transport est indisponible. La grâce et le cooldown suivent une
+horloge monotone ; `not_required` prouve qu'une reprise devenue inutile n'est
+ni exécutée ni rejouée. L'écho d'un acquittement survit à la rotation ou au
+redémarrage backend ; un acquittement sans correspondance ne supprime jamais
+une autre commande et peut être confirmé avant sa livraison dans la même
+réponse. Un scénario distinct vérifie que l'expiration simultanée d'une autre
+commande ne remplace pas cet écho, tout en restant observable au cycle suivant.
+Le test système traverse réellement
+`POST /v1/hogp-control` avec TLS remplacé par un serveur hermétique, HMAC et
+anti-rejeu inchangés.
+Il refuse aussi un jeton de commande binaire avant toute construction du
+transport, afin que le client loopback et les en-têtes Bearer partagent le même
+contrat ASCII visible.
+Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de
+contrôle afin qu'un runtime de contrôle ne puisse jamais falsifier une position.
+Un secret réutilisé sous deux identifiants est refusé avant création du transport.
+Une identité de contrôle reste exclue lorsque le plan est désactivé. Le mode
+`position-only` exclut lui aussi la clé de contrôle et les tests observent
+l'effacement des secrets lorsque la composition échoue ou que le serveur ferme.
+
+`tests/contract/test_hogp_control_agent_contract.py` interdit au runtime cible
+les API GATT, de pairage et d'injection, exige les quatre empreintes PnP/AEP,
+le binaire `pnputil` système exact et une tâche distincte `RunLevel=Highest`.
+Il impose aussi une énumération AEP limitée par le sélecteur Windows des seuls
+périphériques BLE appairés, bornée à 30 secondes. Cette contrainte couvre la
+régression matérielle où l'énumération BLE générale dépassait dix secondes sur
+`DESKTOP-NPIHO8K` ; le sélecteur ne crée aucun client BLE ou GATT.
+Le profil `build` compile ce runtime séparément ; aucun test logiciel ne lance
+de commande PnP ou Bluetooth réelle.
+Le contrat exige aussi l'inspection d'identités sans identifiant brut, l'état
+atomique anti-rejeu, le verrou mono-instance, l'installation sous répertoires
+protégés, les empreintes attendues et l'absence de binaire élevé sous
+`LOCALAPPDATA`. Le rôle matériel `USB`/`PCI`, le déclencheur `AtLogOn`, le SID,
+le type `Interactive`, le répertoire de travail, l'écho exact des acquittements
+et l'absence de droit de mutation ACL pour tout principal inattendu sont
+verrouillés. Le contrat interdit les masques ACL agrégés qui classeraient
+`ReadAndExecute` comme écriture. Les tests
+unitaires font tourner la génération après reprise du
+provider, traitent l'absence du statut `advertising` comme une rupture du canal
+et distinguent `advertising=False` de la simple absence d'abonné. Un statut de
+transport absent ou non structuré ferme aussi le plan de reprise.
+Les tests suspendent une commande déjà en attente pendant un statut invalide ou
+`advertising=False`, puis vérifient la reprise du même identifiant seulement
+après retour à un statut sain.
+Une rotation déterministe intercalée pendant la lecture du statut vérifie qu'un
+état de l'ancien provider ne peut jamais créer une commande liée à la nouvelle
+génération ; la réponse devient indisponible et ne contient aucune commande.
+Une course avec l'arrêt ne fait ni tourner la génération provider ni publier
+une reprise fictive : la rotation traverse une section critique commune à
+l'arrêt du processus et à l'intention d'arrêt du contrôleur. Un compteur
+d'époque garantit également qu'une intention d'arrêt publiée pendant
+`transport.start()` gagne avant l'activation du contrôleur.
+
 ## Assemblage système hermétique
 
 `tests/system/test_runtime_composition.py` construit le même graphe d'objets que
@@ -119,6 +184,17 @@ les commentaires des PR #13–#18. La matrice des défauts est dans
   elle ne réexécute pas les commandes Windows de Codex.
 - Aucune de ces mentions ne vaut qualification matérielle post-R1–R5,
   synchronisation des machines ou déploiement.
+
+### Porte de reconnexion HOGP native
+
+La qualification courante interdit tout moniteur GATT persistant sur la cible.
+Après le diagnostic ponctuel de la paire, toutes ses références sont libérées et
+les preuves de reprise proviennent du pilote HID Windows et du fournisseur
+backend : retour de l'unique abonné autorisé, session active, boutons à zéro et
+absence de nouveau consentement. Les cas obligatoires sont le redémarrage du
+provider, le cycle radio cible, le redémarrage cible et la mise à jour du runtime
+à identité/descripteur inchangés. Un succès obtenu seulement pendant l'exécution
+de `PairingTool Connect` ne qualifie pas la reconnexion native.
 
 ## Preuves matérielles historiques
 

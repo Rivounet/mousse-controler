@@ -17,8 +17,16 @@
 
 - `MouseApplicationService` sépare les protocoles du métier ;
 - `OperationCoordinator` possède l'unique voie de commande locale ;
-- `PositionAgent --config` publie uniquement télémétrie et captures ; la
-  reconnexion HOGP est un mode et une tâche distincts ;
+- `PositionAgent --config` publie uniquement télémétrie et captures, sans code
+  Bluetooth ; le pilote HID Windows possède seul la connexion HOGP cible ;
+- l'absence d'abonné ne redémarre jamais le provider ; `hogp_health` ne recrée
+  le moteur qu'après une panne réelle de son canal ;
+- le plan de contrôle optionnel `/v1/hogp-control` est servi sur le même HTTPS
+  mais utilise une clé, une séquence et un runtime cible distincts. Ses actions
+  PnP sont désactivées par défaut et exigent tâche élevée et identités enrôlées ;
+- « agent cible » désigne `HogpControlAgent.exe`, le runtime déployé sur la
+  cible, et non Codex ; installation et état sont protégés sous
+  `Program Files`/`ProgramData`, vérifiés par empreinte et persistants ;
 - l'enrôlement Bluetooth est une opération atomique : annonce unique au nom
   exact, connectable et HID, résolution immédiate de cette adresse rotative,
   pairage standard chiffré, puis émission de l'identité AEP durable ;
@@ -45,8 +53,10 @@
    qualification. Ne pas démarrer ni repointer la tâche de production.
 5. Exécuter le pairage atomique depuis la cible pendant la fenêtre interactive,
    conserver uniquement l'identité AEP produite après preuve du chiffrement et
-   l'imposer à `Connect` puis à la reconnexion. Enrôler séparément l'empreinte de
-   la cible observée par le moteur HOGP côté backend.
+   l'imposer au diagnostic ponctuel `Connect`. Fermer ensuite cet outil et
+   prouver la reconnexion par le pilote HID Windows sans client GATT applicatif.
+   Enrôler séparément l'empreinte de la cible observée par le moteur HOGP côté
+   backend.
 6. Exiger `authorized_subscriber=True`, `subscriber_count=1`, l'empreinte
    attendue, une session `Active`, `buttons=0`, une position fraîche et aucune
    action active.
@@ -56,6 +66,12 @@
    prouver l'absence de processus/tâche résiduel, puis libérer les deux baux.
 9. Archiver les preuves expurgées au SHA exact. Fusion, synchronisation de
    `main` et éventuel déploiement de production restent des portes distinctes.
+
+Si le plan de contrôle est activé pour la qualification, construire
+`HogpControlAgent.exe`, l'inscrire sous le nom de tâche qualificatif dédié avec
+`RunLevel=Highest`, vérifier que son premier échange ne commande rien, puis
+n'autoriser qu'une action à la fois. Une installation refusée ou un runtime non
+élevé est un blocage explicite, jamais une raison de relâcher les contrôles.
 
 ## Reprise après incident
 

@@ -16,6 +16,16 @@ from tests.support.waiting import wait_until
 
 
 class ControllerTests(unittest.TestCase):
+    def test_provider_metadata_callback_is_excluded_after_stop_intent(self) -> None:
+        calls = []
+
+        self.assertTrue(self.controller.run_if_running(lambda: calls.append("active")))
+        self.controller.emergency_stop()
+        self.assertFalse(
+            self.controller.run_if_running(lambda: calls.append("stopped"))
+        )
+        self.assertEqual(calls, ["active"])
+
     def setUp(self):
         self.transport = SimulatedHidTransport()
         self.store = PositionStore()
@@ -206,6 +216,19 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.transport.buttons_mask, 0)
         self.assertIn(("stop",), self.transport.events)
 
+    def test_restart_transport_stays_stopped_when_advertising_fails(self):
+        def fail_advertising():
+            raise RuntimeError("advertising failed")
+
+        self.transport.advertise = fail_advertising
+
+        with self.assertRaisesRegex(RuntimeError, "advertising failed"):
+            self.controller.restart_transport()
+
+        self.assertFalse(self.transport.started)
+        with self.assertRaisesRegex(RuntimeError, "controller is stopped"):
+            self.controller.move(1, 1)
+
     def test_restart_transport_is_disabled_after_emergency_stop(self):
         self.controller.emergency_stop()
         count = len(self.transport.events)
@@ -271,6 +294,34 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "injected start failure"):
             self.controller.start()
 
+        self.assertTrue(self.controller.is_stopped())
+        self.assertFalse(self.transport.started)
+        self.assertEqual(self.transport.events[-1], ("stop",))
+
+    def test_stop_intent_wins_when_published_during_start(self):
+        self.controller.emergency_stop()
+        entered = threading.Event()
+        release = threading.Event()
+        original_start = self.transport.start
+
+        def blocking_start():
+            original_start()
+            entered.set()
+            release.wait(1)
+
+        self.transport.start = blocking_start
+        start_thread = threading.Thread(target=self.controller.start)
+        start_thread.start()
+        self.assertTrue(entered.wait(1))
+        stop_thread = threading.Thread(target=self.controller.emergency_stop)
+        stop_thread.start()
+        self.assertTrue(self.controller._stopped.wait(1))
+        release.set()
+        start_thread.join(1)
+        stop_thread.join(1)
+
+        self.assertFalse(start_thread.is_alive())
+        self.assertFalse(stop_thread.is_alive())
         self.assertTrue(self.controller.is_stopped())
         self.assertFalse(self.transport.started)
         self.assertEqual(self.transport.events[-1], ("stop",))
@@ -438,6 +489,14 @@ class ControllerTests(unittest.TestCase):
     def test_emergency_stop_interrupts_feedback_wait(self):
         self.store.update(self.sample(x=0, y=0))
         errors = []
+        movement_emitted = threading.Event()
+        original_move = self.transport.move
+
+        def observed_move(dx, dy):
+            original_move(dx, dy)
+            movement_emitted.set()
+
+        self.transport.move = observed_move
 
         def position():
             try:
@@ -446,12 +505,9 @@ class ControllerTests(unittest.TestCase):
                 errors.append(exc)
 
         thread = threading.Thread(target=position)
-        started = time.monotonic()
         thread.start()
-        wait_until(
-            lambda: any(event[0] == "move" for event in self.transport.events),
-            description="movement before emergency stop",
-        )
+        self.assertTrue(movement_emitted.wait(5), "movement before emergency stop")
+        started = time.monotonic()
         self.controller.emergency_stop()
         thread.join(1)
 
