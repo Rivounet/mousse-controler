@@ -93,11 +93,13 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
     artifacts = output_dir / "artifacts"
     architecture_measurement = artifacts / "test-architecture.json"
     position_agent = artifacts / "PositionAgent"
+    hogp_control_agent = artifacts / "HogpControlAgent"
     pairing_tool = artifacts / "PairingTool"
     mouse_witness = artifacts / "MouseWitness"
     hogp_package = artifacts / "HogpPackage"
     hogp_qualification_package = artifacts / "HogpQualificationPackage"
     manifest = artifacts / "position-agent-build.json"
+    hogp_control_manifest = artifacts / "hogp-control-agent-build.json"
     build = [
         Phase(
             "test-architecture-measurement",
@@ -138,6 +140,17 @@ def phases_for(profile: str, output_dir: Path) -> list[Phase]:
             ),
             "build",
             required_artifact=position_agent / "PositionAgent.exe",
+        ),
+        Phase(
+            "hogp-control-agent-build",
+            (
+                "pwsh", "-NoLogo", "-NoProfile", "-NonInteractive", "-File",
+                str(ROOT / "scripts/build/Build-HogpControlAgent.ps1"),
+                "-OutputDirectory", str(hogp_control_agent),
+                "-QualificationManifestPath", str(hogp_control_manifest),
+            ),
+            "build",
+            required_artifact=hogp_control_agent / "HogpControlAgent.exe",
         ),
         Phase(
             "pairing-tool-build",

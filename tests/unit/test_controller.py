@@ -206,6 +206,19 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.transport.buttons_mask, 0)
         self.assertIn(("stop",), self.transport.events)
 
+    def test_restart_transport_stays_stopped_when_advertising_fails(self):
+        def fail_advertising():
+            raise RuntimeError("advertising failed")
+
+        self.transport.advertise = fail_advertising
+
+        with self.assertRaisesRegex(RuntimeError, "advertising failed"):
+            self.controller.restart_transport()
+
+        self.assertFalse(self.transport.started)
+        with self.assertRaisesRegex(RuntimeError, "controller is stopped"):
+            self.controller.move(1, 1)
+
     def test_restart_transport_is_disabled_after_emergency_stop(self):
         self.controller.emergency_stop()
         count = len(self.transport.events)
@@ -438,6 +451,14 @@ class ControllerTests(unittest.TestCase):
     def test_emergency_stop_interrupts_feedback_wait(self):
         self.store.update(self.sample(x=0, y=0))
         errors = []
+        movement_emitted = threading.Event()
+        original_move = self.transport.move
+
+        def observed_move(dx, dy):
+            original_move(dx, dy)
+            movement_emitted.set()
+
+        self.transport.move = observed_move
 
         def position():
             try:
@@ -446,12 +467,9 @@ class ControllerTests(unittest.TestCase):
                 errors.append(exc)
 
         thread = threading.Thread(target=position)
-        started = time.monotonic()
         thread.start()
-        wait_until(
-            lambda: any(event[0] == "move" for event in self.transport.events),
-            description="movement before emergency stop",
-        )
+        self.assertTrue(movement_emitted.wait(5), "movement before emergency stop")
+        started = time.monotonic()
         self.controller.emergency_stop()
         thread.join(1)
 

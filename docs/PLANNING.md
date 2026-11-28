@@ -1,4 +1,4 @@
-# Planning opérationnel — 27 novembre 2026
+# Planning opérationnel — 28 novembre 2026
 
 | Chantier | État | Critère de clôture |
 |---|---|---|

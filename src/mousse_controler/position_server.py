@@ -180,10 +180,13 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 
 
 class PositionReceiver:
-    def __init__(self, store: PositionStore, verifier: HmacVerifier, capture_broker: Any | None = None):
+    def __init__(self, store: PositionStore, verifier: HmacVerifier,
+                 capture_broker: Any | None = None,
+                 hogp_control_receiver: Any | None = None):
         self.store = store
         self.verifier = verifier
         self.capture_broker = capture_broker
+        self.hogp_control_receiver = hogp_control_receiver
         self._lock = threading.Lock()
         self._last_received_monotonic: float | None = None
         self._interarrival_ms: deque[float] = deque(maxlen=2048)
@@ -286,6 +289,13 @@ class PositionReceiver:
         sequence = int(headers.get("X-Sequence", "-1"))
         self.verifier.verify(key_id, signature, "POST", path, timestamp_ms, sequence, body)
         return self.capture_broker.accept_upload(body)
+
+    def accept_hogp_control(
+        self, headers: Any, body: bytes, path: str = "/v1/hogp-control",
+    ) -> dict[str, Any]:
+        if self.hogp_control_receiver is None:
+            raise ValueError("HOGP control receiver is disabled")
+        return self.hogp_control_receiver.accept(headers, body, path)
 
 
 def handler_factory(receiver: PositionReceiver):
@@ -420,12 +430,12 @@ def handler_factory(receiver: PositionReceiver):
                 return
 
         def do_POST(self) -> None:  # noqa: N802
-            if self.path not in ("/v1/position", "/v1/capture"):
+            if self.path not in ("/v1/position", "/v1/capture", "/v1/hogp-control"):
                 self._send_error_bounded(HTTPStatus.NOT_FOUND)
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
-                limit = MAX_BODY_BYTES if self.path == "/v1/position" else MAX_CAPTURE_BODY_BYTES
+                limit = MAX_CAPTURE_BODY_BYTES if self.path == "/v1/capture" else MAX_BODY_BYTES
                 if length <= 0 or length > limit:
                     raise ValueError("invalid body length")
                 body = self._read_exact_body(length)
@@ -435,8 +445,12 @@ def handler_factory(receiver: PositionReceiver):
                         "accepted_seq": accepted,
                         "capture_request": receiver.next_capture_request(),
                     }
-                else:
+                elif self.path == "/v1/capture":
                     response_body = {"capture": receiver.accept_capture(self.headers, body, self.path)}
+                else:
+                    response_body = receiver.accept_hogp_control(
+                        self.headers, body, self.path,
+                    )
                 response = json.dumps(response_body, separators=(",", ":")).encode()
                 self._set_timeout(float(getattr(
                     self.server, "write_timeout", DEFAULT_WRITE_TIMEOUT,

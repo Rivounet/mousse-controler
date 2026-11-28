@@ -7,18 +7,21 @@ un canal LAN HTTPS/HMAC sortant ; il ne reçoit aucune commande souris.
 
 ## État courant — 28 novembre 2026
 
-- Base de fusion auditée : `origin/main` après la PR #26, commit de fusion
-  `5ed7045823a0d7b8c7c6418ca5586008e35ba2d2`.
+- Base de fusion actuelle : `origin/main` au commit
+  `6b6de0caf2c354b9855922439c6449b272246161` (PR #41). La branche de correction
+  HOGP native reste distincte tant que sa qualification et sa revue ne sont pas
+  terminées.
 - Les preuves matérielles réalisées avec `MonOrdinateur` sont historiques et ne
   qualifient pas la nouvelle cible `DESKTOP-NPIHO8K`.
 - L'audit du 27 novembre a constaté que la tâche contrôleur exécutait un
   worktree modifié, donc non reproductible par un SHA. Ce runtime a depuis été
   remplacé par une release immuable vérifiée ; les preuves sont publiées dans
   la PR #27.
-- Le chantier `MC-ARCHITECTURE-CONVERGENCE-001` introduit une couche
-  applicative, un coordinateur exclusif des opérations, un feedback atomique et
-  des releases contrôleur immuables. Qualification, activation et publication
-  restent trois décisions et preuves distinctes.
+- La convergence introduit une couche applicative, un coordinateur exclusif des
+  opérations, un feedback atomique et des releases contrôleur immuables. La
+  correction en cours sépare en plus télémétrie, propriété HID Windows et plan
+  de contrôle PnP. Qualification, activation et publication restent trois
+  décisions et preuves distinctes.
 - Aucun GitHub Actions ni service CI externe. La qualification officielle reste
   locale sous Windows.
 - La qualification like-prod emploie une instance HOGP, une configuration et des
@@ -37,7 +40,14 @@ mini-pc-backend : API → service applicatif → coordinateur exclusif
                                                                     │
 PC cible Windows : pile HID Windows native ←────────────────────────┘
        agent visible : position/capture → HTTPS + HMAC → mini-pc-backend
+       runtime contrôle HOGP : état Bluetooth/PnP → HTTPS + HMAC → backend
 ```
+
+Le « runtime contrôle HOGP » est `HogpControlAgent.exe`, code applicatif
+qualificatif déployé sur la cible. Il est distinct de PositionAgent et de tout
+agent Codex : il ne transporte aucune commande souris, n'ouvre aucune session
+GATT et ne peut exécuter que les reprises PnP explicitement autorisées et liées
+aux identités enrôlées.
 
 Le moteur HOGP actif est PowerShell/WinRT dans un MSIX. Les sources C++ HOGP
 sont historiques et conservées faute de preuve d'absence totale d'usage. Le

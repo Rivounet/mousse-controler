@@ -78,6 +78,39 @@ vérifie dépôt sale refusé, extraction des seuls objets sélectionnés, réut
 identique, exécution autonome du vérificateur, altération et fichier inattendu
 refusés. Ces tests ne créent ni tâche ni processus applicatif persistant.
 
+## Supervision HOGP et plan de contrôle cible
+
+`tests/unit/test_hogp_health.py` verrouille la propriété architecturale issue de
+la qualification réelle : un abonné absent laisse le provider vivant ; seule
+une erreur du canal moteur autorise une reprise, avec temporisation observable.
+
+`tests/unit/test_hogp_control.py` vérifie la liaison aux identités enrôlées, la
+génération du provider, l'unicité et l'expiration des commandes, les
+acquittements, l'absence de commande sans élévation et le refus fail-closed si
+le statut transport est indisponible. La grâce et le cooldown suivent une
+horloge monotone ; `not_required` prouve qu'une reprise devenue inutile n'est
+ni exécutée ni rejouée. Le test système traverse réellement
+`POST /v1/hogp-control` avec TLS remplacé par un serveur hermétique, HMAC et
+anti-rejeu inchangés.
+Il prouve aussi l'exclusion croisée des clés entre télémétrie/capture et plan de
+contrôle afin qu'un runtime de contrôle ne puisse jamais falsifier une position.
+Un secret réutilisé sous deux identifiants est refusé avant création du transport.
+Le mode `position-only` exclut lui aussi la clé de contrôle et les tests observent
+l'effacement des secrets lorsque la composition échoue ou que le serveur ferme.
+
+`tests/contract/test_hogp_control_agent_contract.py` interdit au runtime cible
+les API GATT, de pairage et d'injection, exige les quatre empreintes PnP/AEP,
+le binaire `pnputil` système exact et une tâche distincte `RunLevel=Highest`.
+Le profil `build` compile ce runtime séparément ; aucun test logiciel ne lance
+de commande PnP ou Bluetooth réelle.
+Le contrat exige aussi l'inspection d'identités sans identifiant brut, l'état
+atomique anti-rejeu, le verrou mono-instance, l'installation sous répertoires
+protégés, les empreintes attendues et l'absence de binaire élevé sous
+`LOCALAPPDATA`. Le rôle matériel `USB`/`PCI`, le déclencheur `AtLogOn`, le SID,
+le type `Interactive` et le répertoire de travail sont verrouillés. Les tests
+unitaires font tourner la génération après reprise du
+provider et distinguent `advertising=False` de la simple absence d'abonné.
+
 ## Assemblage système hermétique
 
 `tests/system/test_runtime_composition.py` construit le même graphe d'objets que

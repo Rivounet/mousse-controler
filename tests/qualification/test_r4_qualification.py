@@ -41,7 +41,8 @@ class QualificationProfileTests(unittest.TestCase):
                 [phase.name for phase in qualify.phases_for("full-local", output)],
                 ["fast-tests", "integration-tests", "test-architecture-measurement",
                  "python-compilation", "api-reference-check", "powershell-syntax",
-                 "position-agent-build", "pairing-tool-build", "mouse-witness-build",
+                 "position-agent-build", "hogp-control-agent-build",
+                 "pairing-tool-build", "mouse-witness-build",
                  "hogp-package-build", "hogp-qualification-package-build"],
             )
 
@@ -54,7 +55,8 @@ class QualificationProfileTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [phase.name for phase in build_phases],
-                ["position-agent-build", "pairing-tool-build", "mouse-witness-build",
+                ["position-agent-build", "hogp-control-agent-build",
+                 "pairing-tool-build", "mouse-witness-build",
                  "hogp-package-build", "hogp-qualification-package-build"],
             )
             for phase in phases:

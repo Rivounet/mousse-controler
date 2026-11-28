@@ -1,0 +1,16 @@
+{
+  "Endpoint": "https://MINI_PC_PRIVATE_ADDRESS:8765/v1/hogp-control",
+  "KeyId": "hogp-control-agent",
+  "SecretDpapi": "BASE64_DPAPI_CURRENT_USER",
+  "CertificateSha256": "64_HEX_CERTIFICATE_HASH",
+  "IntervalMilliseconds": 5000,
+  "RequestTimeoutMilliseconds": 5000,
+  "HogpDeviceName": "MINI-PC-BACKEND",
+  "TargetAepSha256": "64_HEX_PAIRED_AEP_ID_HASH",
+  "AdapterInstanceSha256": "64_HEX_BLUETOOTH_ADAPTER_PNP_HASH",
+  "PairedPnpInstanceSha256": "64_HEX_PAIRED_BLE_PNP_HASH",
+  "HidPnpInstanceSha256": "64_HEX_HID_CHILD_PNP_HASH",
+  "AllowAdapterRestart": false,
+  "AllowEndpointRestart": false,
+  "StatePath": "C:\\ProgramData\\MousseControler\\Qualification\\MC-HOGP-NATIVE-OWNER-001\\agent-state.json"
+}

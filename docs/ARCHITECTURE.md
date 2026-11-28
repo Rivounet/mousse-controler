@@ -19,6 +19,9 @@ PC cible Windows : pile Bluetooth et souris HID natives Windows
   PositionAgent visible (C# .NET Framework 4.8, session utilisateur)
            │ GetCursorPos / écrans / session / capture explicitement demandée
            └── HTTPS sortant + certificat épinglé + HMAC/anti-rejeu ──► mini-pc-backend
+  HogpControlAgent distinct (optionnel, actions désactivées par défaut)
+           │ état radio/PnP/HID + acquittements ; aucune API GATT/HID
+           └── HTTPS sortant `/v1/hogp-control` ───────────────────────► plan de contrôle backend
 ```
 
 ## Couches et règles de dépendance
@@ -31,6 +34,21 @@ L'architecture conserve un seul processus mais sépare les responsabilités :
 | Application | `application`, `orchestration`, `actions`, `sequence` | cas d'usage, cycle de vie, coordination et attribution exclusive du périphérique |
 | Domaine | `geometry`, `trajectory`, types de `feedback` | règles pures, valeurs et invariants indépendants des protocoles |
 | Infrastructure | `controller`, `transport`, `capture`, `dpapi`, `security` | HID, processus WinRT, stockage privé et primitives de sécurité |
+
+`hogp_health` observe le provider sans le recréer lorsqu'un abonné manque.
+`hogp_control` porte un plan de contrôle optionnel, authentifié et sans commande
+souris. Le runtime cible correspondant est un exécutable séparé de
+`PositionAgent`; partager le serveur HTTPS ne fusionne ni leurs clés, ni leurs
+séquences, ni leurs responsabilités.
+Chaque route possède son propre trousseau : la clé HOGP est refusée par
+`/v1/position` et `/v1/capture`, et la clé de télémétrie est refusée par
+`/v1/hogp-control`. Le démarrage refuse également deux identifiants dont le
+matériau secret serait identique.
+
+Les identités PnP sont aussi verrouillées par rôle : l'adaptateur doit être un
+nœud Bluetooth sur bus matériel `USB` ou `PCI` (la cible qualifiée expose
+`USB`), l'endpoint pairé appartient à `BTHLE\DEV_` et l'enfant HID à
+`BTHLEDEVICE\`. Une empreinte correcte associée au mauvais rôle est refusée.
 
 Les adaptateurs ne pilotent plus directement le contrôleur. Ils appellent
 `MouseApplicationService`, qui partage un unique `OperationCoordinator` avec
@@ -65,12 +83,23 @@ qualifient pas `DESKTOP-NPIHO8K`.
 - **Agent cible** : lit curseur, topologie, DPI et état de session ; publie les
   mesures et réalise seulement les captures avant/après explicitement liées à
   une action. Il ne reçoit aucune commande souris et n'est pas un service caché.
+- **Agent de contrôle HOGP** : observe exclusivement les identités enrôlées et
+  l'état Windows Bluetooth/PnP/HID. Une réponse API peut demander un unique
+  redémarrage PnP borné si la politique backend et la politique locale
+  l'autorisent, si le runtime est élevé et si toutes les empreintes concordent.
+  Il n'ouvre jamais `BluetoothLEDevice`, `GattSession` ou un service GATT.
+  Cet « agent cible » désigne le runtime applicatif déployé
+  `HogpControlAgent.exe`, jamais l'agent Codex utilisé pour l'installation ou le
+  diagnostic.
 - **LAN** : HTTPS sur réseau privé, certificat épinglé, HMAC-SHA-256, anti-rejeu,
   séquence, horodatage, secrets protégés, aucun port entrant sur la cible.
 
 ## Priorités et alternatives
 
-P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534` est hors périmètre (radio propriétaire 2,4 GHz non Bluetooth). Repli : pont HID physique programmable après arbitrage ; HID virtuel seulement en option secondaire explicitement décidée. `SendInput`/`SetCursorPos` seuls ne satisfont pas l'exigence de périphérique HID.
+P1 : HOGP natif entre les deux PC. Le récepteur Logitech Nano `046D:C534`, un
+pont HID physique, un HID virtuel et `SendInput`/`SetCursorPos` sont hors
+périmètre. Il n'existe aucun transport de repli : les limites de la pile
+Bluetooth Windows doivent être observables et traitées dans cette architecture.
 
 ## État des preuves
 
@@ -124,15 +153,13 @@ cible ; il n'est pas une API de commande.
 L'architecture détaillée et la boucle de position sont spécifiées dans
 [`MC-HID-AUDIT-001/ARCHITECTURE.md`](../qualification/MC-HID-AUDIT-001/ARCHITECTURE.md).
 
-## Alternative en cas de NO-GO
+## Limite de solution retenue
 
-Si le prototype conforme échoue sur la pile Windows/Realtek, comparer d'abord un
-adaptateur externe programmable capable d'HOGP. Un changement d'OS, de pilote ou
-de matériel nécessite une décision explicite ; aucune installation implicite.
-Un tel adaptateur est également le repli requis si le provisioning doit lui-même
-être totalement sans intervention, l'acceptation globale des demandes entrantes
-n'étant prise en charge par Microsoft que pour les applications Windows 10 IoT
-Core.
+Le périmètre impose les radios Windows existantes et Bluetooth HOGP. Aucun
+matériel supplémentaire ni autre transport n'est un repli admissible. Une
+limite de la pile Windows est donc rendue visible et traitée par stabilité du
+provider, état fail-closed et plan de contrôle API ; elle n'est pas masquée par
+un changement de technologie. SSH reste exclusivement un secours de maintenance.
 
 ## Réalisation MC-HID-EXEC-001 — 20 novembre 2026
 
@@ -226,7 +253,7 @@ HID de l'action ont été émis ; un clic reste `EXECUTED`. `CONFIRMED` est rés
 `CaptureBroker` n'accepte aucune capture autonome. Une politique d'action ou de
 séquence peut demander `before` et/ou `after`. La demande est remise à l'agent
 dans la réponse HTTPS à son échantillon de position sortant : aucun port entrant
-n'est ajouté sur MonOrdinateur. L'agent visible relit alors le curseur, choisit
+n'est ajouté sur le PC cible. L'agent visible relit alors le curseur, choisit
 le rectangle écran qui le contient (coordonnées négatives incluses), affiche
 l'indication `CAPTURE VISIBLE`, copie uniquement ce moniteur complet puis
 téléverse un PNG HMAC sur `/v1/capture` avec corrélation et horodatage. Taille,

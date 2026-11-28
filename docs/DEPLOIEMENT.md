@@ -227,6 +227,51 @@ autorisée et emploie l'overload de notification ciblé.
 SSH n'est qu'un canal de maintenance de dernier recours ; il ne transporte
 jamais une commande souris et ne constitue pas une preuve HOGP.
 
+Le plan de contrôle API est optionnel et séparé. Le backend l'active par un
+objet `hogp_control` contenant la clé dédiée, les empreintes AEP/adaptateur/
+endpoint BLE/enfant HID et deux autorisations booléennes désactivées par
+défaut. La cible utilise `HogpControlAgent.exe`, construit par
+`Build-HogpControlAgent.ps1`, avec une configuration DPAPI et certificat
+épinglé distincte. `Manage-HogpControlAgent.ps1` inscrit uniquement la tâche
+qualificative `MC-HOGP-NATIVE-OWNER-001` à l'ouverture de session avec
+`RunLevel=Highest` ; cette inscription exige une console déjà administrative.
+Elle constitue l'unique élévation de provisioning : les échanges et reprises
+ultérieurs ne demandent aucun consentement interactif.
+
+L'enrôlement des identités se prépare en lecture seule avec
+`HogpControlAgent.exe --inspect-identities <nom-HOGP> <résultat.json>` après le
+pairage réussi. La configuration emploie `HogpDeviceName`, les quatre empreintes
+sélectionnées et un `StatePath` exactement situé sous
+`C:\ProgramData\MousseControler\Qualification\MC-HOGP-NATIVE-OWNER-001`.
+L'action `Install` reçoit les empreintes attendues du binaire et de la
+configuration, les copie sous `Program Files`/`ProgramData`, retire les droits
+d'écriture des utilisateurs standards, réserve configuration, secret DPAPI et
+état à `SYSTEM`/administrateurs, inscrit la tâche puis vérifie son action.
+`Start` ne réinscrit jamais la tâche : il contrôle les ACL, le manifeste,
+les deux empreintes, le principal Windows exact et `RunLevel=Highest` avant
+lancement. Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
+répertoire de travail protégé sont également vérifiés. `Stop` conserve
+l'installation ; `Uninstall` est la suppression administrative explicite.
+
+Le premier échange sert seulement à apprendre la génération courante du
+provider et ne commande rien. Une génération différente peut autoriser un
+redémarrage de l'endpoint pairé exact ; un adaptateur absent ou en code problème
+peut autoriser son redémarrage exact. Chaque action est unique par génération,
+expirable, temporisée, corrélée à la séquence HMAC, acquittée et revalidée par
+précondition locale puis postcondition. Si Windows a déjà restauré le nœud,
+`not_required` acquitte sans exécuter `pnputil` ni rejouer. Après un redémarrage
+du runtime cible, une absence HID continue
+doit dépasser la grâce configurée avant la même reprise ciblée. Un runtime non
+élevé, une empreinte divergente, plusieurs nœuds candidats ou un statut backend
+indisponible ferment la porte sans action. Le runtime n'appelle aucune API GATT
+et le backend ne redémarre jamais le provider pour la seule absence d'abonné.
+La génération, la séquence anti-rejeu, l'historique borné des commandes et les
+acquittements sont persistés atomiquement. Une interruption au milieu d'une
+reprise produit `outcome_unknown` et interdit un rejeu automatique. Une reprise
+interne du moteur fait tourner la génération ; un statut `advertising=False`
+est réparé comme panne provider, alors que `subscriber=False` reste un état
+externe sans recréation.
+
 `Start-InteractiveMouseQualification.ps1` refuse de démarrer la surface sûre si
 le bail cible ne correspond pas au run, au SHA et au backend. Le pilote matériel
 refuse à son tour toute action sans le bail backend actif et un statut cible de

@@ -78,13 +78,21 @@ class MouseController:
                 self._transport_stopped = True
             if self._stopped.is_set():
                 return
-            self._transport.start()
+            try:
+                self._transport.start()
+                if self._stopped.is_set():
+                    self._transport.stop()
+                    return
+                advertise = getattr(self._transport, "advertise", None)
+                if advertise is not None:
+                    advertise()
+            except BaseException:
+                try:
+                    self._transport.stop()
+                finally:
+                    self._transport_stopped = True
+                raise
             self._transport_stopped = False
-            if self._stopped.is_set():
-                return
-            advertise = getattr(self._transport, "advertise", None)
-            if advertise is not None:
-                advertise()
 
     def position_snapshot(self, max_age_ms: int = 150) -> PositionSnapshot:
         return self._positions.latest(max_age_ms)
