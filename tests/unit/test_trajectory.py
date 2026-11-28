@@ -121,6 +121,12 @@ class SequenceTests(unittest.TestCase):
         controller = MouseController(transport, store)
         controller.start()
         runner = SequenceRunner(controller, TrajectoryEngine(), TOPOLOGY, steps, seed=seed)
+
+        def cleanup() -> None:
+            runner.stop()
+            runner.join(1)
+
+        self.addCleanup(cleanup)
         return runner, transport
 
     def test_a_b_c_sequence_confirmed_by_measurements(self):
@@ -146,7 +152,7 @@ class SequenceTests(unittest.TestCase):
         runner.start()
         wait_until(
             lambda: runner.status().state == SequenceState.WAITING,
-            timeout=2,
+            timeout=5,
             description="commanded sequence waiting state",
         )
         self.assertEqual(runner.status().state, SequenceState.WAITING)

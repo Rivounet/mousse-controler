@@ -285,7 +285,9 @@ def _artifacts(output_dir: Path) -> list[dict[str, object]]:
     ]
 
 
-def _read_test_result(path: Path) -> dict[str, object]:
+def _read_test_result(
+    path: Path, *, require_success: bool = True,
+) -> dict[str, object]:
     if not path.is_file():
         raise RuntimeError(f"test result metadata is missing: {path.name}")
     result = json.loads(path.read_text(encoding="utf-8"))
@@ -302,13 +304,21 @@ def _read_test_result(path: Path) -> dict[str, object]:
         raise RuntimeError("test result metadata has an unsupported schema")
     if int(result["tests_run"]) < 1:
         raise RuntimeError("test result metadata reports no executed tests")
-    for counter in (
+    counters = (
         "failures", "errors", "skipped", "expected_failures",
         "unexpected_successes",
-    ):
-        if int(result[counter]) != 0:
-            raise RuntimeError(f"test result metadata reports {counter}")
-    if not bool(result["successful"]):
+    )
+    for counter in counters:
+        if int(result[counter]) < 0:
+            raise RuntimeError(
+                f"test result metadata reports negative {counter}"
+            )
+    if not isinstance(result["successful"], bool):
+        raise RuntimeError("test result metadata successful flag must be boolean")
+    observed_success = all(int(result[counter]) == 0 for counter in counters)
+    if result["successful"] != observed_success:
+        raise RuntimeError("test result metadata has an inconsistent success flag")
+    if require_success and not observed_success:
         raise RuntimeError("test result metadata is not successful")
     return result
 
@@ -451,6 +461,11 @@ def run_qualification(
                         if completed.stdout:
                             log_stream.write(completed.stdout)
                     result["exit_code"] = completed.returncode
+                    if phase.result_path:
+                        result["tests"] = _read_test_result(
+                            phase.result_path,
+                            require_success=completed.returncode == 0,
+                        )
                     if completed.returncode != 0:
                         result["status"] = "FAIL"
                         summary["verdict"] = "FAIL"
@@ -462,8 +477,6 @@ def run_qualification(
                             "required phase artifact is missing: "
                             f"{phase.required_artifact.name}"
                         )
-                    if phase.result_path:
-                        result["tests"] = _read_test_result(phase.result_path)
                 except KeyboardInterrupt:
                     result.update(status="INTERRUPTED", reason="qualification interrupted")
                     log_path.write_text("qualification interrupted\n", encoding="utf-8")

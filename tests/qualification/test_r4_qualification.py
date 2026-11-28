@@ -138,6 +138,42 @@ class QualificationOutcomeTests(unittest.TestCase):
             self.assertEqual(summary["exclusions"], list(qualify.MATERIAL_EXCLUSIONS))
             self.assertIn("deliberate failure", (output / "fast-tests.log").read_text())
 
+    def test_failed_phase_retains_executed_test_evidence(self):
+        calls = 0
+
+        def run(command, **_kwargs):
+            nonlocal calls
+            calls += 1
+            path = Path(command[command.index("--summary-path") + 1])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            failed = calls == 2
+            path.write_text(json.dumps({
+                "schema": "mousse-test-results-v1",
+                "tests_run": 3 if failed else 2,
+                "failures": 1 if failed else 0,
+                "errors": 0,
+                "skipped": 0,
+                "expected_failures": 0,
+                "unexpected_successes": 0,
+                "successful": not failed,
+            }), encoding="utf-8")
+            return subprocess.CompletedProcess(
+                command, 1 if failed else 0, stdout="test evidence\n",
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            code, summary = qualify.run_qualification(
+                "software", Path(temporary) / "result",
+                command_runner=run,
+                git_provenance=lambda: self.PROVENANCE,
+            )
+
+        self.assertEqual(code, 1)
+        self.assertEqual(summary["verdict"], "FAIL")
+        self.assertEqual(summary["tests"]["tests_run"], 5)
+        self.assertEqual(summary["tests"]["failures"], 1)
+        self.assertEqual(summary["phases"][1]["tests"]["tests_run"], 3)
+
     def test_interruption_is_observable_and_temporary_files_are_cleaned(self):
         def interrupt(_command, **kwargs):
             Path(kwargs["env"]["MC_QUALIFICATION_TEMP"], "marker").write_text("temporary")

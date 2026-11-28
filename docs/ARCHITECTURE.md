@@ -409,7 +409,9 @@ isolé par une variable d'environnement ; il ne touche aucune tâche réelle.
 `scripts/qualification/qualify.py` est l'unique point d'entrée des profils
 locaux. Il orchestre une liste fermée de phases et écrit pour chacune un log,
 une durée et un statut, puis un `summary.json` contenant SHA Git, versions,
-exclusions et artefacts. `full-local` enchaîne strictement `software` puis
+exclusions et artefacts. Un résultat logiciel non favorable reste une preuve
+comptable : ses compteurs sont validés et agrégés avant l'arrêt fail-closed de
+la qualification. `full-local` enchaîne strictement `software` puis
 `build`; il n'existe aucune transition vers un diagnostic matériel.
 
 La chaîne build Windows découvre Roslyn avec `vswhere`, le SDK avec

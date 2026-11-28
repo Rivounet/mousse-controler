@@ -28,7 +28,10 @@ Une qualification officielle refuse avant toute phase un dépôt sale, une
 identité Git indisponible ou un arbre non résolu. Son résumé v2 contient commit,
 empreinte d'arbre, branche, propreté, compteurs de tests, skips, erreurs
 attendues, durées et empreintes des artefacts. Tout skip ou échec attendu non
-explicitement sorti de la porte rend le profil logiciel non favorable.
+explicitement sorti de la porte rend le profil logiciel non favorable. Les
+métadonnées d'une phase de tests sont lues même lorsque son processus échoue :
+les tests réellement exécutés et leurs échecs restent donc comptés dans le
+résumé au lieu d'être remplacés par zéro.
 
 Un chemin fourni avec `--output-dir` doit être nouveau. L'orchestrateur le crée
 de manière exclusive et bloque avant toute phase s'il existe déjà, même vide,
