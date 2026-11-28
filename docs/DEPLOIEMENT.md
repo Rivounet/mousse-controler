@@ -255,7 +255,9 @@ d'écriture des utilisateurs standards, réserve configuration, secret DPAPI et
 les deux empreintes, le principal Windows exact et `RunLevel=Highest` avant
 lancement. Les ACL sont non héritées, possédées par `Administrators`, refusent
 tout droit de mutation hors `SYSTEM`/`Administrators` et garantissent leur
-contrôle total. Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
+contrôle total. Le contrôle des tiers porte sur les droits mutateurs primitifs,
+sans confondre les bits communs des agrégats `ReadAndExecute` et `FullControl`.
+Le type `Interactive`, le déclencheur `AtLogOn` du même SID et le
 répertoire de travail protégé sont également vérifiés. `Stop` conserve
 l'installation ; `Uninstall` est la suppression administrative explicite.
 

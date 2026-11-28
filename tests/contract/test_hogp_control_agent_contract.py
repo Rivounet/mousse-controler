@@ -79,6 +79,17 @@ class HogpControlAgentContractTests(unittest.TestCase):
         self.assertIn("AreAccessRulesProtected", source)
         self.assertIn("unexpected principal", source)
         self.assertIn("required full-control principal", source)
+        dangerous = source[
+            source.index("$dangerousRights = ("):
+            source.index("$allowedWriteSids =", source.index("$dangerousRights = ("))
+        ]
+        for required in (
+            "WriteData", "AppendData", "WriteExtendedAttributes", "WriteAttributes",
+            "DeleteSubdirectoriesAndFiles", "ChangePermissions", "TakeOwnership",
+        ):
+            self.assertIn(required, dangerous)
+        for aggregate in ("::Write -bor", "::Modify -bor", "::FullControl -bor"):
+            self.assertNotIn(aggregate, dangerous)
         self.assertIn("ExpectedExecutableSha256", source)
         self.assertIn("mousse-hogp-control-install-v1", source)
         self.assertIn("Assert-InstallationIntegrity", source)
