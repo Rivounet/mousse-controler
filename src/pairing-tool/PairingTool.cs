@@ -263,7 +263,6 @@ internal static class PairingTool
             Diagnostics["watcher_enumeration_completed"] = enumerationCompleted;
             Diagnostics["matching_candidates"] = candidates.Values.ToArray();
             Diagnostics["live_matching_candidates"] = liveCandidates.Count;
-            Diagnostics["expected_id_sha256"] = expectedIdSha256;
             if (selected != null)
             {
                 var state = Snapshot(selected);

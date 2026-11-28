@@ -20,6 +20,8 @@ class PairingIdentityContractTests(unittest.TestCase):
         self.assertIn("NormalizeSha256(args[2])", source)
         self.assertIn("identity == expectedIdSha256", source)
         self.assertIn("No live Bluetooth LE endpoint matched the exact name and expected identity", source)
+        self.assertEqual(source.count('{ "expected_id_sha256", expectedIdSha256 }'), 2)
+        self.assertNotIn('Diagnostics["expected_id_sha256"]', source)
 
     def test_new_pairing_requires_observed_encryption_and_rolls_back_otherwise(self) -> None:
         source = TOOL.read_text(encoding="utf-8")
