@@ -84,6 +84,8 @@ namespace MousseControler.PositionAgent
         private readonly Thread worker;
         private BluetoothLEDevice device;
         private IReadOnlyList<GattDeviceService> services;
+        private GattSession session;
+        private GattSessionStatus? observedSessionStatus;
 
         private readonly string expectedPairedAepIdSha256;
 
@@ -114,10 +116,14 @@ namespace MousseControler.PositionAgent
             {
                 try
                 {
-                    if (device == null || device.ConnectionStatus != BluetoothConnectionStatus.Connected)
+                    if (device == null || session == null)
                     {
                         ReleaseConnection();
                         ConnectOnce();
+                    }
+                    else
+                    {
+                        ObserveSessionStatus();
                     }
                 }
                 catch (Exception ex)
@@ -159,15 +165,49 @@ namespace MousseControler.PositionAgent
                 candidateDevice.Dispose();
                 throw new InvalidOperationException("HOGP service connection status: " + result.Status);
             }
+            GattSession candidateSession = result.Services[0].Session;
+            if (candidateSession == null || !candidateSession.CanMaintainConnection)
+            {
+                if (candidateSession != null) candidateSession.Dispose();
+                foreach (GattDeviceService service in result.Services) service.Dispose();
+                candidateDevice.Dispose();
+                throw new InvalidOperationException("HOGP session cannot maintain the connection");
+            }
+            try
+            {
+                candidateSession.MaintainConnection = true;
+            }
+            catch
+            {
+                candidateSession.Dispose();
+                foreach (GattDeviceService service in result.Services) service.Dispose();
+                candidateDevice.Dispose();
+                throw;
+            }
             if (cancellation.IsCancellationRequested)
             {
+                DisposeSession(candidateSession);
                 foreach (GattDeviceService service in result.Services) service.Dispose();
                 candidateDevice.Dispose();
                 return;
             }
             device = candidateDevice;
             services = result.Services;
+            session = candidateSession;
+            observedSessionStatus = candidateSession.SessionStatus;
             Console.WriteLine("[{0:O}] HOGP link connected; native HID service active.", DateTimeOffset.Now);
+        }
+
+        private void ObserveSessionStatus()
+        {
+            GattSessionStatus current = session.SessionStatus;
+            if (observedSessionStatus == current) return;
+            GattSessionStatus? previous = observedSessionStatus;
+            observedSessionStatus = current;
+            Console.WriteLine("[{0:O}] HOGP session status: {1}.", DateTimeOffset.Now, current);
+            if (previous == GattSessionStatus.Closed && current == GattSessionStatus.Active)
+                Console.WriteLine("[{0:O}] HOGP link reconnected; maintained GATT session active.",
+                    DateTimeOffset.Now);
         }
 
         private static string NormalizeSha256(string value)
@@ -189,6 +229,10 @@ namespace MousseControler.PositionAgent
 
         private void ReleaseConnection()
         {
+            GattSession sessionToDispose = session;
+            session = null;
+            observedSessionStatus = null;
+            if (sessionToDispose != null) DisposeSession(sessionToDispose);
             if (services != null)
             {
                 foreach (GattDeviceService service in services) service.Dispose();
@@ -199,6 +243,13 @@ namespace MousseControler.PositionAgent
                 device.Dispose();
                 device = null;
             }
+        }
+
+        private static void DisposeSession(GattSession current)
+        {
+            try { current.MaintainConnection = false; }
+            catch { }
+            current.Dispose();
         }
     }
 
