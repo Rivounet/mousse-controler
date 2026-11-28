@@ -93,6 +93,12 @@ $services = @(try { Get-Service -Name 'bthserv', 'BTAGService', 'BluetoothUserSe
     }
 
 $api = [Windows.Foundation.Metadata.ApiInformation]
+$isWindowsIotCore =
+    $currentVersion.EditionID -in @('IoTUAP', 'IoTCore') -or
+    $currentVersion.ProductName -match 'IoT Core'
+$inboundPairingRegistrationApi = $api::IsMethodPresent(
+    'Windows.Devices.Enumeration.DeviceInformationPairing',
+    'TryRegisterForAllInboundPairingRequests')
 $codexCommand = Get-Command codex -ErrorAction SilentlyContinue | Select-Object -First 1
 $codexVersion = $null
 if ($codexCommand) {
@@ -147,6 +153,19 @@ $result = [ordered]@{
             notify_value_async = $api::IsMethodPresent('Windows.Devices.Bluetooth.GenericAttributeProfile.GattLocalCharacteristic', 'NotifyValueAsync')
             advertisement_publisher = $api::IsTypePresent('Windows.Devices.Bluetooth.Advertisement.BluetoothLEAdvertisementPublisher')
             device_pairing = $api::IsTypePresent('Windows.Devices.Enumeration.DeviceInformationPairing')
+            register_all_inbound_pairing_requests = $inboundPairingRegistrationApi
+        }
+        inbound_pairing = [ordered]@{
+            platform_contract = 'Windows 10 IoT Core applications only'
+            windows_iot_core = $isWindowsIotCore
+            automatic_handler_implemented = $false
+            unattended_supported = $false
+            windows_desktop_requires_system_consent = -not $isWindowsIotCore
+            reason = if ($isWindowsIotCore) {
+                'No inbound pairing handler is implemented'
+            } else {
+                'Windows Desktop requires system consent for inbound pairing'
+            }
         }
         services = @($services)
     }

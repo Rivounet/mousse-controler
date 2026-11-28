@@ -258,3 +258,23 @@ dupliqué, un statut cible périmé ou un run concurrent provoquent un refus
 fail-closed. La production `mini-pc-backend` et les preuves historiques de
 `MonOrdinateur` ne sont ni utilisées ni présentées comme qualification de
 `DESKTOP-NPIHO8K`.
+
+## D-073 — Consentement Windows limité au provisioning HOGP (28 novembre 2026)
+
+**Décision :** sur Windows Desktop, la validation système d'une demande de
+pairage entrante est une étape manuelle unique de provisioning, jamais une étape
+de démarrage ou de reprise. La fenêtre de pairabilité doit déclarer la politique
+`windows-interactive`. La politique `unattended` est refusée avant l'accès radio
+tant qu'aucun périphérique HOGP capable d'accepter lui-même le bonding n'est
+retenu.
+
+**Preuve :** au SHA `399ac5322df44663d84641ffcf655ac3287500b8`, le scan radio
+et `Inspect` ont sélectionné un unique endpoint. Sans validation de la
+notification backend, `Pair` a fini `Failed`, protection `None`, et aucune paire
+n'a subsisté. Au même instant, le backend a journalisé `BTHUSB 37` (demande
+entrante rejetée) puis les deux machines `BTHUSB 29` (délai de sécurité).
+
+**Critère de clôture :** après un consentement unique et un pairage
+`ProtectionLevelUsed=Encryption`, prouver sans nouveau consentement la
+reconnexion, le redémarrage de chaque machine, un cycle radio et la recréation ou
+mise à jour du runtime avec identité et descripteur HOGP inchangés.

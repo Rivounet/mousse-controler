@@ -22,8 +22,20 @@ Bluetooth Windows. Il relève l'état initial et le restaure dans un bloc
 
 ```powershell
 python .\scripts\bluetooth\manage_pairability.py `
-  --duration-seconds 120 --confirm-pairing-window
+  --duration-seconds 120 `
+  --confirm-pairing-window `
+  --consent-policy windows-interactive
 ```
 
 Cet outil ne démarre aucun service GATT, n'effectue aucun appairage et ne laisse
-pas la découverte activée après la fenêtre demandée.
+pas la découverte activée après la fenêtre demandée. Le mode
+`windows-interactive` déclare explicitement que Windows Desktop demandera un
+consentement système entrant sur le serveur GATT. Ce consentement constitue un
+provisioning unique : le bond doit ensuite survivre aux redémarrages et aux
+mises à jour conservant l'identité et le descripteur HOGP.
+
+Le mode `--consent-policy unattended` est fail-closed avant tout accès radio.
+L'API Microsoft d'enregistrement global des demandes entrantes est limitée aux
+applications Windows 10 IoT Core et aucun gestionnaire entrant de ce type n'est
+implémenté dans le projet. Une qualification sans intervention exige donc un
+périphérique HOGP distinct qui possède explicitement cette capacité.
