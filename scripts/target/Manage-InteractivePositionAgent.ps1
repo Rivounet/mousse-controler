@@ -7,7 +7,7 @@ param(
     [string]$ConfigPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\agent.json",
     [ValidateSet('Position', 'HogpReconnect')][string]$Mode = 'Position',
     [string]$HogpDeviceName = 'MINI-PC-BACKEND',
-    [string]$HogpDeviceIdSha256,
+    [string]$HogpPairedAepIdSha256,
     [string]$HogpLogPath = "$env:LOCALAPPDATA\Temp\Mousse-controler-MC-HID-EXEC-001\hogp-reconnect.log",
     [string]$TaskName = 'MousseControler-MC-HID-EXEC-001-PositionAgent'
 )
@@ -50,12 +50,12 @@ switch ($Action) {
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
         }
         $arguments = if ($Mode -eq 'HogpReconnect') {
-            if ($HogpDeviceIdSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
-                throw '-HogpDeviceIdSha256 with 64 hex characters is required in HogpReconnect mode'
+            if ($HogpPairedAepIdSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
+                throw '-HogpPairedAepIdSha256 with 64 hex characters is required in HogpReconnect mode'
             }
             Remove-Item -LiteralPath $HogpLogPath -Force -ErrorAction SilentlyContinue
             '--hogp-reconnect "{0}" "{1}" "{2}"' -f $HogpDeviceName,
-                $HogpDeviceIdSha256.ToUpperInvariant(), $HogpLogPath
+                $HogpPairedAepIdSha256.ToUpperInvariant(), $HogpLogPath
         } else {
             '--config "{0}"' -f $ConfigPath
         }
