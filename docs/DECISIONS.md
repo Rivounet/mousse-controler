@@ -326,3 +326,23 @@ et empêchait le moniteur de reconnexion d'atteindre la vérification GATT réel
 client ne contourne ni le chiffrement ni l'unicité. Un endpoint absent échoue
 toujours lors de l'ouverture ou de la découverte GATT, puis le moniteur réessaie
 de façon bornée sans déclencher de nouvel appairage.
+
+## D-077 — Session GATT maintenue pendant les indisponibilités radio (28 novembre 2026)
+
+**Décision :** après la découverte non cachée de l'unique service HID, le
+moniteur conserve son `GattSession`, exige `CanMaintainConnection` et positionne
+`MaintainConnection=true`. Une transition temporaire vers `Closed` ne détruit
+plus le device, le service et la session : Windows conserve la demande et
+reconnecte lorsque le périphérique redevient disponible. Ces ressources ne sont
+libérées, avec `MaintainConnection=false`, qu'à l'arrêt du moniteur ou avant une
+nouvelle ouverture initiale ayant échoué.
+
+**Motif :** la découverte GATT non cachée est une opération finie dont le délai
+est variable et peut atteindre plusieurs minutes quand des requêtes sont mises
+en file. La détruire puis la relancer à chaque déconnexion radio accumulait des
+tentatives `Unreachable`. `GattSession.MaintainConnection` est la primitive
+Windows prévue pour attendre indéfiniment et reprendre dès disponibilité.
+
+**Conséquence :** le cycle radio ne déclenche ni nouvel appairage ni boucle de
+découverte GATT. Les transitions `Closed` puis `Active` sont journalisées et la
+reprise `Active` constitue la preuve de reconnexion de la même session maintenue.

@@ -24,6 +24,15 @@ class PositionAgentReconnectContractTests(unittest.TestCase):
         self.assertIn("BluetoothCacheMode.Uncached", source)
         self.assertIn("result.Services.Count != 1", source)
 
+    def test_reconnect_keeps_a_maintained_gatt_session(self) -> None:
+        source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn("candidateSession.CanMaintainConnection", source)
+        self.assertIn("candidateSession.MaintainConnection = true", source)
+        self.assertIn("current.MaintainConnection = false", source)
+        self.assertIn("catch { }", source)
+        self.assertIn("GattSessionStatus.Closed && current == GattSessionStatus.Active", source)
+        self.assertNotIn("device.ConnectionStatus != BluetoothConnectionStatus.Connected", source)
+
     def test_agent_has_no_input_injection_api(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
         for forbidden in ("SendInput", "mouse_event", "SetCursorPos"):
